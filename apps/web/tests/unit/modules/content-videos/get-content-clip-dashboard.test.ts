@@ -53,6 +53,10 @@ describe("getContentClipDashboard", () => {
 			introMimeType: "video/mp4",
 			outroStorageKey: "channels/outro.mp4",
 			outroMimeType: "video/mp4",
+			verticalIntroStorageKey: "channels/vertical-intro.mp4",
+			verticalIntroMimeType: "video/mp4",
+			verticalOutroStorageKey: "channels/vertical-outro.mp4",
+			verticalOutroMimeType: "video/mp4",
 			createdAt: new Date(0),
 			updatedAt: new Date(0),
 		};
@@ -145,6 +149,10 @@ describe("getContentClipDashboard", () => {
 			introMimeType: null,
 			outroStorageKey: null,
 			outroMimeType: null,
+			verticalIntroStorageKey: null,
+			verticalIntroMimeType: null,
+			verticalOutroStorageKey: null,
+			verticalOutroMimeType: null,
 			createdAt: new Date(0),
 			updatedAt: new Date(0),
 		};

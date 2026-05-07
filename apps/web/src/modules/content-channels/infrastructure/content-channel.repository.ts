@@ -81,10 +81,20 @@ export class ContentChannelRepository
 							introStorageKey: input.storageKey,
 							introMimeType: input.mimeType,
 						}
-					: {
-							outroStorageKey: input.storageKey,
-							outroMimeType: input.mimeType,
-						}),
+					: input.position === "outro"
+						? {
+								outroStorageKey: input.storageKey,
+								outroMimeType: input.mimeType,
+							}
+						: input.position === "verticalIntro"
+							? {
+									verticalIntroStorageKey: input.storageKey,
+									verticalIntroMimeType: input.mimeType,
+								}
+							: {
+									verticalOutroStorageKey: input.storageKey,
+									verticalOutroMimeType: input.mimeType,
+								}),
 				updatedAt: new Date(),
 			})
 			.where(eq(contentChannels.id, input.id))
@@ -107,6 +117,10 @@ export class ContentChannelRepository
 			introMimeType: row.introMimeType ?? null,
 			outroStorageKey: row.outroStorageKey ?? null,
 			outroMimeType: row.outroMimeType ?? null,
+			verticalIntroStorageKey: row.verticalIntroStorageKey ?? null,
+			verticalIntroMimeType: row.verticalIntroMimeType ?? null,
+			verticalOutroStorageKey: row.verticalOutroStorageKey ?? null,
+			verticalOutroMimeType: row.verticalOutroMimeType ?? null,
 			createdAt: row.createdAt,
 			updatedAt: row.updatedAt,
 		};

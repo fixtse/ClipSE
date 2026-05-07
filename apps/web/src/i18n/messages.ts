@@ -82,6 +82,7 @@ export const messages = {
 				sources: "Videos",
 				drafts: "Clips",
 				active: "Active",
+				signOut: "Sign out",
 				settings: "Settings",
 			},
 			channels: {
@@ -161,10 +162,21 @@ export const messages = {
 					"Select a source in Media before configuring start/end videos.",
 				startVideo: "Start Video",
 				endVideo: "End Video",
+				verticalSectionTitle: "Vertical Start / End",
+				verticalSectionDescription:
+					"Optional vertical assets used only for 9:16 exports. If empty, the normal start/end videos are scaled down with black bars.",
+				verticalStartVideo: "Vertical Start Video",
+				verticalEndVideo: "Vertical End Video",
 				startVideoLower: "start",
 				endVideoLower: "end",
+				verticalStartVideoLower: "vertical start",
+				verticalEndVideoLower: "vertical end",
 				startVideoDescription: "Prepended before every rendered clip.",
 				endVideoDescription: "Appended after every rendered clip.",
+				verticalStartVideoDescription:
+					"Prepended before vertical rendered clips.",
+				verticalEndVideoDescription:
+					"Appended after vertical rendered clips.",
 				noVideoConfigured: "No {position} video configured.",
 				uploadLabel: "Upload {label}",
 				dropTitle: "Drop {label} here",
@@ -249,8 +261,8 @@ export const messages = {
 					"Select a source from the library or add a new file/URL to show transcript, clip drafts, and render controls.",
 			},
 			renderOptions: {
-				source: "Source",
-				vertical: "9:16",
+				source: "Horizontal",
+				vertical: "Vertical",
 				subtitles: "Subtitles",
 			},
 			clipEditor: {
@@ -302,6 +314,7 @@ export const messages = {
 				pauseClip: "Pause clip",
 				playClip: "Play clip",
 				playbackSpeed: "Playback speed",
+				fullscreen: "Fullscreen",
 			},
 			deleteSourceDialog: {
 				title: "Delete source?",
@@ -349,6 +362,7 @@ export const messages = {
 				manualClipTitle: "Manual clip {count}",
 				manualClipAdded: "Manual clip added.",
 				clipDeleted: "Clip deleted.",
+				signOutFailed: "Failed to sign out.",
 			},
 		},
 	},
@@ -434,6 +448,7 @@ export const messages = {
 				sources: "Videos",
 				drafts: "Clips",
 				active: "Activos",
+				signOut: "Cerrar sesión",
 				settings: "Ajustes",
 			},
 			channels: {
@@ -513,10 +528,21 @@ export const messages = {
 					"Selecciona un video en Media antes de configurar videos de inicio y fin.",
 				startVideo: "Video inicial",
 				endVideo: "Video final",
+				verticalSectionTitle: "Inicio / Fin Vertical",
+				verticalSectionDescription:
+					"Archivos verticales opcionales usados solo para exportaciones 9:16. Si están vacíos, los videos normales de inicio y fin se reducen con barras negras.",
+				verticalStartVideo: "Video inicial Vertical",
+				verticalEndVideo: "Video final Vertical",
 				startVideoLower: "inicial",
 				endVideoLower: "final",
+				verticalStartVideoLower: "inicial Vertical",
+				verticalEndVideoLower: "final Vertical",
 				startVideoDescription: "Se agrega antes de cada clip renderizado.",
 				endVideoDescription: "Se agrega después de cada clip renderizado.",
+				verticalStartVideoDescription:
+					"Se agrega antes de cada clip vertical renderizado.",
+				verticalEndVideoDescription:
+					"Se agrega después de cada clip vertical renderizado.",
 				noVideoConfigured: "No hay video {position} configurado.",
 				uploadLabel: "Subir {label}",
 				dropTitle: "Suelta {label} aquí",
@@ -603,8 +629,8 @@ export const messages = {
 					"Selecciona un video desde la biblioteca o agrega un nuevo archivo/URL para mostrar transcripción, borradores de clips y controles de render.",
 			},
 			renderOptions: {
-				source: "Original",
-				vertical: "9:16",
+				source: "Horizontal",
+				vertical: "Vertical",
 				subtitles: "Subtítulos",
 			},
 			clipEditor: {
@@ -657,6 +683,7 @@ export const messages = {
 				pauseClip: "Pausar clip",
 				playClip: "Reproducir clip",
 				playbackSpeed: "Velocidad de reproducción",
+				fullscreen: "Pantalla completa",
 			},
 			deleteSourceDialog: {
 				title: "¿Eliminar video?",
@@ -706,6 +733,7 @@ export const messages = {
 				manualClipTitle: "Clip manual {count}",
 				manualClipAdded: "Se agregó un clip manual.",
 				clipDeleted: "Se eliminó el clip.",
+				signOutFailed: "No se pudo cerrar sesión.",
 			},
 		},
 	},

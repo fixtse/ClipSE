@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AuthForm } from "~/components/auth/AuthForm";
 import { defaultLocale, type Locale } from "~/i18n/config";
 import { isLocale, localizePath } from "~/i18n/path";
-import { getSession } from "~/server/auth";
+import { getSession, hasExistingUser } from "~/server/auth";
 
 interface SignInPageProps {
 	params: Promise<{ locale: string }>;
@@ -23,8 +23,13 @@ export default async function SignInPage({
 	}
 
 	const switchHref = `${localizePath(locale, "/sign-up")}?returnTo=${encodeURIComponent(returnTo)}`;
+	const canCreateAccount = !(await hasExistingUser());
 
 	return (
-		<AuthForm mode="sign-in" returnTo={returnTo} switchHref={switchHref} />
+		<AuthForm
+			mode="sign-in"
+			returnTo={returnTo}
+			switchHref={canCreateAccount ? switchHref : undefined}
+		/>
 	);
 }

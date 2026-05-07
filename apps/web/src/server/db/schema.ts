@@ -86,6 +86,14 @@ export const contentChannels = createTable(
 		introMimeType: d.varchar("intro_mime_type", { length: 120 }),
 		outroStorageKey: d.text("outro_storage_key"),
 		outroMimeType: d.varchar("outro_mime_type", { length: 120 }),
+		verticalIntroStorageKey: d.text("vertical_intro_storage_key"),
+		verticalIntroMimeType: d.varchar("vertical_intro_mime_type", {
+			length: 120,
+		}),
+		verticalOutroStorageKey: d.text("vertical_outro_storage_key"),
+		verticalOutroMimeType: d.varchar("vertical_outro_mime_type", {
+			length: 120,
+		}),
 		createdAt: d
 			.timestamp("created_at", { withTimezone: true })
 			.$defaultFn(() => new Date())

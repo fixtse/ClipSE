@@ -40,6 +40,22 @@ export const auth = betterAuth({
 	verification: {
 		modelName: "verification",
 	},
+	databaseHooks: {
+		user: {
+			create: {
+				async before() {
+					const [existingUser] = await db
+						.select({ id: schema.user.id })
+						.from(schema.user)
+						.limit(1);
+
+					if (existingUser) {
+						return false;
+					}
+				},
+			},
+		},
+	},
 });
 
 export type AuthSession = Awaited<ReturnType<typeof auth.api.getSession>>;
@@ -48,6 +64,15 @@ export async function getSession(): Promise<AuthSession> {
 	return auth.api.getSession({
 		headers: await headers(),
 	});
+}
+
+export async function hasExistingUser(): Promise<boolean> {
+	const [existingUser] = await db
+		.select({ id: schema.user.id })
+		.from(schema.user)
+		.limit(1);
+
+	return !!existingUser;
 }
 
 export async function getSessionFromHeaders(

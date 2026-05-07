@@ -9,6 +9,7 @@ import {
 	FastForward,
 	Gauge,
 	LoaderCircle,
+	Maximize2,
 	Pause,
 	Play,
 	Redo2,
@@ -306,6 +307,19 @@ function ClipPreviewPlayer({
 		}
 	}, [playbackRate]);
 
+	async function enterFullscreen() {
+		const player = playerRef.current;
+		if (!player?.requestFullscreen) {
+			return;
+		}
+
+		try {
+			await player.requestFullscreen();
+		} catch (error) {
+			console.error("Failed to open clip player fullscreen", { error });
+		}
+	}
+
 	function seekWithinClip(nextElapsedSeconds: number) {
 		const player = playerRef.current;
 		const boundedElapsed = Math.max(
@@ -427,6 +441,16 @@ function ClipPreviewPlayer({
 						onChange={setPlaybackRate}
 						value={playbackRate}
 					/>
+					<Button
+						aria-label={t("workspace.clipEditor.fullscreen")}
+						className="h-9 w-9 shrink-0 border-white/10 bg-white/6 p-0 text-slate-100 hover:bg-white/10"
+						onClick={() => void enterFullscreen()}
+						size="icon"
+						title={t("workspace.clipEditor.fullscreen")}
+						variant="outline"
+					>
+						<Maximize2 className="h-4 w-4" />
+					</Button>
 				</div>
 			</div>
 		</div>

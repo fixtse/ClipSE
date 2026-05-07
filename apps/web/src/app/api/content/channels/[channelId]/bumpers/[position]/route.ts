@@ -24,6 +24,10 @@ function resolveBumper(
 		introMimeType: string | null;
 		outroStorageKey: string | null;
 		outroMimeType: string | null;
+		verticalIntroStorageKey: string | null;
+		verticalIntroMimeType: string | null;
+		verticalOutroStorageKey: string | null;
+		verticalOutroMimeType: string | null;
 	},
 	position: string,
 ) {
@@ -38,6 +42,20 @@ function resolveBumper(
 		return {
 			storageKey: channel.outroStorageKey,
 			mimeType: channel.outroMimeType ?? "video/mp4",
+		};
+	}
+
+	if (position === "verticalIntro") {
+		return {
+			storageKey: channel.verticalIntroStorageKey,
+			mimeType: channel.verticalIntroMimeType ?? "video/mp4",
+		};
+	}
+
+	if (position === "verticalOutro") {
+		return {
+			storageKey: channel.verticalOutroStorageKey,
+			mimeType: channel.verticalOutroMimeType ?? "video/mp4",
 		};
 	}
 

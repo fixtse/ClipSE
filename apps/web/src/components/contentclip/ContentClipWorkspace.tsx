@@ -12,6 +12,7 @@ import {
 	Languages,
 	Link,
 	LoaderCircle,
+	LogOut,
 	Plus,
 	RefreshCcw,
 	RotateCcw,
@@ -23,11 +24,15 @@ import {
 	Upload,
 	Video,
 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import toast from "react-hot-toast";
 import ReactPlayer from "react-player";
+import { localizePath, resolveLocaleFromPathname } from "~/i18n/path";
 import { useTranslations } from "~/i18n/provider";
+import { authClient } from "~/lib/auth-client";
 import { cn } from "~/lib/utils";
+import type { ContentChannelBumperPosition } from "~/modules/content-channels/domain/content-channel.valueobject";
 import { formatTimecode } from "~/modules/content-clips/application/clip-timing";
 import type { ContentClipRenderAspectMode } from "~/modules/content-clips/domain/content-clip.valueobject";
 import {
@@ -136,6 +141,8 @@ type RenderOptionsState = {
 	aspectMode: ContentClipRenderAspectMode;
 	burnSubtitles: boolean;
 };
+const BUMPER_POSITIONS = ["intro", "outro"] as const;
+const VERTICAL_BUMPER_POSITIONS = ["verticalIntro", "verticalOutro"] as const;
 type UploadMessageKey =
 	| "workspace.intake.progress.idle"
 	| "workspace.intake.progress.creatingUploadDraft"
@@ -152,6 +159,8 @@ export function ContentClipWorkspace({
 	requestedVideoId,
 }: ContentClipWorkspaceProps) {
 	const t = useTranslations();
+	const pathname = usePathname();
+	const router = useRouter();
 	const utils = api.useUtils();
 	const {
 		selectedVideoId,
@@ -177,13 +186,16 @@ export function ContentClipWorkspace({
 	);
 	const [introFile, setIntroFile] = useState<File | null>(null);
 	const [outroFile, setOutroFile] = useState<File | null>(null);
+	const [verticalIntroFile, setVerticalIntroFile] = useState<File | null>(null);
+	const [verticalOutroFile, setVerticalOutroFile] = useState<File | null>(null);
 	const [bumperPreviewUrls, setBumperPreviewUrls] = useState<{
 		readonly intro: string | null;
 		readonly outro: string | null;
-	}>({ intro: null, outro: null });
-	const [activeBumperDropTarget, setActiveBumperDropTarget] = useState<
-		"intro" | "outro" | null
-	>(null);
+		readonly verticalIntro: string | null;
+		readonly verticalOutro: string | null;
+	}>({ intro: null, outro: null, verticalIntro: null, verticalOutro: null });
+	const [activeBumperDropTarget, setActiveBumperDropTarget] =
+		useState<ContentChannelBumperPosition | null>(null);
 	const [channelDialogOpen, setChannelDialogOpen] = useState(false);
 	const [channelName, setChannelName] = useState("");
 	const [channelLogo, setChannelLogo] = useState<File | null>(null);
@@ -214,15 +226,15 @@ export function ContentClipWorkspace({
 		burnSubtitles: false,
 	});
 	const [deleteSourceId, setDeleteSourceId] = useState<string | null>(null);
-	const [bumperMutationPosition, setBumperMutationPosition] = useState<
-		"intro" | "outro" | null
-	>(null);
+	const [bumperMutationPosition, setBumperMutationPosition] =
+		useState<ContentChannelBumperPosition | null>(null);
 	const [libraryVideos, setLibraryVideos] = useState<DashboardVideo[]>([]);
 	const [librarySearch, setLibrarySearch] = useState("");
 	const [libraryPage, setLibraryPage] = useState(1);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [transcriptSearch, setTranscriptSearch] = useState("");
 	const [isPending, startTransition] = useTransition();
+	const [isSigningOut, setIsSigningOut] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const channelLogoInputRef = useRef<HTMLInputElement | null>(null);
 	const bumperPreviewUrlsRef = useRef(bumperPreviewUrls);
@@ -517,6 +529,21 @@ export function ContentClipWorkspace({
 		await utils.contentClip.dashboard.invalidate();
 	}
 
+	async function handleSignOut() {
+		setIsSigningOut(true);
+
+		const result = await authClient.signOut();
+		if (result.error) {
+			setIsSigningOut(false);
+			toast.error(result.error.message ?? t("workspace.toasts.signOutFailed"));
+			return;
+		}
+
+		const locale = resolveLocaleFromPathname(pathname) ?? "en";
+		router.replace(localizePath(locale, "/sign-in"));
+		router.refresh();
+	}
+
 	function selectUploadFile(file: File | null) {
 		if (!file) {
 			return;
@@ -530,7 +557,90 @@ export function ContentClipWorkspace({
 		setUploadFileValue(file);
 	}
 
-	function selectBumperFile(position: "intro" | "outro", file: File | null) {
+	function getBumperFile(position: ContentChannelBumperPosition): File | null {
+		if (position === "intro") {
+			return introFile;
+		}
+		if (position === "outro") {
+			return outroFile;
+		}
+		if (position === "verticalIntro") {
+			return verticalIntroFile;
+		}
+		return verticalOutroFile;
+	}
+
+	function setBumperFile(
+		position: ContentChannelBumperPosition,
+		file: File | null,
+	): void {
+		if (position === "intro") {
+			setIntroFile(file);
+		} else if (position === "outro") {
+			setOutroFile(file);
+		} else if (position === "verticalIntro") {
+			setVerticalIntroFile(file);
+		} else {
+			setVerticalOutroFile(file);
+		}
+	}
+
+	function getBumperLabelKey(position: ContentChannelBumperPosition) {
+		if (position === "intro") {
+			return "workspace.bumpers.startVideo";
+		}
+		if (position === "outro") {
+			return "workspace.bumpers.endVideo";
+		}
+		if (position === "verticalIntro") {
+			return "workspace.bumpers.verticalStartVideo";
+		}
+		return "workspace.bumpers.verticalEndVideo";
+	}
+
+	function getBumperLowerLabelKey(position: ContentChannelBumperPosition) {
+		if (position === "intro") {
+			return "workspace.bumpers.startVideoLower";
+		}
+		if (position === "outro") {
+			return "workspace.bumpers.endVideoLower";
+		}
+		if (position === "verticalIntro") {
+			return "workspace.bumpers.verticalStartVideoLower";
+		}
+		return "workspace.bumpers.verticalEndVideoLower";
+	}
+
+	function getSavedBumperPreviewUrl(
+		position: ContentChannelBumperPosition,
+	): string | null {
+		if (!selectedChannel) {
+			return null;
+		}
+		if (position === "intro") {
+			return selectedChannel.introStorageKey
+				? `/api/content/channels/${selectedChannel.id}/bumpers/intro`
+				: null;
+		}
+		if (position === "outro") {
+			return selectedChannel.outroStorageKey
+				? `/api/content/channels/${selectedChannel.id}/bumpers/outro`
+				: null;
+		}
+		if (position === "verticalIntro") {
+			return selectedChannel.verticalIntroStorageKey
+				? `/api/content/channels/${selectedChannel.id}/bumpers/verticalIntro`
+				: null;
+		}
+		return selectedChannel.verticalOutroStorageKey
+			? `/api/content/channels/${selectedChannel.id}/bumpers/verticalOutro`
+			: null;
+	}
+
+	function selectBumperFile(
+		position: ContentChannelBumperPosition,
+		file: File | null,
+	) {
 		if (!file) {
 			return;
 		}
@@ -540,11 +650,7 @@ export function ContentClipWorkspace({
 			return;
 		}
 
-		if (position === "intro") {
-			setIntroFile(file);
-		} else {
-			setOutroFile(file);
-		}
+		setBumperFile(position, file);
 
 		setBumperPreviewUrls((current) => {
 			const previousUrl = current[position];
@@ -560,12 +666,8 @@ export function ContentClipWorkspace({
 		setActiveBumperDropTarget(null);
 	}
 
-	function clearBumperFile(position: "intro" | "outro") {
-		if (position === "intro") {
-			setIntroFile(null);
-		} else {
-			setOutroFile(null);
-		}
+	function clearBumperFile(position: ContentChannelBumperPosition) {
+		setBumperFile(position, null);
 
 		setBumperPreviewUrls((current) => {
 			const previousUrl = current[position];
@@ -583,6 +685,8 @@ export function ContentClipWorkspace({
 	function clearSelectedBumperFiles() {
 		setIntroFile(null);
 		setOutroFile(null);
+		setVerticalIntroFile(null);
+		setVerticalOutroFile(null);
 		setActiveBumperDropTarget(null);
 		setBumperPreviewUrls((current) => {
 			for (const previewUrl of Object.values(current)) {
@@ -591,7 +695,12 @@ export function ContentClipWorkspace({
 				}
 			}
 
-			return { intro: null, outro: null };
+			return {
+				intro: null,
+				outro: null,
+				verticalIntro: null,
+				verticalOutro: null,
+			};
 		});
 	}
 
@@ -789,21 +898,17 @@ export function ContentClipWorkspace({
 		setVideoPromptDraftDirty(false);
 	}
 
-	async function handleUploadBumper(position: "intro" | "outro") {
+	async function handleUploadBumper(position: ContentChannelBumperPosition) {
 		if (!selectedChannel) {
 			toast.error(t("workspace.toasts.selectChannelFirst"));
 			return;
 		}
 
-		const file = position === "intro" ? introFile : outroFile;
+		const file = getBumperFile(position);
 		if (!file) {
 			toast.error(
 				t("workspace.toasts.choosePositionVideo", {
-					position: t(
-						position === "intro"
-							? "workspace.bumpers.startVideoLower"
-							: "workspace.bumpers.endVideoLower",
-					),
+					position: t(getBumperLowerLabelKey(position)),
 				}),
 			);
 			return;
@@ -822,19 +927,11 @@ export function ContentClipWorkspace({
 				return;
 			}
 
-			if (position === "intro") {
-				setIntroFile(null);
-			} else {
-				setOutroFile(null);
-			}
+			setBumperFile(position, null);
 
 			toast.success(
 				t("workspace.toasts.bumperSaved", {
-					position: t(
-						position === "intro"
-							? "workspace.bumpers.startVideoLower"
-							: "workspace.bumpers.endVideoLower",
-					),
+					position: t(getBumperLowerLabelKey(position)),
 				}),
 			);
 			await refreshDashboard();
@@ -843,7 +940,7 @@ export function ContentClipWorkspace({
 		}
 	}
 
-	async function handleDeleteBumper(position: "intro" | "outro") {
+	async function handleDeleteBumper(position: ContentChannelBumperPosition) {
 		if (!selectedChannel) {
 			return;
 		}
@@ -862,11 +959,7 @@ export function ContentClipWorkspace({
 
 			toast.success(
 				t("workspace.toasts.bumperRemoved", {
-					position: t(
-						position === "intro"
-							? "workspace.bumpers.startVideoLower"
-							: "workspace.bumpers.endVideoLower",
-					),
+					position: t(getBumperLowerLabelKey(position)),
 				}),
 			);
 			await refreshDashboard();
@@ -1688,6 +1781,24 @@ export function ContentClipWorkspace({
 								</div>
 							</DialogContent>
 						</Dialog>
+						<Button
+							aria-label={t("workspace.header.signOut")}
+							className="border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"
+							disabled={isSigningOut}
+							onClick={() => {
+								void handleSignOut();
+							}}
+							size="icon"
+							title={t("workspace.header.signOut")}
+							type="button"
+							variant="outline"
+						>
+							{isSigningOut ? (
+								<LoaderCircle className="h-4 w-4 animate-spin" />
+							) : (
+								<LogOut className="h-4 w-4" />
+							)}
+						</Button>
 					</div>
 				</header>
 				<Tabs
@@ -1908,174 +2019,201 @@ export function ContentClipWorkspace({
 							initial={{ opacity: 0, y: 18 }}
 							transition={{ duration: 0.35 }}
 						>
-							{(["intro", "outro"] as const).map((position) => {
-								const file = position === "intro" ? introFile : outroFile;
-								const savedPreviewUrl =
-									position === "intro"
-										? selectedChannel?.introStorageKey
-											? `/api/content/channels/${selectedChannel.id}/bumpers/intro`
-											: null
-										: selectedChannel?.outroStorageKey
-											? `/api/content/channels/${selectedChannel.id}/bumpers/outro`
-											: null;
+							{(
+								[
+									...BUMPER_POSITIONS,
+									...VERTICAL_BUMPER_POSITIONS,
+								] as readonly ContentChannelBumperPosition[]
+							).map((position) => {
+								const file = getBumperFile(position);
+								const savedPreviewUrl = getSavedBumperPreviewUrl(position);
 								const localPreviewUrl = bumperPreviewUrls[position];
 								const previewUrl = localPreviewUrl ?? savedPreviewUrl;
 								const isDropActive = activeBumperDropTarget === position;
 								const isBumperMutating =
 									bumperMutationPosition === position || isPending;
 								const showUploadControls = !previewUrl || Boolean(file);
-								const label =
-									position === "intro"
-										? t("workspace.bumpers.startVideo")
-										: t("workspace.bumpers.endVideo");
+								const label = t(getBumperLabelKey(position));
+								const isVerticalBumper =
+									position === "verticalIntro" || position === "verticalOutro";
 								const inputId = `bumper-${position}-file`;
 
 								return (
-									<Card
-										className="border-white/10 bg-slate-950/70"
-										key={position}
-									>
-										<CardHeader>
-											<CardTitle className="text-white">{label}</CardTitle>
-											<CardDescription className="text-slate-300">
-												{position === "intro"
-													? t("workspace.bumpers.startVideoDescription")
-													: t("workspace.bumpers.endVideoDescription")}
-											</CardDescription>
-										</CardHeader>
-										<CardContent className="space-y-4">
-											{previewUrl ? (
-												<ReactPlayer
-													className="aspect-video overflow-hidden rounded-md border border-white/10 bg-black"
-													controls
-													preload="metadata"
-													src={previewUrl}
-													style={{ width: "100%", height: "auto" }}
-													width="100%"
-												/>
-											) : null}
-											{showUploadControls ? (
-												<div className="space-y-2">
-													<p className="font-medium text-slate-200 text-xs uppercase tracking-[0.18em]">
-														{t("workspace.bumpers.uploadLabel", { label })}
-													</p>
-													{file ? null : (
-														<label
-															className={cn(
-																"flex aspect-video cursor-pointer flex-col items-center justify-center rounded-md border border-white/10 border-dashed bg-white/4 px-4 text-center text-slate-400 text-sm transition",
-																"hover:border-teal-300/40 hover:bg-teal-300/10 hover:text-teal-100",
-																isDropActive &&
-																	"border-teal-300/60 bg-teal-300/15 text-teal-50",
-																(!selectedChannel || isBumperMutating) &&
-																	"pointer-events-none cursor-not-allowed opacity-50",
-															)}
-															htmlFor={inputId}
-															onDragEnter={(event) => {
-																event.preventDefault();
-																setActiveBumperDropTarget(position);
-															}}
-															onDragLeave={(event) => {
-																event.preventDefault();
-																setActiveBumperDropTarget(null);
-															}}
-															onDragOver={(event) => event.preventDefault()}
-															onDrop={(event) => {
-																event.preventDefault();
-																setActiveBumperDropTarget(null);
-																selectBumperFile(
-																	position,
-																	event.dataTransfer.files?.[0] ?? null,
-																);
-															}}
-														>
-															<Upload className="mb-3 h-7 w-7 text-teal-200" />
-															<span className="font-medium text-slate-100">
-																{t("workspace.bumpers.dropTitle", { label })}
-															</span>
-															<span className="mt-1 text-slate-400 text-xs">
-																{t("workspace.bumpers.dropDescription")}
-															</span>
-															<Input
-																accept="video/*"
-																className="sr-only"
-																disabled={!selectedChannel || isBumperMutating}
-																id={inputId}
-																onChange={(event) =>
+									<div className="contents" key={position}>
+										{position === "verticalIntro" ? (
+											<div className="border-white/10 border-t pt-4 lg:col-span-2">
+												<p className="font-medium text-slate-100 text-sm">
+													{t("workspace.bumpers.verticalSectionTitle")}
+												</p>
+												<p className="mt-1 text-slate-400 text-xs">
+													{t("workspace.bumpers.verticalSectionDescription")}
+												</p>
+											</div>
+										) : null}
+										<Card
+											className="border-white/10 bg-slate-950/70"
+											key={position}
+										>
+											<CardHeader>
+												<CardTitle className="text-white">{label}</CardTitle>
+												<CardDescription className="text-slate-300">
+													{position === "intro"
+														? t("workspace.bumpers.startVideoDescription")
+														: position === "outro"
+															? t("workspace.bumpers.endVideoDescription")
+															: position === "verticalIntro"
+																? t(
+																		"workspace.bumpers.verticalStartVideoDescription",
+																	)
+																: t(
+																		"workspace.bumpers.verticalEndVideoDescription",
+																	)}
+												</CardDescription>
+											</CardHeader>
+											<CardContent className="space-y-4">
+												{previewUrl ? (
+													<ReactPlayer
+														className={cn(
+															"overflow-hidden rounded-md border border-white/10 bg-black",
+															isVerticalBumper
+																? "mx-auto aspect-[9/16] max-h-[360px]"
+																: "aspect-video",
+														)}
+														controls
+														preload="metadata"
+														src={previewUrl}
+														style={{ width: "100%", height: "auto" }}
+														width="100%"
+													/>
+												) : null}
+												{showUploadControls ? (
+													<div className="space-y-2">
+														<p className="font-medium text-slate-200 text-xs uppercase tracking-[0.18em]">
+															{t("workspace.bumpers.uploadLabel", { label })}
+														</p>
+														{file ? null : (
+															<label
+																className={cn(
+																	"flex cursor-pointer flex-col items-center justify-center rounded-md border border-white/10 border-dashed bg-white/4 px-4 text-center text-slate-400 text-sm transition",
+																	isVerticalBumper
+																		? "mx-auto aspect-[9/16] max-h-[360px] w-full"
+																		: "aspect-video",
+																	"hover:border-teal-300/40 hover:bg-teal-300/10 hover:text-teal-100",
+																	isDropActive &&
+																		"border-teal-300/60 bg-teal-300/15 text-teal-50",
+																	(!selectedChannel || isBumperMutating) &&
+																		"pointer-events-none cursor-not-allowed opacity-50",
+																)}
+																htmlFor={inputId}
+																onDragEnter={(event) => {
+																	event.preventDefault();
+																	setActiveBumperDropTarget(position);
+																}}
+																onDragLeave={(event) => {
+																	event.preventDefault();
+																	setActiveBumperDropTarget(null);
+																}}
+																onDragOver={(event) => event.preventDefault()}
+																onDrop={(event) => {
+																	event.preventDefault();
+																	setActiveBumperDropTarget(null);
 																	selectBumperFile(
 																		position,
-																		event.currentTarget.files?.[0] ?? null,
-																	)
-																}
-																type="file"
-															/>
-														</label>
-													)}
-													{file ? (
-														<div className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/5 px-3 py-2">
-															<p className="min-w-0 truncate text-slate-300 text-xs">
-																{t("workspace.bumpers.selectedFile", {
-																	name: file.name,
-																})}
-															</p>
-															<Button
-																className="h-8 shrink-0 border-white/10"
-																disabled={isBumperMutating}
-																onClick={() => clearBumperFile(position)}
-																size="sm"
-																type="button"
-																variant="outline"
+																		event.dataTransfer.files?.[0] ?? null,
+																	);
+																}}
 															>
-																{t("common.remove")}
-															</Button>
-														</div>
+																<Upload className="mb-3 h-7 w-7 text-teal-200" />
+																<span className="font-medium text-slate-100">
+																	{t("workspace.bumpers.dropTitle", { label })}
+																</span>
+																<span className="mt-1 text-slate-400 text-xs">
+																	{t("workspace.bumpers.dropDescription")}
+																</span>
+																<Input
+																	accept="video/*"
+																	className="sr-only"
+																	disabled={
+																		!selectedChannel || isBumperMutating
+																	}
+																	id={inputId}
+																	onChange={(event) =>
+																		selectBumperFile(
+																			position,
+																			event.currentTarget.files?.[0] ?? null,
+																		)
+																	}
+																	type="file"
+																/>
+															</label>
+														)}
+														{file ? (
+															<div className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/5 px-3 py-2">
+																<p className="min-w-0 truncate text-slate-300 text-xs">
+																	{t("workspace.bumpers.selectedFile", {
+																		name: file.name,
+																	})}
+																</p>
+																<Button
+																	className="h-8 shrink-0 border-white/10"
+																	disabled={isBumperMutating}
+																	onClick={() => clearBumperFile(position)}
+																	size="sm"
+																	type="button"
+																	variant="outline"
+																>
+																	{t("common.remove")}
+																</Button>
+															</div>
+														) : null}
+													</div>
+												) : null}
+												<div className="grid gap-2 sm:grid-cols-2">
+													{showUploadControls ? (
+														<Button
+															className="border-teal-300/20 bg-teal-300/10 text-teal-100 hover:bg-teal-300/15"
+															disabled={
+																!selectedChannel || !file || isBumperMutating
+															}
+															onClick={() =>
+																startTransition(() => {
+																	void handleUploadBumper(position);
+																})
+															}
+														>
+															{isBumperMutating ? (
+																<LoaderCircle className="h-4 w-4 animate-spin" />
+															) : (
+																<Upload className="h-4 w-4" />
+															)}
+															{t("workspace.bumpers.saveLabel", { label })}
+														</Button>
 													) : null}
-												</div>
-											) : null}
-											<div className="grid gap-2 sm:grid-cols-2">
-												{showUploadControls ? (
 													<Button
-														className="border-teal-300/20 bg-teal-300/10 text-teal-100 hover:bg-teal-300/15"
+														className="border-rose-300/25 bg-rose-300/10 text-rose-50 hover:bg-rose-300/15"
 														disabled={
-															!selectedChannel || !file || isBumperMutating
+															!selectedChannel ||
+															!savedPreviewUrl ||
+															isBumperMutating
 														}
 														onClick={() =>
 															startTransition(() => {
-																void handleUploadBumper(position);
+																void handleDeleteBumper(position);
 															})
 														}
+														variant="outline"
 													>
 														{isBumperMutating ? (
 															<LoaderCircle className="h-4 w-4 animate-spin" />
 														) : (
-															<Upload className="h-4 w-4" />
+															<Trash2 className="h-4 w-4" />
 														)}
-														{t("workspace.bumpers.saveLabel", { label })}
+														{t("common.remove")}
 													</Button>
-												) : null}
-												<Button
-													className="border-rose-300/25 bg-rose-300/10 text-rose-50 hover:bg-rose-300/15"
-													disabled={
-														!selectedChannel ||
-														!savedPreviewUrl ||
-														isBumperMutating
-													}
-													onClick={() =>
-														startTransition(() => {
-															void handleDeleteBumper(position);
-														})
-													}
-													variant="outline"
-												>
-													{isBumperMutating ? (
-														<LoaderCircle className="h-4 w-4 animate-spin" />
-													) : (
-														<Trash2 className="h-4 w-4" />
-													)}
-													{t("common.remove")}
-												</Button>
-											</div>
-										</CardContent>
-									</Card>
+												</div>
+											</CardContent>
+										</Card>
+									</div>
 								);
 							})}
 						</motion.section>

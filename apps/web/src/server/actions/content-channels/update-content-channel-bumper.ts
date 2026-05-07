@@ -2,6 +2,8 @@
 
 import {
 	buildChannelBumperStorageKey,
+	type ContentChannelBumperPosition,
+	ContentChannelBumperPositionSchema,
 	UpdateContentChannelBumperSchema,
 } from "~/modules/content-channels/domain/content-channel.valueobject";
 import { contentChannelRepository } from "~/modules/content-channels/infrastructure/content-channel.repository";
@@ -22,18 +24,41 @@ type UpdateContentChannelBumperActionResult =
 			error: string;
 	  };
 
+function getChannelBumperStorageKey(
+	channel: Awaited<ReturnType<typeof contentChannelRepository.findById>>,
+	position: ContentChannelBumperPosition,
+): string | null {
+	if (!channel) {
+		return null;
+	}
+
+	if (position === "intro") {
+		return channel.introStorageKey;
+	}
+	if (position === "outro") {
+		return channel.outroStorageKey;
+	}
+	if (position === "verticalIntro") {
+		return channel.verticalIntroStorageKey;
+	}
+	return channel.verticalOutroStorageKey;
+}
+
 export async function updateContentChannelBumperAction(
 	formData: FormData,
 ): Promise<UpdateContentChannelBumperActionResult> {
 	try {
 		await requireSession();
 		const channelId = String(formData.get("channelId") ?? "");
-		const position = String(formData.get("position") ?? "");
+		const positionResult = ContentChannelBumperPositionSchema.safeParse(
+			String(formData.get("position") ?? ""),
+		);
 		const file = formData.get("file");
 
-		if (position !== "intro" && position !== "outro") {
+		if (!positionResult.success) {
 			return { success: false, error: "Invalid bumper position" };
 		}
+		const position = positionResult.data;
 
 		if (!(file instanceof File) || file.size <= 0) {
 			return { success: false, error: "Choose a bumper video file" };
@@ -48,8 +73,7 @@ export async function updateContentChannelBumperAction(
 			return { success: false, error: "Channel not found" };
 		}
 
-		const existingStorageKey =
-			position === "intro" ? channel.introStorageKey : channel.outroStorageKey;
+		const existingStorageKey = getChannelBumperStorageKey(channel, position);
 		if (existingStorageKey) {
 			await deleteStorageObject(existingStorageKey).catch((error: unknown) => {
 				console.warn("Failed to delete previous channel bumper asset:", error);
@@ -92,18 +116,16 @@ export async function updateContentChannelBumperAction(
 
 export async function deleteContentChannelBumperAction(input: {
 	channelId: string;
-	position: "intro" | "outro";
+	position: ContentChannelBumperPosition;
 }): Promise<UpdateContentChannelBumperActionResult> {
 	try {
+		const position = ContentChannelBumperPositionSchema.parse(input.position);
 		const channel = await contentChannelRepository.findById(input.channelId);
 		if (!channel) {
 			return { success: false, error: "Channel not found" };
 		}
 
-		const storageKey =
-			input.position === "intro"
-				? channel.introStorageKey
-				: channel.outroStorageKey;
+		const storageKey = getChannelBumperStorageKey(channel, position);
 		if (storageKey) {
 			await deleteStorageObject(storageKey).catch((error: unknown) => {
 				console.warn("Failed to delete channel bumper asset:", error);
@@ -112,7 +134,7 @@ export async function deleteContentChannelBumperAction(input: {
 
 		const updatedChannel = await contentChannelRepository.updateBumper({
 			id: channel.id,
-			position: input.position,
+			position,
 			storageKey: null,
 			mimeType: null,
 		});

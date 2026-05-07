@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { AuthForm } from "~/components/auth/AuthForm";
 import { defaultLocale, type Locale } from "~/i18n/config";
 import { isLocale, localizePath } from "~/i18n/path";
-import { getSession } from "~/server/auth";
+import { getSession, hasExistingUser } from "~/server/auth";
 
 interface SignUpPageProps {
 	params: Promise<{ locale: string }>;
@@ -23,6 +23,10 @@ export default async function SignUpPage({
 	}
 
 	const switchHref = `${localizePath(locale, "/sign-in")}?returnTo=${encodeURIComponent(returnTo)}`;
+
+	if (await hasExistingUser()) {
+		redirect(switchHref);
+	}
 
 	return (
 		<AuthForm mode="sign-up" returnTo={returnTo} switchHref={switchHref} />

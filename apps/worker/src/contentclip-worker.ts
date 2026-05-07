@@ -396,6 +396,14 @@ async function processRenderJob(
 	const job = await contentJobRepository.findById(jobId);
 	const aspectMode = readRenderAspectMode(job?.payload.aspectMode);
 	const burnSubtitles = readRenderBurnSubtitles(job?.payload.burnSubtitles);
+	const introStorageKey =
+		aspectMode === "vertical9x16"
+			? (channel?.verticalIntroStorageKey ?? channel?.introStorageKey)
+			: channel?.introStorageKey;
+	const outroStorageKey =
+		aspectMode === "vertical9x16"
+			? (channel?.verticalOutroStorageKey ?? channel?.outroStorageKey)
+			: channel?.outroStorageKey;
 
 	await contentClipRepository.updateStatus({
 		id: clipId,
@@ -410,12 +418,8 @@ async function processRenderJob(
 
 	const workspace = await mkdtemp(join(tmpdir(), "contentclip-render-"));
 	const sourcePath = join(workspace, video.originalFilename);
-	const introPath = channel?.introStorageKey
-		? join(workspace, "intro.mp4")
-		: null;
-	const outroPath = channel?.outroStorageKey
-		? join(workspace, "outro.mp4")
-		: null;
+	const introPath = introStorageKey ? join(workspace, "intro.mp4") : null;
+	const outroPath = outroStorageKey ? join(workspace, "outro.mp4") : null;
 	const outputPath = join(workspace, `${clip.id}.mp4`);
 	const subtitlePath = burnSubtitles
 		? join(workspace, `${clip.id}.json`)
@@ -425,15 +429,15 @@ async function processRenderJob(
 		key: video.storageKey,
 		filePath: sourcePath,
 	});
-	if (channel?.introStorageKey && introPath) {
+	if (introStorageKey && introPath) {
 		await downloadStorageObjectToFile({
-			key: channel.introStorageKey,
+			key: introStorageKey,
 			filePath: introPath,
 		});
 	}
-	if (channel?.outroStorageKey && outroPath) {
+	if (outroStorageKey && outroPath) {
 		await downloadStorageObjectToFile({
-			key: channel.outroStorageKey,
+			key: outroStorageKey,
 			filePath: outroPath,
 		});
 	}

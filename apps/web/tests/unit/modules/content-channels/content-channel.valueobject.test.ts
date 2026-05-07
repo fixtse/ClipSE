@@ -12,6 +12,13 @@ describe("content channel helpers", () => {
 		expect(
 			buildChannelBumperStorageKey("channel-123", "intro", "Intro Clip.MOV"),
 		).toBe("channels/channel-123/bumpers/intro-intro-clip.mov");
+		expect(
+			buildChannelBumperStorageKey(
+				"channel-123",
+				"verticalIntro",
+				"Vertical Intro.MOV",
+			),
+		).toBe("channels/channel-123/bumpers/verticalIntro-vertical-intro.mov");
 	});
 
 	it("uses stable fallback filenames when sanitized asset names are empty", () => {

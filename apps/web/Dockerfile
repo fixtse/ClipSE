@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS base
+FROM node:24-alpine AS base
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ COPY . .
 
 RUN SKIP_ENV_VALIDATION=1 pnpm build
 
-FROM node:24-bookworm-slim AS runner
+FROM node:24-alpine AS runner
 
 WORKDIR /app
 

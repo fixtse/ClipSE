@@ -22,7 +22,7 @@ import { authClient } from "~/lib/auth-client";
 interface AuthFormProps {
 	mode: "sign-in" | "sign-up";
 	returnTo: string;
-	switchHref: string;
+	switchHref?: string;
 }
 
 export function AuthForm({ mode, returnTo, switchHref }: AuthFormProps) {
@@ -128,15 +128,17 @@ export function AuthForm({ mode, returnTo, switchHref }: AuthFormProps) {
 							{submitLabel}
 						</Button>
 					</form>
-					<p className="mt-5 text-center text-slate-400 text-sm">
-						{switchLabel}{" "}
-						<Link
-							className="text-cyan-200 hover:text-cyan-100"
-							href={switchHref}
-						>
-							{switchAction}
-						</Link>
-					</p>
+					{switchHref ? (
+						<p className="mt-5 text-center text-slate-400 text-sm">
+							{switchLabel}{" "}
+							<Link
+								className="text-cyan-200 hover:text-cyan-100"
+								href={switchHref}
+							>
+								{switchAction}
+							</Link>
+						</p>
+					) : null}
 				</CardContent>
 			</Card>
 		</div>

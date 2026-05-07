@@ -9,11 +9,26 @@ export const ContentChannelSchema = z.object({
 	introMimeType: z.string().min(1).max(120).nullable(),
 	outroStorageKey: z.string().min(1).nullable(),
 	outroMimeType: z.string().min(1).max(120).nullable(),
+	verticalIntroStorageKey: z.string().min(1).nullable(),
+	verticalIntroMimeType: z.string().min(1).max(120).nullable(),
+	verticalOutroStorageKey: z.string().min(1).nullable(),
+	verticalOutroMimeType: z.string().min(1).max(120).nullable(),
 	createdAt: z.date(),
 	updatedAt: z.date(),
 });
 
 export type ContentChannel = z.infer<typeof ContentChannelSchema>;
+
+export const ContentChannelBumperPositionSchema = z.enum([
+	"intro",
+	"outro",
+	"verticalIntro",
+	"verticalOutro",
+]);
+
+export type ContentChannelBumperPosition = z.infer<
+	typeof ContentChannelBumperPositionSchema
+>;
 
 export const CreateContentChannelSchema = z.object({
 	name: z.string().trim().min(1).max(120),
@@ -27,7 +42,7 @@ export type CreateContentChannelInput = z.infer<
 
 export const UpdateContentChannelBumperSchema = z.object({
 	id: z.string().uuid(),
-	position: z.enum(["intro", "outro"]),
+	position: ContentChannelBumperPositionSchema,
 	storageKey: z.string().min(1).nullable(),
 	mimeType: z.string().min(1).max(120).nullable(),
 });
@@ -46,7 +61,7 @@ function sanitizeAssetName(filename: string): string {
 
 export function buildChannelBumperStorageKey(
 	channelId: string,
-	position: "intro" | "outro",
+	position: ContentChannelBumperPosition,
 	filename: string,
 ): string {
 	return `channels/${channelId}/bumpers/${position}-${sanitizeAssetName(filename) || "video.mp4"}`;

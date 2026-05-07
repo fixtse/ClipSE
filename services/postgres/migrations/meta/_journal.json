@@ -64,6 +64,13 @@
       "when": 1778124235786,
       "tag": "0008_certain_night_thrasher",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1778180020780,
+      "tag": "0009_thick_taskmaster",
+      "breakpoints": true
     }
   ]
 }
