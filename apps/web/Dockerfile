@@ -2,7 +2,8 @@ FROM node:24-bookworm-slim
 
 RUN apt-get update \
 	&& apt-get install -y ffmpeg ca-certificates openssl yt-dlp python3-pip python3-opencv \
-	&& python3 -m pip install --break-system-packages --no-cache-dir --upgrade yt-dlp \
+	&& python3 -m pip install --break-system-packages --no-cache-dir --upgrade torch torchvision --index-url https://download.pytorch.org/whl/cu128 \
+	&& python3 -m pip install --break-system-packages --no-cache-dir --upgrade yt-dlp ultralytics \
 	&& rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

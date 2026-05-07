@@ -19,6 +19,7 @@ describe("buildFocusPlan", () => {
 				},
 			],
 			fallback: true,
+			detectorBackend: "opencv",
 		});
 	});
 
@@ -34,7 +35,7 @@ describe("buildFocusPlan", () => {
 					width: 220,
 					height: 280,
 					score: 0.8,
-					source: "face",
+					source: "person",
 				},
 				{
 					timestampSeconds: 1,
@@ -43,12 +44,14 @@ describe("buildFocusPlan", () => {
 					width: 220,
 					height: 280,
 					score: 0.6,
-					source: "face",
+					source: "person",
 				},
 			],
+			detectorBackend: "yolo-cuda",
 		});
 
 		expect(plan.fallback).toBe(false);
+		expect(plan.detectorBackend).toBe("yolo-cuda");
 		expect(plan.regions).toHaveLength(1);
 		const region = plan.regions[0];
 		expect(region).toBeDefined();

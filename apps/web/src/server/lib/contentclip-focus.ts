@@ -11,8 +11,10 @@ export interface FocusDetection {
 	width: number;
 	height: number;
 	score: number;
-	source: "face" | "motion";
+	source: "face" | "motion" | "person";
 }
+
+export type DetectorBackend = "opencv" | "yolo-cuda";
 
 export interface FocusRegion {
 	centerX: number;
@@ -24,6 +26,7 @@ export interface FocusRegion {
 export interface FocusPlan {
 	regions: FocusRegion[];
 	fallback: boolean;
+	detectorBackend: DetectorBackend;
 }
 
 interface ClusterAccumulator {
@@ -50,6 +53,7 @@ export function buildFocusPlan(input: {
 	detections: readonly FocusDetection[];
 	frameWidth: number;
 	frameHeight: number;
+	detectorBackend?: DetectorBackend;
 }): FocusPlan {
 	const safeFrameWidth = Math.max(1, input.frameWidth);
 	const safeFrameHeight = Math.max(1, input.frameHeight);
@@ -73,6 +77,7 @@ export function buildFocusPlan(input: {
 				},
 			],
 			fallback: true,
+			detectorBackend: input.detectorBackend ?? "opencv",
 		};
 	}
 
@@ -138,6 +143,7 @@ export function buildFocusPlan(input: {
 	return {
 		regions,
 		fallback: false,
+		detectorBackend: input.detectorBackend ?? "opencv",
 	};
 }
 
@@ -164,11 +170,16 @@ export async function detectFocusRegions(input: {
 			],
 			{ maxBuffer: 1024 * 1024 * 5 },
 		);
-		const parsed = JSON.parse(stdout) as { detections?: FocusDetection[] };
+		const parsed = JSON.parse(stdout) as {
+			detections?: FocusDetection[];
+			detectorBackend?: DetectorBackend;
+		};
 		return buildFocusPlan({
 			detections: parsed.detections ?? [],
 			frameWidth: input.frameWidth,
 			frameHeight: input.frameHeight,
+			detectorBackend:
+				parsed.detectorBackend === "yolo-cuda" ? "yolo-cuda" : "opencv",
 		});
 	} catch (error) {
 		console.warn("Focus detection failed; using centered crop:", error);
@@ -176,6 +187,7 @@ export async function detectFocusRegions(input: {
 			detections: [],
 			frameWidth: input.frameWidth,
 			frameHeight: input.frameHeight,
+			detectorBackend: "opencv",
 		});
 	}
 }

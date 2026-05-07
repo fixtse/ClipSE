@@ -95,6 +95,7 @@ services:
   worker:
     image: ${CONTENTCLIP_APP_IMAGE:-ghcr.io/fixtse/contentclip-app:latest}
     container_name: contentclip-worker
+    runtime: nvidia
     restart: unless-stopped
     env_file:
       - .env
@@ -110,6 +111,9 @@ services:
       WHISPER_SERVICE_URL: http://whisper:8000
       CONTENTCLIP_YTDLP_COOKIES_FILE: ${CONTENTCLIP_YTDLP_COOKIES_FILE:-}
       CONTENTCLIP_YTDLP_USER_AGENT: ${CONTENTCLIP_YTDLP_USER_AGENT:-}
+      CONTENTCLIP_YOLO_MODEL: ${CONTENTCLIP_YOLO_MODEL:-yolo11n.pt}
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+      NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:

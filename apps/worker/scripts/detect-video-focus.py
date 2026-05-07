@@ -1,12 +1,96 @@
 #!/usr/bin/env python3
+import os
 import json
 import sys
-
-import cv2
 
 
 SAMPLE_INTERVAL_SECONDS = 0.75
 MAX_SAMPLE_WIDTH = 640
+PERSON_CLASS_ID = 0
+
+
+def try_import_cv2():
+    try:
+        import cv2
+
+        return cv2
+    except Exception:
+        return None
+
+
+def detect_yolo_cuda(file_path, start_seconds, end_seconds):
+    cv2 = try_import_cv2()
+    if cv2 is None:
+        return None
+
+    try:
+        import torch
+        from ultralytics import YOLO
+    except Exception:
+        return None
+
+    if not torch.cuda.is_available():
+        return None
+
+    try:
+        capture = cv2.VideoCapture(file_path)
+        if not capture.isOpened():
+            return None
+
+        model_name = os.environ.get("CONTENTCLIP_YOLO_MODEL", "yolo11n.pt")
+        model = YOLO(model_name)
+        detections = []
+        timestamp = start_seconds
+
+        while timestamp < end_seconds:
+            capture.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1000)
+            ok, frame = capture.read()
+            if not ok:
+                break
+
+            frame_height, frame_width = frame.shape[:2]
+            scale = min(1.0, MAX_SAMPLE_WIDTH / max(1, frame_width))
+            resized = (
+                cv2.resize(
+                    frame,
+                    (int(frame_width * scale), int(frame_height * scale)),
+                    interpolation=cv2.INTER_AREA,
+                )
+                if scale < 1.0
+                else frame
+            )
+
+            results = model.predict(
+                resized,
+                classes=[PERSON_CLASS_ID],
+                device=0,
+                imgsz=MAX_SAMPLE_WIDTH,
+                verbose=False,
+            )
+            result = results[0] if results else None
+            boxes = [] if result is None else result.boxes
+            if boxes is not None:
+                for box in boxes[:2]:
+                    confidence = float(box.conf[0].item())
+                    x1, y1, x2, y2 = [float(value) for value in box.xyxy[0].tolist()]
+                    detections.append(
+                        {
+                            "timestampSeconds": timestamp,
+                            "x": x1 / scale,
+                            "y": y1 / scale,
+                            "width": max(1.0, (x2 - x1) / scale),
+                            "height": max(1.0, (y2 - y1) / scale),
+                            "score": confidence,
+                            "source": "person",
+                        }
+                    )
+
+            timestamp += SAMPLE_INTERVAL_SECONDS
+
+        capture.release()
+        return detections
+    except Exception:
+        return None
 
 
 def scale_rect(rect, scale):
@@ -44,18 +128,14 @@ def detect_motion(previous_gray, gray, scale):
     return sorted(boxes, key=lambda box: box["score"], reverse=True)[:2]
 
 
-def main():
-    if len(sys.argv) != 4:
-        print(json.dumps({"detections": []}))
-        return
+def detect_opencv(file_path, start_seconds, end_seconds):
+    cv2 = try_import_cv2()
+    if cv2 is None:
+        return None
 
-    file_path = sys.argv[1]
-    start_seconds = float(sys.argv[2])
-    end_seconds = float(sys.argv[3])
     capture = cv2.VideoCapture(file_path)
     if not capture.isOpened():
-        print(json.dumps({"detections": []}))
-        return
+        return None
 
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
@@ -108,7 +188,35 @@ def main():
         timestamp += SAMPLE_INTERVAL_SECONDS
 
     capture.release()
-    print(json.dumps({"detections": detections}))
+    return detections
+
+
+def main():
+    if len(sys.argv) != 4:
+        print(json.dumps({"detections": [], "detectorBackend": "opencv"}))
+        return
+
+    file_path = sys.argv[1]
+    start_seconds = float(sys.argv[2])
+    end_seconds = float(sys.argv[3])
+    yolo_detections = detect_yolo_cuda(file_path, start_seconds, end_seconds)
+    if yolo_detections is not None and len(yolo_detections) > 0:
+        print(
+            json.dumps(
+                {"detections": yolo_detections, "detectorBackend": "yolo-cuda"}
+            )
+        )
+        return
+
+    opencv_detections = detect_opencv(file_path, start_seconds, end_seconds)
+    print(
+        json.dumps(
+            {
+                "detections": opencv_detections or [],
+                "detectorBackend": "opencv",
+            }
+        )
+    )
 
 
 if __name__ == "__main__":
