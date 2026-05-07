@@ -191,7 +191,7 @@ ${input.jsonInstructions}`;
 			}),
 			prompt,
 		});
-		return output;
+		return input.schema.parse(output);
 	} catch (error) {
 		if (!NoObjectGeneratedError.isInstance(error) || !error.text) {
 			throw error;

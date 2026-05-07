@@ -2538,10 +2538,10 @@ export function ContentClipWorkspace({
 																		<div className="space-y-3">
 																			{filteredTranscriptSegments.length ? (
 																				filteredTranscriptSegments.map(
-																					(segment, index) => (
+																					(segment) => (
 																						<button
 																							className="w-full rounded-md border border-white/8 bg-slate-950/45 p-3 text-left transition hover:bg-slate-900/70"
-																							key={`${segment.start}-${segment.end}-${index}`}
+																							key={`${segment.start}-${segment.end}-${segment.text}`}
 																							onClick={() =>
 																								seekVideo(segment.start)
 																							}
