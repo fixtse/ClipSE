@@ -6,6 +6,7 @@
 /.pnp
 .pnp.js
 /.pnpm-store/
+yolo11n.pt
 
 # testing
 /coverage

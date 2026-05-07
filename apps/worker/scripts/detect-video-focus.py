@@ -4,9 +4,10 @@ import json
 import sys
 
 
-SAMPLE_INTERVAL_SECONDS = 0.75
+SAMPLE_INTERVAL_SECONDS = 0.35
 MAX_SAMPLE_WIDTH = 640
 PERSON_CLASS_ID = 0
+MAX_GROUPS_PER_FRAME = 2
 
 
 def try_import_cv2():
@@ -69,21 +70,25 @@ def detect_yolo_cuda(file_path, start_seconds, end_seconds):
             )
             result = results[0] if results else None
             boxes = [] if result is None else result.boxes
+            frame_boxes = []
             if boxes is not None:
-                for box in boxes[:2]:
+                for box in boxes:
                     confidence = float(box.conf[0].item())
                     x1, y1, x2, y2 = [float(value) for value in box.xyxy[0].tolist()]
-                    detections.append(
+                    frame_boxes.append(
                         {
-                            "timestampSeconds": timestamp,
                             "x": x1 / scale,
                             "y": y1 / scale,
                             "width": max(1.0, (x2 - x1) / scale),
                             "height": max(1.0, (y2 - y1) / scale),
                             "score": confidence,
-                            "source": "person",
                         }
                     )
+
+            for group in group_boxes(frame_boxes, frame_width):
+                group["timestampSeconds"] = timestamp
+                group["source"] = "person-group"
+                detections.append(group)
 
             timestamp += SAMPLE_INTERVAL_SECONDS
 
@@ -100,6 +105,57 @@ def scale_rect(rect, scale):
         "y": float(y / scale),
         "width": float(width / scale),
         "height": float(height / scale),
+    }
+
+
+def group_boxes(boxes, frame_width):
+    if len(boxes) == 0:
+        return []
+
+    boxes_by_center = sorted(boxes, key=lambda box: box["x"] + box["width"] / 2)
+
+    if len(boxes_by_center) == 1:
+        return boxes_by_center
+
+    if len(boxes_by_center) == MAX_GROUPS_PER_FRAME:
+        left = boxes_by_center[0]
+        right = boxes_by_center[1]
+        left_center = left["x"] + left["width"] / 2
+        right_center = right["x"] + right["width"] / 2
+        if right_center - left_center < frame_width * 0.18:
+            return [merge_boxes(boxes_by_center)]
+        return sorted(boxes, key=lambda box: box["score"], reverse=True)
+
+    gaps = []
+    for index in range(len(boxes_by_center) - 1):
+        left = boxes_by_center[index]
+        right = boxes_by_center[index + 1]
+        left_center = left["x"] + left["width"] / 2
+        right_center = right["x"] + right["width"] / 2
+        gaps.append((right_center - left_center, index))
+
+    largest_gap, split_index = max(gaps, key=lambda gap: gap[0])
+    if largest_gap < frame_width * 0.18:
+        return [merge_boxes(boxes_by_center)]
+
+    return [
+        merge_boxes(boxes_by_center[: split_index + 1]),
+        merge_boxes(boxes_by_center[split_index + 1 :]),
+    ]
+
+
+def merge_boxes(boxes):
+    left = min(box["x"] for box in boxes)
+    top = min(box["y"] for box in boxes)
+    right = max(box["x"] + box["width"] for box in boxes)
+    bottom = max(box["y"] + box["height"] for box in boxes)
+    score = sum(box["score"] for box in boxes) / len(boxes)
+    return {
+        "x": left,
+        "y": top,
+        "width": max(1.0, right - left),
+        "height": max(1.0, bottom - top),
+        "score": min(1.0, score + 0.08 * (len(boxes) - 1)),
     }
 
 
@@ -171,14 +227,17 @@ def detect_opencv(file_path, start_seconds, end_seconds):
 
         if len(faces) > 0:
             ranked_faces = sorted(faces, key=lambda face: face[2] * face[3], reverse=True)[
-                :2
+                :4
             ]
+            frame_boxes = []
             for face in ranked_faces:
                 rect = scale_rect(face, scale)
                 rect["score"] = min(1.0, float((face[2] * face[3]) / 16000))
-                rect["source"] = "face"
-                rect["timestampSeconds"] = timestamp
-                detections.append(rect)
+                frame_boxes.append(rect)
+            for group in group_boxes(frame_boxes, frame_width):
+                group["source"] = "face-group"
+                group["timestampSeconds"] = timestamp
+                detections.append(group)
         else:
             for rect in detect_motion(previous_gray, gray, scale):
                 rect["timestampSeconds"] = timestamp

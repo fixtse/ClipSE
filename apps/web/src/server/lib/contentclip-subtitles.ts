@@ -4,6 +4,13 @@ export interface RenderSubtitleCue {
 	startSeconds: number;
 	endSeconds: number;
 	text: string;
+	words: RenderSubtitleWord[];
+}
+
+export interface RenderSubtitleWord {
+	startSeconds: number;
+	endSeconds: number;
+	text: string;
 }
 
 const SUBTITLE_WORDS_PER_CUE = 4;
@@ -41,6 +48,10 @@ function chunkWords(text: string): string[] {
 	return chunks;
 }
 
+function splitWords(text: string): string[] {
+	return text.split(/\s+/).filter(Boolean);
+}
+
 export function buildRenderSubtitleCues(input: {
 	segments: readonly ContentTranscriptionSegment[];
 	clipStartSeconds: number;
@@ -55,15 +66,33 @@ export function buildRenderSubtitleCues(input: {
 		const startSeconds = Math.max(segment.start, input.clipStartSeconds);
 		const endSeconds = Math.min(segment.end, input.clipEndSeconds);
 		const durationSeconds = endSeconds - startSeconds;
+		const words = splitWords(segment.text);
 		const chunks = chunkWords(segment.text);
 
-		if (durationSeconds <= 0 || chunks.length === 0) {
+		if (durationSeconds <= 0 || chunks.length === 0 || words.length === 0) {
 			return [];
 		}
 
 		const chunkDurationSeconds = durationSeconds / chunks.length;
+		const wordDurationSeconds = durationSeconds / words.length;
+		const timedWords = words.map((word, index) => ({
+			startSeconds: Math.max(
+				0,
+				startSeconds - input.clipStartSeconds + wordDurationSeconds * index,
+			),
+			endSeconds: Math.min(
+				clipDurationSeconds,
+				index === words.length - 1
+					? endSeconds - input.clipStartSeconds
+					: startSeconds -
+							input.clipStartSeconds +
+							wordDurationSeconds * (index + 1),
+			),
+			text: word,
+		}));
 
 		return chunks.flatMap((chunk, index) => {
+			const chunkStartWordIndex = index * SUBTITLE_WORDS_PER_CUE;
 			const cueStartSeconds =
 				startSeconds - input.clipStartSeconds + chunkDurationSeconds * index;
 			const cueEndSeconds =
@@ -82,6 +111,10 @@ export function buildRenderSubtitleCues(input: {
 				startSeconds: Math.max(0, cueStartSeconds),
 				endSeconds: Math.min(clipDurationSeconds, cueEndSeconds),
 				text: chunk,
+				words: timedWords.slice(
+					chunkStartWordIndex,
+					chunkStartWordIndex + SUBTITLE_WORDS_PER_CUE,
+				),
 			};
 		});
 	});

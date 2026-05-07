@@ -18,9 +18,15 @@ describe("contentclip subtitles", () => {
 			],
 		});
 
-		expect(cues).toEqual([
+		expect(cues).toMatchObject([
 			{ startSeconds: 0, endSeconds: 2.5, text: "This is a very" },
 			{ startSeconds: 2.5, endSeconds: 5, text: "useful clip moment" },
+		]);
+		expect(cues[0]?.words.map((word) => word.text)).toEqual([
+			"This",
+			"is",
+			"a",
+			"very",
 		]);
 	});
 
@@ -30,6 +36,7 @@ describe("contentclip subtitles", () => {
 				startSeconds: 0,
 				endSeconds: 1.2,
 				text: "Use {braces} and \\ slash",
+				words: [],
 			},
 		]);
 

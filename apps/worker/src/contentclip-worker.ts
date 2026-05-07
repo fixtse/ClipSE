@@ -29,10 +29,7 @@ import {
 	downloadStorageObjectToFile,
 	uploadLocalFileToStorage,
 } from "~/server/lib/contentclip-storage";
-import {
-	buildAssSubtitleFile,
-	buildRenderSubtitleCues,
-} from "~/server/lib/contentclip-subtitles";
+import { buildRenderSubtitleCues } from "~/server/lib/contentclip-subtitles";
 import { transcribeWithWhisperService } from "~/server/lib/contentclip-whisper";
 
 const runnerId = `contentclip-worker-${randomUUID()}`;
@@ -420,7 +417,9 @@ async function processRenderJob(
 		? join(workspace, "outro.mp4")
 		: null;
 	const outputPath = join(workspace, `${clip.id}.mp4`);
-	const subtitlePath = burnSubtitles ? join(workspace, `${clip.id}.ass`) : null;
+	const subtitlePath = burnSubtitles
+		? join(workspace, `${clip.id}.json`)
+		: null;
 
 	await downloadStorageObjectToFile({
 		key: video.storageKey,
@@ -456,7 +455,7 @@ async function processRenderJob(
 			clipStartSeconds: clip.startSeconds,
 			clipEndSeconds: clip.endSeconds,
 		});
-		await writeFile(subtitlePath, buildAssSubtitleFile(cues), "utf8");
+		await writeFile(subtitlePath, JSON.stringify(cues), "utf8");
 	}
 
 	await contentJobRepository.updateProgress({

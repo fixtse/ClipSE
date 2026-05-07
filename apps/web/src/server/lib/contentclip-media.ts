@@ -1,11 +1,13 @@
 import { execFile, spawn } from "node:child_process";
-import { open, readdir, stat, writeFile } from "node:fs/promises";
+import { open, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
 import {
 	detectFocusRegions,
 	type FocusPlan,
+	type FocusRegion,
 } from "~/server/lib/contentclip-focus";
+import type { RenderSubtitleCue } from "~/server/lib/contentclip-subtitles";
 
 const execFileAsync = promisify(execFile);
 
@@ -76,6 +78,40 @@ async function runFfmpegWithFallback(input: {
 		console.warn("NVIDIA ffmpeg path failed, falling back to CPU:", error);
 		await runBinary("ffmpeg", input.cpuArgs);
 	}
+}
+
+function getNvencOutputArgs(): string[] {
+	return [
+		"-c:v",
+		"h264_nvenc",
+		"-profile:v",
+		"high",
+		"-preset",
+		"p4",
+		"-tune",
+		"hq",
+		"-rc",
+		"vbr",
+		"-cq",
+		"22",
+		"-b:v",
+		"0",
+		"-pix_fmt",
+		"yuv420p",
+	];
+}
+
+function getX264OutputArgs(): string[] {
+	return [
+		"-c:v",
+		"libx264",
+		"-preset",
+		"veryfast",
+		"-crf",
+		"22",
+		"-pix_fmt",
+		"yuv420p",
+	];
 }
 
 function parseFrameRate(value: string | undefined): number | null {
@@ -352,25 +388,31 @@ export async function renderClipSegment(input: {
 	]);
 }
 
-function escapeFilterPath(filePath: string): string {
-	return filePath
-		.replaceAll("\\", "\\\\")
-		.replaceAll(":", "\\:")
-		.replaceAll("'", "\\'");
-}
-
 function getCrop(input: {
 	frameWidth: number;
 	frameHeight: number;
 	centerX: number;
 	centerY: number;
 	targetAspectRatio: number;
+	focusWidth?: number | null;
+	focusHeight?: number | null;
 }): { x: number; y: number; width: number; height: number } {
 	const frameAspectRatio = input.frameWidth / input.frameHeight;
-	const cropWidth =
+	const minimumCropWidth =
+		input.focusWidth && input.focusHeight
+			? Math.max(
+					input.focusWidth * 1.22,
+					input.focusHeight * input.targetAspectRatio * 1.12,
+				)
+			: 0;
+	const maximumCropWidth =
 		frameAspectRatio > input.targetAspectRatio
 			? input.frameHeight * input.targetAspectRatio
 			: input.frameWidth;
+	const cropWidth = Math.min(
+		maximumCropWidth,
+		Math.max(maximumCropWidth * 0.48, minimumCropWidth),
+	);
 	const cropHeight = cropWidth / input.targetAspectRatio;
 	const x = Math.max(
 		0,
@@ -389,14 +431,6 @@ function getCrop(input: {
 	};
 }
 
-function buildSubtitleFilter(
-	subtitleFilePath: string | null | undefined,
-): string {
-	return subtitleFilePath
-		? `,subtitles='${escapeFilterPath(subtitleFilePath)}'`
-		: "";
-}
-
 async function renderVerticalClipSegment(input: {
 	inputFilePath: string;
 	outputFilePath: string;
@@ -407,8 +441,104 @@ async function renderVerticalClipSegment(input: {
 	focusPlan: FocusPlan;
 	subtitleFilePath?: string | null;
 }): Promise<void> {
-	const regions = input.focusPlan.regions.slice(0, 2);
-	const subtitleFilter = buildSubtitleFilter(input.subtitleFilePath);
+	const windows = input.focusPlan.windows.filter(
+		(window) => window.endSeconds > window.startSeconds,
+	);
+	const workspace = dirname(input.outputFilePath);
+
+	if (windows.length > 1) {
+		const scenePaths = await Promise.all(
+			windows.map(async (window, index) => {
+				const outputFilePath = join(workspace, `vertical-scene-${index}.mp4`);
+				await renderVerticalSceneSegment({
+					inputFilePath: input.inputFilePath,
+					outputFilePath,
+					startSeconds: window.startSeconds,
+					durationSeconds: window.endSeconds - window.startSeconds,
+					frameWidth: input.frameWidth,
+					frameHeight: input.frameHeight,
+					regions: window.regions,
+				});
+				return outputFilePath;
+			}),
+		);
+
+		const concatOutputPath = input.subtitleFilePath
+			? join(workspace, "vertical-scenes-concat.mp4")
+			: input.outputFilePath;
+		const concatListPath = join(workspace, "vertical-scene-list.txt");
+		await writeFile(
+			concatListPath,
+			scenePaths
+				.map((filePath) => `file '${filePath.replaceAll("'", "'\\''")}'`)
+				.join("\n"),
+			"utf8",
+		);
+
+		await runBinary("ffmpeg", [
+			"-y",
+			"-f",
+			"concat",
+			"-safe",
+			"0",
+			"-i",
+			concatListPath,
+			"-c",
+			"copy",
+			"-movflags",
+			"+faststart",
+			concatOutputPath,
+		]);
+
+		if (input.subtitleFilePath) {
+			await renderCaptionOverlayAndComposite({
+				inputFilePath: concatOutputPath,
+				outputFilePath: input.outputFilePath,
+				subtitleFilePath: input.subtitleFilePath,
+				durationSeconds: input.durationSeconds,
+				width: 1080,
+				height: 1920,
+			});
+		}
+		return;
+	}
+
+	const staticRegions = windows[0]?.regions ?? input.focusPlan.regions;
+	const sceneOutputPath = input.subtitleFilePath
+		? join(workspace, "vertical-scene-no-captions.mp4")
+		: input.outputFilePath;
+	await renderVerticalSceneSegment({
+		inputFilePath: input.inputFilePath,
+		outputFilePath: sceneOutputPath,
+		startSeconds: input.startSeconds,
+		durationSeconds: input.durationSeconds,
+		frameWidth: input.frameWidth,
+		frameHeight: input.frameHeight,
+		regions: staticRegions,
+	});
+
+	if (input.subtitleFilePath) {
+		await renderCaptionOverlayAndComposite({
+			inputFilePath: sceneOutputPath,
+			outputFilePath: input.outputFilePath,
+			subtitleFilePath: input.subtitleFilePath,
+			durationSeconds: input.durationSeconds,
+			width: 1080,
+			height: 1920,
+		});
+	}
+}
+
+async function renderVerticalSceneSegment(input: {
+	inputFilePath: string;
+	outputFilePath: string;
+	startSeconds: number;
+	durationSeconds: number;
+	frameWidth: number;
+	frameHeight: number;
+	regions: readonly FocusRegion[];
+}): Promise<void> {
+	const regions = input.regions.slice(0, 2);
 
 	if (regions.length >= 2) {
 		const [topRegion, bottomRegion] = regions as [
@@ -420,6 +550,8 @@ async function renderVerticalClipSegment(input: {
 			frameHeight: input.frameHeight,
 			centerX: topRegion.centerX,
 			centerY: topRegion.centerY,
+			focusWidth: topRegion.width,
+			focusHeight: topRegion.height,
 			targetAspectRatio: 1080 / 960,
 		});
 		const bottomCrop = getCrop({
@@ -427,14 +559,85 @@ async function renderVerticalClipSegment(input: {
 			frameHeight: input.frameHeight,
 			centerX: bottomRegion.centerX,
 			centerY: bottomRegion.centerY,
+			focusWidth: bottomRegion.width,
+			focusHeight: bottomRegion.height,
 			targetAspectRatio: 1080 / 960,
 		});
 		const filterComplex =
 			`[0:v]crop=${topCrop.width}:${topCrop.height}:${topCrop.x}:${topCrop.y},scale=1080:960,setsar=1[top];` +
 			`[0:v]crop=${bottomCrop.width}:${bottomCrop.height}:${bottomCrop.x}:${bottomCrop.y},scale=1080:960,setsar=1[bottom];` +
-			`[top][bottom]vstack=inputs=2,format=yuv420p${subtitleFilter}[v]`;
+			"[top][bottom]vstack=inputs=2,format=yuv420p[v]";
 
-		await runBinary("ffmpeg", [
+		await runFfmpegWithFallback({
+			nvidiaArgs: [
+				"-y",
+				"-ss",
+				input.startSeconds.toFixed(3),
+				"-i",
+				input.inputFilePath,
+				"-t",
+				input.durationSeconds.toFixed(3),
+				"-filter_complex",
+				filterComplex,
+				"-map",
+				"[v]",
+				"-map",
+				"0:a:0?",
+				...getNvencOutputArgs(),
+				"-c:a",
+				"aac",
+				"-b:a",
+				"160k",
+				"-movflags",
+				"+faststart",
+				input.outputFilePath,
+			],
+			cpuArgs: [
+				"-y",
+				"-ss",
+				input.startSeconds.toFixed(3),
+				"-i",
+				input.inputFilePath,
+				"-t",
+				input.durationSeconds.toFixed(3),
+				"-filter_complex",
+				filterComplex,
+				"-map",
+				"[v]",
+				"-map",
+				"0:a:0?",
+				...getX264OutputArgs(),
+				"-c:a",
+				"aac",
+				"-b:a",
+				"160k",
+				"-movflags",
+				"+faststart",
+				input.outputFilePath,
+			],
+		});
+		return;
+	}
+
+	const region = regions[0] ?? {
+		centerX: input.frameWidth / 2,
+		centerY: input.frameHeight / 2,
+		width: null,
+		height: null,
+	};
+	const crop = getCrop({
+		frameWidth: input.frameWidth,
+		frameHeight: input.frameHeight,
+		centerX: region.centerX,
+		centerY: region.centerY,
+		focusWidth: region.width,
+		focusHeight: region.height,
+		targetAspectRatio: 9 / 16,
+	});
+
+	const filter = `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y},scale=1080:1920,setsar=1,format=yuv420p`;
+	await runFfmpegWithFallback({
+		nvidiaArgs: [
 			"-y",
 			"-ss",
 			input.startSeconds.toFixed(3),
@@ -442,20 +645,13 @@ async function renderVerticalClipSegment(input: {
 			input.inputFilePath,
 			"-t",
 			input.durationSeconds.toFixed(3),
-			"-filter_complex",
-			filterComplex,
 			"-map",
-			"[v]",
+			"0:v:0",
 			"-map",
 			"0:a:0?",
-			"-c:v",
-			"libx264",
-			"-preset",
-			"veryfast",
-			"-crf",
-			"22",
-			"-pix_fmt",
-			"yuv420p",
+			"-vf",
+			filter,
+			...getNvencOutputArgs(),
 			"-c:a",
 			"aac",
 			"-b:a",
@@ -463,52 +659,31 @@ async function renderVerticalClipSegment(input: {
 			"-movflags",
 			"+faststart",
 			input.outputFilePath,
-		]);
-		return;
-	}
-
-	const region = regions[0] ?? {
-		centerX: input.frameWidth / 2,
-		centerY: input.frameHeight / 2,
-	};
-	const crop = getCrop({
-		frameWidth: input.frameWidth,
-		frameHeight: input.frameHeight,
-		centerX: region.centerX,
-		centerY: region.centerY,
-		targetAspectRatio: 9 / 16,
+		],
+		cpuArgs: [
+			"-y",
+			"-ss",
+			input.startSeconds.toFixed(3),
+			"-i",
+			input.inputFilePath,
+			"-t",
+			input.durationSeconds.toFixed(3),
+			"-map",
+			"0:v:0",
+			"-map",
+			"0:a:0?",
+			"-vf",
+			filter,
+			...getX264OutputArgs(),
+			"-c:a",
+			"aac",
+			"-b:a",
+			"160k",
+			"-movflags",
+			"+faststart",
+			input.outputFilePath,
+		],
 	});
-
-	await runBinary("ffmpeg", [
-		"-y",
-		"-ss",
-		input.startSeconds.toFixed(3),
-		"-i",
-		input.inputFilePath,
-		"-t",
-		input.durationSeconds.toFixed(3),
-		"-map",
-		"0:v:0",
-		"-map",
-		"0:a:0?",
-		"-vf",
-		`crop=${crop.width}:${crop.height}:${crop.x}:${crop.y},scale=1080:1920,setsar=1,format=yuv420p${subtitleFilter}`,
-		"-c:v",
-		"libx264",
-		"-preset",
-		"veryfast",
-		"-crf",
-		"22",
-		"-pix_fmt",
-		"yuv420p",
-		"-c:a",
-		"aac",
-		"-b:a",
-		"160k",
-		"-movflags",
-		"+faststart",
-		input.outputFilePath,
-	]);
 }
 
 async function renderSourceClipSegmentWithSubtitles(input: {
@@ -518,36 +693,169 @@ async function renderSourceClipSegmentWithSubtitles(input: {
 	durationSeconds: number;
 	subtitleFilePath: string;
 }): Promise<void> {
-	await runBinary("ffmpeg", [
-		"-y",
-		"-ss",
-		input.startSeconds.toFixed(3),
-		"-i",
-		input.inputFilePath,
-		"-t",
-		input.durationSeconds.toFixed(3),
-		"-map",
-		"0:v:0",
-		"-map",
-		"0:a:0?",
-		"-vf",
-		`subtitles='${escapeFilterPath(input.subtitleFilePath)}'`,
-		"-c:v",
-		"libx264",
-		"-preset",
-		"veryfast",
-		"-crf",
-		"22",
-		"-pix_fmt",
-		"yuv420p",
-		"-c:a",
-		"aac",
-		"-b:a",
-		"160k",
-		"-movflags",
-		"+faststart",
-		input.outputFilePath,
-	]);
+	const workspace = dirname(input.outputFilePath);
+	const segmentPath = join(workspace, "source-segment-no-captions.mp4");
+
+	await runFfmpegWithFallback({
+		nvidiaArgs: [
+			"-y",
+			"-ss",
+			input.startSeconds.toFixed(3),
+			"-i",
+			input.inputFilePath,
+			"-t",
+			input.durationSeconds.toFixed(3),
+			"-map",
+			"0:v:0",
+			"-map",
+			"0:a:0?",
+			...getNvencOutputArgs(),
+			"-c:a",
+			"aac",
+			"-b:a",
+			"160k",
+			"-movflags",
+			"+faststart",
+			segmentPath,
+		],
+		cpuArgs: [
+			"-y",
+			"-ss",
+			input.startSeconds.toFixed(3),
+			"-i",
+			input.inputFilePath,
+			"-t",
+			input.durationSeconds.toFixed(3),
+			"-map",
+			"0:v:0",
+			"-map",
+			"0:a:0?",
+			...getX264OutputArgs(),
+			"-c:a",
+			"aac",
+			"-b:a",
+			"160k",
+			"-movflags",
+			"+faststart",
+			segmentPath,
+		],
+	});
+	const segmentMetadata = await getMediaMetadata(segmentPath);
+	await renderCaptionOverlayAndComposite({
+		inputFilePath: segmentPath,
+		outputFilePath: input.outputFilePath,
+		subtitleFilePath: input.subtitleFilePath,
+		durationSeconds: input.durationSeconds,
+		width: segmentMetadata.width ?? 1920,
+		height: segmentMetadata.height ?? 1080,
+	});
+}
+
+function escapeDrawtextText(text: string): string {
+	return text
+		.replaceAll("\\", "\\\\")
+		.replaceAll(":", "\\:")
+		.replaceAll("'", "\\'")
+		.replaceAll(",", "\\,")
+		.replaceAll("%", "\\%")
+		.replace(/\s+/g, " ")
+		.trim()
+		.toUpperCase();
+}
+
+function buildCaptionDrawtextFilters(
+	cues: readonly RenderSubtitleCue[],
+): string {
+	const filters: string[] = [];
+
+	for (const cue of cues) {
+		const cueText = escapeDrawtextText(cue.text);
+		const timedWords = cue.words.length > 0 ? cue.words : [cue];
+
+		for (const [index, timedWord] of timedWords.entries()) {
+			const isEvenPulse = index % 2 === 0;
+			filters.push(
+				[
+					`drawtext=text='${cueText}'`,
+					`fontcolor=${isEvenPulse ? "0xFFE45C" : "white"}`,
+					`fontsize=${isEvenPulse ? "96" : "88"}`,
+					`borderw=${isEvenPulse ? "9" : "8"}`,
+					"bordercolor=black",
+					"shadowx=0",
+					"shadowy=6",
+					"shadowcolor=black@0.45",
+					"x=(w-text_w)/2",
+					"y=h*0.71",
+					`enable='between(t,${timedWord.startSeconds.toFixed(3)},${timedWord.endSeconds.toFixed(3)})'`,
+				].join(":"),
+			);
+		}
+	}
+
+	return filters.join(",");
+}
+
+async function readSubtitleCues(
+	filePath: string,
+): Promise<RenderSubtitleCue[]> {
+	const contents = await readFile(filePath, "utf8");
+	const parsed = JSON.parse(contents) as RenderSubtitleCue[];
+	return Array.isArray(parsed) ? parsed : [];
+}
+
+async function renderCaptionOverlayAndComposite(input: {
+	inputFilePath: string;
+	outputFilePath: string;
+	subtitleFilePath: string;
+	durationSeconds: number;
+	width: number;
+	height: number;
+}): Promise<void> {
+	const cues = await readSubtitleCues(input.subtitleFilePath);
+	const drawtextFilters = buildCaptionDrawtextFilters(cues);
+	const videoFilter = [
+		`scale=${input.width}:${input.height}:force_original_aspect_ratio=decrease`,
+		`pad=${input.width}:${input.height}:(ow-iw)/2:(oh-ih)/2`,
+		...(drawtextFilters ? [drawtextFilters] : []),
+		"format=yuv420p",
+	].join(",");
+
+	await runFfmpegWithFallback({
+		nvidiaArgs: [
+			"-y",
+			"-i",
+			input.inputFilePath,
+			"-map",
+			"0:v:0",
+			"-map",
+			"0:a:0?",
+			"-vf",
+			videoFilter,
+			...getNvencOutputArgs(),
+			"-c:a",
+			"copy",
+			"-movflags",
+			"+faststart",
+			input.outputFilePath,
+		],
+		cpuArgs: [
+			"-y",
+			"-i",
+			input.inputFilePath,
+			"-map",
+			"0:v:0",
+			"-map",
+			"0:a:0?",
+			"-vf",
+			videoFilter,
+			...getX264OutputArgs(),
+			"-c:a",
+			"copy",
+			"-movflags",
+			"+faststart",
+			input.outputFilePath,
+		],
+	});
 }
 
 async function applyInternalEdgeFades(input: {
