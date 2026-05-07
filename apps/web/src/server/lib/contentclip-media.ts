@@ -31,6 +31,124 @@ async function runBinary(command: string, args: string[]): Promise<string> {
 	return stdout.trim();
 }
 
+function parseFfmpegTimestamp(value: string): number | null {
+	const parts = value.split(":");
+	if (parts.length !== 3) {
+		return null;
+	}
+
+	const [hoursText, minutesText, secondsText] = parts;
+	const hours = Number.parseFloat(hoursText ?? "");
+	const minutes = Number.parseFloat(minutesText ?? "");
+	const seconds = Number.parseFloat(secondsText ?? "");
+
+	if (
+		!Number.isFinite(hours) ||
+		!Number.isFinite(minutes) ||
+		!Number.isFinite(seconds)
+	) {
+		return null;
+	}
+
+	return hours * 3600 + minutes * 60 + seconds;
+}
+
+export function parseFfmpegProgressSeconds(line: string): number | null {
+	const [key, value] = line.trim().split("=");
+	if (!key || !value) {
+		return null;
+	}
+
+	if (key === "out_time_us" || key === "out_time_ms") {
+		const microseconds = Number.parseInt(value, 10);
+		return Number.isFinite(microseconds) ? microseconds / 1_000_000 : null;
+	}
+
+	if (key === "out_time") {
+		return parseFfmpegTimestamp(value);
+	}
+
+	return null;
+}
+
+async function runFfmpeg(
+	args: string[],
+	input?: {
+		durationSeconds?: number;
+		onProgress?: (progress: number) => Promise<void>;
+	},
+): Promise<void> {
+	if (
+		!input?.onProgress ||
+		!input.durationSeconds ||
+		input.durationSeconds <= 0
+	) {
+		await runBinary("ffmpeg", args);
+		return;
+	}
+
+	const durationSeconds = input.durationSeconds;
+	await new Promise<void>((resolve, reject) => {
+		const ffmpeg = spawn("ffmpeg", [
+			...args.slice(0, -1),
+			"-progress",
+			"pipe:2",
+			"-nostats",
+			...(args.at(-1) ? [args.at(-1) as string] : []),
+		]);
+		let stderr = "";
+		let progressBuffer = "";
+		let pendingProgress = Promise.resolve();
+
+		ffmpeg.stdout.on("data", () => {
+			// Drain stdout so a verbose child process cannot block on a full pipe.
+		});
+		ffmpeg.stderr.on("data", (chunk: Buffer) => {
+			const text = chunk.toString("utf8");
+			stderr += text;
+			progressBuffer += text;
+			const lines = progressBuffer.split(/\r?\n/);
+			progressBuffer = lines.pop() ?? "";
+
+			for (const line of lines) {
+				const seconds = parseFfmpegProgressSeconds(line);
+				if (seconds === null) {
+					continue;
+				}
+
+				const progress = Math.min(
+					99,
+					Math.max(0, Math.floor((seconds / durationSeconds) * 100)),
+				);
+				pendingProgress = pendingProgress
+					.then(() => input.onProgress?.(progress))
+					.then(() => undefined)
+					.catch((error: unknown) => {
+						console.warn("Failed to update ffmpeg progress:", error);
+					});
+			}
+		});
+
+		ffmpeg.on("error", reject);
+		ffmpeg.on("close", (code) => {
+			pendingProgress
+				.then(() => {
+					if (code === 0) {
+						resolve();
+						return;
+					}
+
+					reject(
+						new Error(
+							`ffmpeg exited with code ${code ?? "unknown"}: ${stderr.trim()}`,
+						),
+					);
+				})
+				.catch(reject);
+		});
+	});
+}
+
 function getYtDlpBaseArgs(): string[] {
 	const cookiesFile = process.env.CONTENTCLIP_YTDLP_COOKIES_FILE?.trim();
 	const userAgent = process.env.CONTENTCLIP_YTDLP_USER_AGENT?.trim();
@@ -79,12 +197,14 @@ function getYtDlpArgs(sourceUrl: string, outputDirectory?: string): string[] {
 async function runFfmpegWithFallback(input: {
 	nvidiaArgs: string[];
 	cpuArgs: string[];
+	durationSeconds?: number;
+	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	try {
-		await runBinary("ffmpeg", input.nvidiaArgs);
+		await runFfmpeg(input.nvidiaArgs, input);
 	} catch (error) {
 		console.warn("NVIDIA ffmpeg path failed, falling back to CPU:", error);
-		await runBinary("ffmpeg", input.cpuArgs);
+		await runFfmpeg(input.cpuArgs, input);
 	}
 }
 
@@ -229,10 +349,24 @@ export async function renderClipSegment(input: {
 	outroFilePath?: string | null;
 	aspectMode?: "source" | "vertical9x16";
 	subtitleFilePath?: string | null;
+	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const durationSeconds = Math.max(1, input.endSeconds - input.startSeconds);
 	const workspace = dirname(input.outputFilePath);
 	const aspectMode = input.aspectMode ?? "source";
+	let reportedProgress = 0;
+	const reportProgress = async (progress: number): Promise<void> => {
+		const nextProgress = Math.max(
+			reportedProgress,
+			Math.min(100, Math.floor(progress)),
+		);
+		if (nextProgress === reportedProgress) {
+			return;
+		}
+
+		reportedProgress = nextProgress;
+		await input.onProgress?.(nextProgress);
+	};
 	const segmentOutputPath =
 		input.introFilePath || input.outroFilePath
 			? join(workspace, "clip-segment.mp4")
@@ -259,6 +393,7 @@ export async function renderClipSegment(input: {
 			frameHeight,
 			focusPlan,
 			subtitleFilePath: input.subtitleFilePath,
+			onProgress: async (progress) => reportProgress(progress * 0.72),
 		});
 	} else if (input.subtitleFilePath) {
 		await renderSourceClipSegmentWithSubtitles({
@@ -267,6 +402,7 @@ export async function renderClipSegment(input: {
 			startSeconds: input.startSeconds,
 			durationSeconds,
 			subtitleFilePath: input.subtitleFilePath,
+			onProgress: async (progress) => reportProgress(progress * 0.72),
 		});
 	} else {
 		const baseArgs = [
@@ -328,8 +464,11 @@ export async function renderClipSegment(input: {
 				"+faststart",
 				segmentOutputPath,
 			],
+			durationSeconds,
+			onProgress: async (progress) => reportProgress(progress * 0.72),
 		});
 	}
+	await reportProgress(72);
 
 	const concatInputs = [
 		input.introFilePath,
@@ -338,6 +477,7 @@ export async function renderClipSegment(input: {
 	].filter(Boolean) as string[];
 
 	if (concatInputs.length <= 1) {
+		await reportProgress(100);
 		return;
 	}
 
@@ -349,6 +489,7 @@ export async function renderClipSegment(input: {
 				outputFilePath: normalizedPath,
 				aspectMode,
 			});
+			await reportProgress(72 + ((index + 1) / concatInputs.length) * 12);
 			return normalizedPath;
 		}),
 	);
@@ -370,6 +511,7 @@ export async function renderClipSegment(input: {
 				fadeIn,
 				fadeOut,
 			});
+			await reportProgress(84 + ((index + 1) / normalizedPaths.length) * 8);
 			return transitionedPath;
 		}),
 	);
@@ -382,20 +524,30 @@ export async function renderClipSegment(input: {
 		"utf8",
 	);
 
-	await runBinary("ffmpeg", [
-		"-y",
-		"-f",
-		"concat",
-		"-safe",
-		"0",
-		"-i",
-		concatListPath,
-		"-c",
-		"copy",
-		"-movflags",
-		"+faststart",
-		input.outputFilePath,
-	]);
+	await runFfmpeg(
+		[
+			"-y",
+			"-f",
+			"concat",
+			"-safe",
+			"0",
+			"-i",
+			concatListPath,
+			"-c",
+			"copy",
+			"-movflags",
+			"+faststart",
+			input.outputFilePath,
+		],
+		{
+			durationSeconds:
+				durationSeconds +
+				(input.introFilePath ? INTERNAL_TRANSITION_SECONDS : 0) +
+				(input.outroFilePath ? INTERNAL_TRANSITION_SECONDS : 0),
+			onProgress: async (progress) => reportProgress(92 + progress * 0.08),
+		},
+	);
+	await reportProgress(100);
 }
 
 function getCrop(input: {
@@ -450,6 +602,7 @@ async function renderVerticalClipSegment(input: {
 	frameHeight: number;
 	focusPlan: FocusPlan;
 	subtitleFilePath?: string | null;
+	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const windows = input.focusPlan.windows.filter(
 		(window) => window.endSeconds > window.startSeconds,
@@ -469,6 +622,11 @@ async function renderVerticalClipSegment(input: {
 					frameWidth: input.frameWidth,
 					frameHeight: input.frameHeight,
 					regions: window.regions,
+					onProgress: async (progress) =>
+						input.onProgress?.(
+							((index + progress / 100) / windows.length) *
+								(input.subtitleFilePath ? 70 : 100),
+						),
 				});
 				return outputFilePath;
 			}),
@@ -486,20 +644,29 @@ async function renderVerticalClipSegment(input: {
 			"utf8",
 		);
 
-		await runBinary("ffmpeg", [
-			"-y",
-			"-f",
-			"concat",
-			"-safe",
-			"0",
-			"-i",
-			concatListPath,
-			"-c",
-			"copy",
-			"-movflags",
-			"+faststart",
-			concatOutputPath,
-		]);
+		await runFfmpeg(
+			[
+				"-y",
+				"-f",
+				"concat",
+				"-safe",
+				"0",
+				"-i",
+				concatListPath,
+				"-c",
+				"copy",
+				"-movflags",
+				"+faststart",
+				concatOutputPath,
+			],
+			{
+				durationSeconds: input.durationSeconds,
+				onProgress: async (progress) =>
+					input.onProgress?.(
+						input.subtitleFilePath ? 70 + progress * 0.1 : progress,
+					),
+			},
+		);
 
 		if (input.subtitleFilePath) {
 			await renderCaptionOverlayAndComposite({
@@ -512,6 +679,7 @@ async function renderVerticalClipSegment(input: {
 				captionYRatio: hasStackedLayout
 					? STACKED_VERTICAL_CAPTION_Y_RATIO
 					: DEFAULT_CAPTION_Y_RATIO,
+				onProgress: async (progress) => input.onProgress?.(80 + progress * 0.2),
 			});
 		}
 		return;
@@ -530,6 +698,8 @@ async function renderVerticalClipSegment(input: {
 		frameWidth: input.frameWidth,
 		frameHeight: input.frameHeight,
 		regions: staticRegions,
+		onProgress: async (progress) =>
+			input.onProgress?.(input.subtitleFilePath ? progress * 0.75 : progress),
 	});
 
 	if (input.subtitleFilePath) {
@@ -543,6 +713,7 @@ async function renderVerticalClipSegment(input: {
 			captionYRatio: hasStaticStackedLayout
 				? STACKED_VERTICAL_CAPTION_Y_RATIO
 				: DEFAULT_CAPTION_Y_RATIO,
+			onProgress: async (progress) => input.onProgress?.(75 + progress * 0.25),
 		});
 	}
 }
@@ -555,6 +726,7 @@ async function renderVerticalSceneSegment(input: {
 	frameWidth: number;
 	frameHeight: number;
 	regions: readonly FocusRegion[];
+	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const regions = input.regions.slice(0, 2);
 
@@ -633,6 +805,8 @@ async function renderVerticalSceneSegment(input: {
 				"+faststart",
 				input.outputFilePath,
 			],
+			durationSeconds: input.durationSeconds,
+			onProgress: input.onProgress,
 		});
 		return;
 	}
@@ -701,6 +875,8 @@ async function renderVerticalSceneSegment(input: {
 			"+faststart",
 			input.outputFilePath,
 		],
+		durationSeconds: input.durationSeconds,
+		onProgress: input.onProgress,
 	});
 }
 
@@ -710,6 +886,7 @@ async function renderSourceClipSegmentWithSubtitles(input: {
 	startSeconds: number;
 	durationSeconds: number;
 	subtitleFilePath: string;
+	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const workspace = dirname(input.outputFilePath);
 	const segmentPath = join(workspace, "source-segment-no-captions.mp4");
@@ -757,6 +934,8 @@ async function renderSourceClipSegmentWithSubtitles(input: {
 			"+faststart",
 			segmentPath,
 		],
+		durationSeconds: input.durationSeconds,
+		onProgress: async (progress) => input.onProgress?.(progress * 0.58),
 	});
 	const segmentMetadata = await getMediaMetadata(segmentPath);
 	await renderCaptionOverlayAndComposite({
@@ -766,6 +945,7 @@ async function renderSourceClipSegmentWithSubtitles(input: {
 		durationSeconds: input.durationSeconds,
 		width: segmentMetadata.width ?? 1920,
 		height: segmentMetadata.height ?? 1080,
+		onProgress: async (progress) => input.onProgress?.(58 + progress * 0.42),
 	});
 }
 
@@ -1049,6 +1229,7 @@ async function renderCaptionOverlayAndComposite(input: {
 	width: number;
 	height: number;
 	captionYRatio?: number;
+	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const cues = await readSubtitleCues(input.subtitleFilePath);
 	const workspace = dirname(input.outputFilePath);
@@ -1109,6 +1290,8 @@ async function renderCaptionOverlayAndComposite(input: {
 			"+faststart",
 			input.outputFilePath,
 		],
+		durationSeconds: input.durationSeconds,
+		onProgress: input.onProgress,
 	});
 }
 

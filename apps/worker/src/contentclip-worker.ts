@@ -482,6 +482,16 @@ async function processRenderJob(
 		outroFilePath: outroPath,
 		aspectMode,
 		subtitleFilePath: subtitlePath,
+		onProgress: async (progress) => {
+			await contentJobRepository.updateProgress({
+				id: jobId,
+				progress: 35 + Math.floor(progress * 0.39),
+				message:
+					aspectMode === "vertical9x16"
+						? `Rendering vertical 9:16 clip: ${progress}%`
+						: `Rendering clip segment: ${progress}%`,
+			});
+		},
 	});
 	await contentJobRepository.updateProgress({
 		id: jobId,
