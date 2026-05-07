@@ -98,6 +98,21 @@ jobs:
           matrix="${matrix}]"
           echo "matrix={\"include\":${matrix}}" >> "$GITHUB_OUTPUT"
 
+          {
+            echo "### Docker image matrix"
+            echo
+            echo '```json'
+            echo "{\"include\":${matrix}}"
+            echo '```'
+
+            if [ -f changed-files.txt ]; then
+              echo
+              echo "### Changed files"
+              echo
+              sed 's/^/- /' changed-files.txt
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
   build-and-push:
     needs: changes
     if: needs.changes.outputs.matrix != '{"include":[]}'
@@ -108,6 +123,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
 
       - name: Login to GHCR
         uses: docker/login-action@v4
