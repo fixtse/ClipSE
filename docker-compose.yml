@@ -61,6 +61,17 @@ services:
     ports:
       - "8000:8000"
 
+  db-migrate:
+    image: ${CONTENTCLIP_MIGRATE_IMAGE:-ghcr.io/fixtse/contentclip-migrate:latest}
+    container_name: contentclip-db-migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/contentclip
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: drizzle-kit migrate --config services/postgres/drizzle.config.ts
+
   app:
     image: ${CONTENTCLIP_APP_IMAGE:-ghcr.io/fixtse/contentclip-app:latest}
     container_name: contentclip-app
@@ -82,18 +93,17 @@ services:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       garage-init:
         condition: service_completed_successfully
       whisper:
         condition: service_started
     ports:
       - "3000:3000"
-    command: sh -c "pnpm db:migrate && pnpm start"
 
   worker:
-    image: ${CONTENTCLIP_APP_IMAGE:-ghcr.io/fixtse/contentclip-app:latest}
+    image: ${CONTENTCLIP_WORKER_IMAGE:-ghcr.io/fixtse/contentclip-worker:latest}
     container_name: contentclip-worker
     runtime: nvidia
     restart: unless-stopped
@@ -117,8 +127,8 @@ services:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       garage-init:
         condition: service_completed_successfully
       whisper:

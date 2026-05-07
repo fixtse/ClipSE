@@ -1,0 +1,21 @@
+FROM node:24-bookworm-slim
+
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends ca-certificates openssl \
+	&& rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+RUN corepack enable && corepack prepare pnpm@10.28.1 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm add --global drizzle-kit@0.31.10 drizzle-orm@0.45.2 postgres@3.4.9
+
+COPY services/postgres/drizzle.config.ts ./services/postgres/drizzle.config.ts
+COPY services/postgres/migrations ./services/postgres/migrations
+COPY apps/web/src/server/db/schema.ts ./apps/web/src/server/db/schema.ts
+
+CMD ["drizzle-kit", "migrate", "--config", "services/postgres/drizzle.config.ts"]

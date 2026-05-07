@@ -70,6 +70,18 @@ services:
     volumes:
       - ${WHISPER_CACHE_DIR:-./.contentclip-whisper-cache}:/models
 
+  db-migrate:
+    build:
+      context: .
+      dockerfile: services/postgres/Dockerfile.migrate
+    container_name: contentclip-db-migrate-dev
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/contentclip
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: drizzle-kit migrate --config services/postgres/drizzle.config.ts
+
   app:
     build:
       context: .
@@ -91,8 +103,8 @@ services:
       CONTENTCLIP_YTDLP_USER_AGENT: ${CONTENTCLIP_YTDLP_USER_AGENT:-}
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       garage-init:
         condition: service_completed_successfully
       whisper:
@@ -103,12 +115,12 @@ services:
       - .:/app
       - app_node_modules:/app/node_modules
       - app_pnpm_store:/pnpm/store
-    command: sh -c "pnpm install --store-dir /pnpm/store --no-frozen-lockfile && pnpm db:migrate && pnpm dev"
+    command: sh -c "pnpm install --store-dir /pnpm/store --no-frozen-lockfile && pnpm dev"
 
   worker:
     build:
       context: .
-      dockerfile: apps/web/Dockerfile.dev
+      dockerfile: apps/worker/Dockerfile.dev
     container_name: contentclip-worker-dev
     runtime: nvidia
     env_file:
@@ -130,8 +142,8 @@ services:
       NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
       garage-init:
         condition: service_completed_successfully
       whisper:

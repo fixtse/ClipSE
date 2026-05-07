@@ -14,7 +14,12 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
 
+  db-migrate:
+    build:
+      context: .
+      dockerfile: services/postgres/Dockerfile.migrate
+
   worker:
     build:
       context: .
-      dockerfile: apps/web/Dockerfile
+      dockerfile: apps/worker/Dockerfile

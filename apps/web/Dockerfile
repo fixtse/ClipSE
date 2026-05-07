@@ -1,11 +1,4 @@
-FROM node:24-bookworm-slim
-
-RUN apt-get update \
-	&& apt-get install -y ffmpeg ca-certificates openssl yt-dlp python3-pip python3-opencv \
-	&& python3 -m pip install --break-system-packages --no-cache-dir --upgrade typing-extensions \
-	&& python3 -m pip install --break-system-packages --no-cache-dir torch==2.7.1+cu128 torchvision==0.22.1+cu128 --index-url https://download.pytorch.org/whl/cu128 \
-	&& python3 -m pip install --break-system-packages --no-cache-dir --upgrade yt-dlp ultralytics \
-	&& rm -rf /var/lib/apt/lists/*
+FROM node:24-bookworm-slim AS base
 
 WORKDIR /app
 
@@ -15,13 +8,30 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN corepack enable && corepack prepare pnpm@10.28.1 --activate
 
+FROM base AS deps
+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
+
+FROM deps AS builder
 
 COPY . .
 
 RUN SKIP_ENV_VALIDATION=1 pnpm build
 
+FROM node:24-bookworm-slim AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
+
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder /app/apps/web/public ./apps/web/public
+
 EXPOSE 3000
 
-CMD ["pnpm", "start"]
+CMD ["node", "apps/web/server.js"]

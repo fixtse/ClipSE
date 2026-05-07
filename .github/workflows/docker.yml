@@ -25,6 +25,12 @@ jobs:
           - image: contentclip-app
             context: .
             dockerfile: apps/web/Dockerfile
+          - image: contentclip-worker
+            context: .
+            dockerfile: apps/worker/Dockerfile
+          - image: contentclip-migrate
+            context: .
+            dockerfile: services/postgres/Dockerfile.migrate
           - image: contentclip-whisper
             context: ./services/whisper
             dockerfile: ./services/whisper/Dockerfile
