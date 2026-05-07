@@ -1,0 +1,1 @@
+ALTER TABLE "content_clip" ADD COLUMN "downloaded_at" timestamp with time zone;

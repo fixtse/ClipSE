@@ -1,0 +1,1 @@
+ALTER TABLE "content_ai_settings" ADD COLUMN "whisper_model" varchar(40) DEFAULT 'medium' NOT NULL;

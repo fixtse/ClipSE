@@ -1,0 +1,86 @@
+# Docker Guide
+
+## Run ContentClip
+
+The default compose file pulls prebuilt images from GitHub Container Registry.
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+The app runs at `http://localhost:3000`.
+
+## Services
+
+- `app` - Next.js web app
+- `worker` - background transcription, analysis, and rendering worker
+- `whisper` - Whisper API service
+- `postgres` - PostgreSQL with pgvector
+- `garage` - S3-compatible object storage
+- `garage-init` - local Garage bucket/key initialization
+
+## Images
+
+- `ghcr.io/fixtse/contentclip-app`
+- `ghcr.io/fixtse/contentclip-whisper`
+- `ghcr.io/fixtse/contentclip-garage-init`
+
+Override images with:
+
+```bash
+CONTENTCLIP_APP_IMAGE=ghcr.io/example/contentclip-app:sha-...
+CONTENTCLIP_WHISPER_IMAGE=ghcr.io/example/contentclip-whisper:sha-...
+CONTENTCLIP_GARAGE_INIT_IMAGE=ghcr.io/example/contentclip-garage-init:sha-...
+docker compose up -d
+```
+
+## Build Locally
+
+Use the build override when testing Dockerfile changes:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
+```
+
+## Logs
+
+```bash
+docker compose ps
+docker compose logs -f app
+docker compose logs -f worker
+docker compose logs -f whisper
+```
+
+## Stop
+
+```bash
+docker compose down
+```
+
+Remove persistent database and object-storage data:
+
+```bash
+docker compose down -v
+```
+
+## Environment
+
+Copy `.env.example` to `.env` and set:
+
+- `BETTER_AUTH_SECRET` for local authentication cookies
+- `BETTER_AUTH_BASE_URL`, usually `http://localhost:3000` for local Docker
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL` and `OPENAI_MODEL` if using another OpenAI-compatible provider
+
+The compose file supplies internal container URLs for PostgreSQL, Garage, and Whisper.
+
+## GPU Notes
+
+The default Whisper service uses NVIDIA CUDA:
+
+- `WHISPER_DEVICE=cuda`
+- `WHISPER_COMPUTE_TYPE=float16`
+- `NVIDIA_VISIBLE_DEVICES=all`
+
+Install NVIDIA drivers and Docker GPU support on the host before running GPU Whisper.

@@ -1,0 +1,5 @@
+FROM docker.io/dxflrs/garage:v2.2.0
+
+COPY --from=docker.io/library/busybox:1.37.0-musl /bin/busybox /bin/busybox
+
+ENTRYPOINT ["/bin/busybox", "sh", "-c"]

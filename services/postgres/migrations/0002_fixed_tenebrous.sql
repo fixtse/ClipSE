@@ -1,0 +1,2 @@
+ALTER TABLE "content_ai_settings" ADD COLUMN "openrouter_api_key" text DEFAULT '' NOT NULL;--> statement-breakpoint
+ALTER TABLE "content_ai_settings" ADD COLUMN "openrouter_model" varchar(180) DEFAULT '' NOT NULL;

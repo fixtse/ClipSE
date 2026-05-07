@@ -1,0 +1,236 @@
+import { asc, eq } from "drizzle-orm";
+import { db } from "~/server/db";
+import { contentClips } from "~/server/db/schema";
+import type { ContentClipRepositoryInterface } from "../domain/content-clip.repository.interface";
+import type {
+	ContentClip,
+	CreateContentClipInput,
+	GeneratedClipCandidate,
+	UpdateContentClipInput,
+} from "../domain/content-clip.valueobject";
+
+export class ContentClipRepository implements ContentClipRepositoryInterface {
+	async findById(id: string): Promise<ContentClip | null> {
+		const [clip] = await db
+			.select()
+			.from(contentClips)
+			.where(eq(contentClips.id, id));
+
+		return clip ? this.map(clip) : null;
+	}
+
+	async listByVideoId(videoId: string): Promise<ContentClip[]> {
+		const clips = await db
+			.select()
+			.from(contentClips)
+			.where(eq(contentClips.videoId, videoId))
+			.orderBy(asc(contentClips.orderIndex), asc(contentClips.createdAt));
+
+		return clips.map((clip) => this.map(clip));
+	}
+
+	async replaceForVideo(
+		videoId: string,
+		clips: GeneratedClipCandidate[],
+	): Promise<ContentClip[]> {
+		await db.delete(contentClips).where(eq(contentClips.videoId, videoId));
+
+		if (clips.length === 0) {
+			return [];
+		}
+
+		await db.insert(contentClips).values(
+			clips.map((clip, index) => ({
+				videoId,
+				orderIndex: index,
+				title: clip.title,
+				hook: clip.hook,
+				summary: clip.summary,
+				rationale: clip.rationale,
+				transcriptExcerpt: clip.transcriptExcerpt,
+				startSeconds: Number(clip.startSeconds.toFixed(3)),
+				endSeconds: Number(clip.endSeconds.toFixed(3)),
+				score: Math.round(clip.score),
+				status: "suggested",
+				tags: clip.tags as unknown as typeof contentClips.$inferInsert.tags,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			})),
+		);
+
+		return this.listByVideoId(videoId);
+	}
+
+	async create(input: CreateContentClipInput): Promise<ContentClip> {
+		const existingClips = await this.listByVideoId(input.videoId);
+		const orderIndex =
+			Math.max(-1, ...existingClips.map((clip) => clip.orderIndex)) + 1;
+
+		const [clip] = await db
+			.insert(contentClips)
+			.values({
+				videoId: input.videoId,
+				orderIndex,
+				title: input.title.trim(),
+				hook: input.hook,
+				summary: input.summary,
+				rationale: "Manual clip",
+				transcriptExcerpt: "",
+				startSeconds: Number(input.startSeconds.toFixed(3)),
+				endSeconds: Number(input.endSeconds.toFixed(3)),
+				score: 50,
+				status: "suggested",
+				tags: [],
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			})
+			.returning();
+
+		if (!clip) {
+			throw new Error("Failed to create clip");
+		}
+
+		return this.map(clip);
+	}
+
+	async update(input: UpdateContentClipInput): Promise<ContentClip> {
+		const shouldResetRenderedAsset =
+			input.startSeconds !== undefined || input.endSeconds !== undefined;
+
+		const [updated] = await db
+			.update(contentClips)
+			.set({
+				title: input.title?.trim(),
+				hook: input.hook,
+				summary: input.summary,
+				rationale: input.rationale,
+				transcriptExcerpt: input.transcriptExcerpt,
+				startSeconds:
+					input.startSeconds === undefined
+						? undefined
+						: Number(input.startSeconds.toFixed(3)),
+				endSeconds:
+					input.endSeconds === undefined
+						? undefined
+						: Number(input.endSeconds.toFixed(3)),
+				score: input.score === undefined ? undefined : Math.round(input.score),
+				tags:
+					input.tags === undefined
+						? undefined
+						: (input.tags as unknown as typeof contentClips.$inferInsert.tags),
+				status: shouldResetRenderedAsset ? "suggested" : undefined,
+				outputStorageKey: shouldResetRenderedAsset ? null : undefined,
+				outputFilename: shouldResetRenderedAsset ? null : undefined,
+				downloadedAt: shouldResetRenderedAsset ? null : undefined,
+				latestError: shouldResetRenderedAsset ? null : undefined,
+				updatedAt: new Date(),
+			})
+			.where(eq(contentClips.id, input.id))
+			.returning();
+
+		if (!updated) {
+			throw new Error("Clip not found");
+		}
+
+		return this.map(updated);
+	}
+
+	async delete(id: string): Promise<void> {
+		await db.delete(contentClips).where(eq(contentClips.id, id));
+	}
+
+	async updateStatus(input: {
+		id: string;
+		status: ContentClip["status"];
+		latestError?: string | null;
+	}): Promise<ContentClip> {
+		const [updated] = await db
+			.update(contentClips)
+			.set({
+				status: input.status,
+				downloadedAt:
+					input.status === "queued" || input.status === "rendering"
+						? null
+						: undefined,
+				latestError:
+					input.latestError === undefined ? undefined : input.latestError,
+				updatedAt: new Date(),
+			})
+			.where(eq(contentClips.id, input.id))
+			.returning();
+
+		if (!updated) {
+			throw new Error("Clip not found");
+		}
+
+		return this.map(updated);
+	}
+
+	async attachRenderedAsset(input: {
+		id: string;
+		outputStorageKey: string;
+		outputFilename: string;
+	}): Promise<ContentClip> {
+		const [updated] = await db
+			.update(contentClips)
+			.set({
+				status: "ready",
+				outputStorageKey: input.outputStorageKey,
+				outputFilename: input.outputFilename,
+				downloadedAt: null,
+				latestError: null,
+				updatedAt: new Date(),
+			})
+			.where(eq(contentClips.id, input.id))
+			.returning();
+
+		if (!updated) {
+			throw new Error("Clip not found");
+		}
+
+		return this.map(updated);
+	}
+
+	async markDownloaded(id: string): Promise<ContentClip> {
+		const [updated] = await db
+			.update(contentClips)
+			.set({
+				downloadedAt: new Date(),
+				updatedAt: new Date(),
+			})
+			.where(eq(contentClips.id, id))
+			.returning();
+
+		if (!updated) {
+			throw new Error("Clip not found");
+		}
+
+		return this.map(updated);
+	}
+
+	private map(row: typeof contentClips.$inferSelect): ContentClip {
+		return {
+			id: row.id,
+			videoId: row.videoId,
+			orderIndex: row.orderIndex,
+			title: row.title,
+			hook: row.hook,
+			summary: row.summary,
+			rationale: row.rationale,
+			transcriptExcerpt: row.transcriptExcerpt,
+			startSeconds: row.startSeconds,
+			endSeconds: row.endSeconds,
+			score: row.score,
+			status: row.status as ContentClip["status"],
+			tags: row.tags as string[],
+			outputStorageKey: row.outputStorageKey ?? null,
+			outputFilename: row.outputFilename ?? null,
+			downloadedAt: row.downloadedAt ?? null,
+			latestError: row.latestError ?? null,
+			createdAt: row.createdAt,
+			updatedAt: row.updatedAt,
+		};
+	}
+}
+
+export const contentClipRepository = new ContentClipRepository();

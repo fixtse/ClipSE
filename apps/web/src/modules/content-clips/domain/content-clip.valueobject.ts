@@ -1,0 +1,105 @@
+import { z } from "zod";
+
+export const CONTENT_CLIP_STATUSES = [
+	"suggested",
+	"queued",
+	"rendering",
+	"ready",
+	"failed",
+] as const;
+
+export type ContentClipStatus = (typeof CONTENT_CLIP_STATUSES)[number];
+
+export const ContentClipSchema = z.object({
+	id: z.string().uuid(),
+	videoId: z.string().uuid(),
+	orderIndex: z.number().int().nonnegative(),
+	title: z.string().min(1).max(255),
+	hook: z.string().max(1000),
+	summary: z.string().max(2000),
+	rationale: z.string().max(2000),
+	transcriptExcerpt: z.string().max(6000),
+	startSeconds: z.number().nonnegative(),
+	endSeconds: z.number().positive(),
+	score: z.number().int().min(0).max(100),
+	status: z.enum(CONTENT_CLIP_STATUSES),
+	tags: z.array(z.string().min(1).max(40)).max(10),
+	outputStorageKey: z.string().nullable(),
+	outputFilename: z.string().nullable(),
+	downloadedAt: z.date().nullable(),
+	latestError: z.string().nullable(),
+	createdAt: z.date(),
+	updatedAt: z.date(),
+});
+
+export type ContentClip = z.infer<typeof ContentClipSchema>;
+
+export const GeneratedClipCandidateSchema = z.object({
+	title: z.string().min(1).max(255),
+	hook: z.string().max(1000).default(""),
+	summary: z.string().max(2000).default(""),
+	rationale: z.string().max(2000).default(""),
+	transcriptExcerpt: z.string().max(6000).default(""),
+	startSeconds: z.number().nonnegative(),
+	endSeconds: z.number().positive(),
+	score: z.number().min(0).max(100).default(70),
+	tags: z.array(z.string().min(1).max(40)).max(10).default([]),
+});
+
+export type GeneratedClipCandidate = z.infer<
+	typeof GeneratedClipCandidateSchema
+>;
+
+export const CreateContentClipSchema = z.object({
+	videoId: z.string().uuid(),
+	title: z.string().min(1).max(255),
+	hook: z.string().max(1000).default(""),
+	summary: z.string().max(2000).default(""),
+	startSeconds: z.number().nonnegative(),
+	endSeconds: z.number().positive(),
+});
+
+export type CreateContentClipInput = z.infer<typeof CreateContentClipSchema>;
+
+export const UpdateContentClipSchema = z.object({
+	id: z.string().uuid(),
+	title: z.string().min(1).max(255).optional(),
+	hook: z.string().max(1000).optional(),
+	summary: z.string().max(2000).optional(),
+	rationale: z.string().max(2000).optional(),
+	transcriptExcerpt: z.string().max(6000).optional(),
+	startSeconds: z.number().nonnegative().optional(),
+	endSeconds: z.number().positive().optional(),
+	score: z.number().int().min(0).max(100).optional(),
+	tags: z.array(z.string().min(1).max(40)).max(10).optional(),
+});
+
+export type UpdateContentClipInput = z.infer<typeof UpdateContentClipSchema>;
+
+export function normalizeClipCandidate(
+	input: GeneratedClipCandidate,
+	videoDurationSeconds: number | null,
+): GeneratedClipCandidate {
+	const minDurationSeconds = 20;
+	const maxEnd = videoDurationSeconds ?? Number.MAX_SAFE_INTEGER;
+	const safeStart = Math.max(0, Number(input.startSeconds.toFixed(3)));
+	const requestedEnd = Number(input.endSeconds.toFixed(3));
+	const safeEnd = Math.min(
+		Math.max(requestedEnd, safeStart + minDurationSeconds),
+		maxEnd,
+	);
+
+	return {
+		...input,
+		startSeconds: safeStart,
+		endSeconds: Number(safeEnd.toFixed(3)),
+		score: Math.round(input.score),
+	};
+}
+
+export function getClipDurationSeconds(clip: {
+	startSeconds: number;
+	endSeconds: number;
+}): number {
+	return Math.max(0, clip.endSeconds - clip.startSeconds);
+}

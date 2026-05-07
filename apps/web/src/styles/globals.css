@@ -1,0 +1,386 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+	/* Font families */
+	--font-sans:
+		var(--font-bricolage), ui-sans-serif, system-ui, sans-serif,
+		"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+	--font-mono:
+		var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
+		Consolas, "Liberation Mono", "Courier New", monospace;
+
+	/* Container settings */
+	--container-center: true;
+	--container-padding: 2rem;
+	--container-screens-2xl: 1400px;
+
+	/* Custom scale */
+	--scale-102: 1.02;
+
+	/* Color palette - using orange as primary */
+	--color-light: rgb(250 250 250);
+	--color-dark: rgb(23 23 23);
+
+	/* Neutral colors (slate) */
+	--color-slate-50: rgb(248 250 252);
+	--color-slate-100: rgb(241 245 249);
+	--color-slate-200: rgb(226 232 240);
+	--color-slate-300: rgb(203 213 225);
+	--color-slate-400: rgb(148 163 184);
+	--color-slate-500: rgb(100 116 139);
+	--color-slate-600: rgb(71 85 105);
+	--color-slate-700: rgb(51 65 85);
+	--color-slate-800: rgb(30 41 59);
+	--color-slate-900: rgb(15 23 42);
+	--color-slate-950: rgb(2 6 23);
+
+	/* Orange colors (primary) */
+	--color-primary-50: rgb(255 247 237);
+	--color-primary-100: rgb(255 237 213);
+	--color-primary-200: rgb(254 215 170);
+	--color-primary-300: rgb(253 186 116);
+	--color-primary-400: rgb(251 146 60);
+	--color-primary-500: rgb(249 115 22);
+	--color-primary-600: rgb(234 88 12);
+	--color-primary-700: rgb(194 65 12);
+	--color-primary-800: rgb(154 52 18);
+	--color-primary-900: rgb(124 45 18);
+	--color-primary-950: rgb(67 20 7);
+
+	/* Emerald colors */
+	--color-emerald-50: rgb(236 253 245);
+	--color-emerald-100: rgb(209 250 229);
+	--color-emerald-500: rgb(16 185 129);
+	--color-emerald-600: rgb(5 150 105);
+	--color-emerald-700: rgb(4 120 87);
+	--color-emerald-900: rgb(6 78 59);
+	--color-emerald-950: rgb(2 44 34);
+
+	/* Rose colors */
+	--color-rose-50: rgb(255 241 242);
+	--color-rose-100: rgb(255 228 230);
+	--color-rose-500: rgb(244 63 94);
+	--color-rose-600: rgb(225 29 72);
+	--color-rose-700: rgb(190 18 60);
+	--color-rose-900: rgb(136 19 55);
+	--color-rose-950: rgb(76 5 25);
+
+	/* Amber colors */
+	--color-amber-50: rgb(255 251 235);
+	--color-amber-100: rgb(254 243 199);
+	--color-amber-500: rgb(245 158 11);
+	--color-amber-600: rgb(217 119 6);
+	--color-amber-700: rgb(180 83 9);
+	--color-amber-800: rgb(146 64 14);
+	--color-amber-900: rgb(120 53 15);
+	--color-amber-950: rgb(69 26 3);
+
+	/* Blue colors */
+	--color-blue-50: rgb(239 246 255);
+	--color-blue-100: rgb(219 234 254);
+	--color-blue-500: rgb(59 130 246);
+	--color-blue-600: rgb(37 99 235);
+	--color-blue-700: rgb(29 78 216);
+	--color-blue-900: rgb(30 58 138);
+	--color-blue-950: rgb(23 37 84);
+
+	/* Teal colors */
+	--color-teal-500: rgb(20 184 166);
+
+	/* Animation durations */
+	--animate-accordion-down: accordion-down 0.2s ease-out;
+	--animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+@theme inline {
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	--radius-2xl: calc(var(--radius) + 8px);
+	--radius-3xl: calc(var(--radius) + 12px);
+	--radius-4xl: calc(var(--radius) + 16px);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+}
+
+@keyframes accordion-down {
+	from {
+		height: 0;
+	}
+	to {
+		height: var(--radix-accordion-content-height);
+	}
+}
+
+@keyframes accordion-up {
+	from {
+		height: var(--radix-accordion-content-height);
+	}
+	to {
+		height: 0;
+	}
+}
+
+:root {
+	--radius: 0.625rem;
+
+	/* Light mode colors - using orange as primary */
+	--background: rgb(250 250 250);
+	--foreground: rgb(15 23 42);
+	--card: rgb(255 255 255);
+	--card-foreground: rgb(15 23 42);
+	--popover: rgb(255 255 255);
+	--popover-foreground: rgb(15 23 42);
+	--primary: rgb(249 115 22);
+	--primary-foreground: rgb(255 255 255);
+	--secondary: rgb(241 245 249);
+	--secondary-foreground: rgb(15 23 42);
+	--muted: rgb(241 245 249);
+	--muted-foreground: rgb(100 116 139);
+	--accent: rgb(241 245 249);
+	--accent-foreground: rgb(15 23 42);
+	--destructive: rgb(239 68 68);
+	--destructive-foreground: rgb(255 255 255);
+	--border: rgb(226 232 240);
+	--input: rgb(226 232 240);
+	--ring: rgb(249 115 22);
+	--chart-1: rgb(22, 154, 249);
+	--chart-2: rgb(5 150 105);
+	--chart-3: rgb(217 119 6);
+	--chart-4: rgb(244 63 94);
+	--chart-5: rgb(20 184 166);
+	--sidebar: rgb(255 255 255);
+	--sidebar-foreground: rgb(15 23 42);
+	--sidebar-primary: rgb(249 115 22);
+	--sidebar-primary-foreground: rgb(255 255 255);
+	--sidebar-accent: rgb(241 245 249);
+	--sidebar-accent-foreground: rgb(15 23 42);
+	--sidebar-border: rgb(226 232 240);
+	--sidebar-ring: rgb(249 115 22);
+
+	/* Semantic status colors - light mode */
+	--success: rgb(5 150 105);
+	--success-foreground: rgb(255 255 255);
+	--success-bg: rgb(236 253 245);
+	--success-border: rgb(209 250 229);
+	--warning: rgb(217 119 6);
+	--warning-foreground: rgb(255 255 255);
+	--warning-bg: rgb(255 251 235);
+	--warning-border: rgb(254 243 199);
+	--info: rgb(37 99 235);
+	--info-foreground: rgb(255 255 255);
+	--info-bg: rgb(239 246 255);
+	--info-border: rgb(219 234 254);
+	--overlay: rgba(15, 23, 42, 0.5);
+}
+
+.dark {
+	/* Dark mode colors - using slate palette with orange primary */
+	--background: rgb(3, 11, 28);
+	--foreground: rgb(248 250 252);
+	--card: rgb(15 23 42);
+	--card-foreground: rgb(248 250 252);
+	--popover: rgb(15 23 42);
+	--popover-foreground: rgb(248 250 252);
+	--primary: rgb(227, 106, 19);
+	--primary-foreground: rgb(255 255 255);
+	--secondary: rgb(30 41 59);
+	--secondary-foreground: rgb(248 250 252);
+	--muted: rgb(30 41 59);
+	--muted-foreground: rgb(148 163 184);
+	--accent: rgb(30 41 59);
+	--accent-foreground: rgb(248 250 252);
+	--destructive: rgb(239 68 68);
+	--destructive-foreground: rgb(255 255 255);
+	--border: rgb(51 65 85);
+	--input: rgb(51 65 85);
+	--ring: rgb(249 115 22);
+	--chart-1: rgb(22, 154, 249);
+	--chart-2: rgb(16 185 129);
+	--chart-3: rgb(245 158 11);
+	--chart-4: rgb(244 63 94);
+	--chart-5: rgb(20 184 166);
+	--sidebar: rgb(15 23 42);
+	--sidebar-foreground: rgb(248 250 252);
+	--sidebar-primary: rgb(249 115 22);
+	--sidebar-primary-foreground: rgb(255 255 255);
+	--sidebar-accent: rgb(30 41 59);
+	--sidebar-accent-foreground: rgb(248 250 252);
+	--sidebar-border: rgb(51 65 85);
+	--sidebar-ring: rgb(249 115 22);
+
+	/* Semantic status colors - dark mode */
+	--success: rgb(16 185 129);
+	--success-foreground: rgb(255 255 255);
+	--success-bg: rgb(2 44 34);
+	--success-border: rgb(6 78 59);
+	--warning: rgb(245 158 11);
+	--warning-foreground: rgb(15 23 42);
+	--warning-bg: rgb(69 26 3);
+	--warning-border: rgb(120 53 15);
+	--info: rgb(59 130 246);
+	--info-foreground: rgb(255 255 255);
+	--info-bg: rgb(23 37 84);
+	--info-border: rgb(30 58 138);
+	--overlay: rgba(2, 6, 23, 0.75);
+}
+
+@layer base {
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+}
+
+/* Custom text stroke utilities */
+@layer utilities {
+	.text-stroke {
+		-webkit-text-stroke: 1px black;
+	}
+	.text-stroke-2 {
+		-webkit-text-stroke: 2px black;
+	}
+	.text-stroke-white {
+		-webkit-text-stroke: 0.5px white;
+	}
+	.text-stroke-2-white {
+		-webkit-text-stroke: 2px white;
+	}
+
+	.animated-underline {
+		background-image:
+			linear-gradient(#33333300, #33333300),
+			linear-gradient(to right, #fa5c00, #fa5c00);
+		background-size:
+			100% 2px,
+			0 2px;
+		background-position:
+			100% 100%,
+			0 100%;
+		background-repeat: no-repeat;
+	}
+	@media (prefers-reduced-motion: no-preference) {
+		.animated-underline {
+			transition: 0.3s ease;
+			transition-property:
+				background-size, color, background-color, border-color;
+		}
+	}
+	.animated-underline:hover,
+	.animated-underline:focus-visible {
+		background-size:
+			0 2px,
+			100% 2px;
+	}
+	.blog-scale {
+		transition: transform 0.75s;
+	}
+	.blog-scale:hover {
+		transform: scale(1.1);
+	}
+}
+
+/* Animations */
+@keyframes fadeOut {
+	0% {
+		opacity: 1;
+	}
+	70% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+
+/* Typography plugin styles for dark mode */
+@layer base {
+	.prose {
+		--tw-prose-body: rgb(51 65 85);
+		--tw-prose-headings: rgb(15 23 42);
+		--tw-prose-lead: rgb(71 85 105);
+		--tw-prose-links: rgb(249 115 22);
+		--tw-prose-bold: rgb(15 23 42);
+		--tw-prose-counters: rgb(100 116 139);
+		--tw-prose-bullets: rgb(100 116 139);
+		--tw-prose-hr: rgb(226 232 240);
+		--tw-prose-quotes: rgb(15 23 42);
+		--tw-prose-quote-borders: rgb(226 232 240);
+		--tw-prose-captions: rgb(100 116 139);
+		--tw-prose-code: rgb(20 184 166);
+		--tw-prose-pre-code: rgb(226 232 240);
+		--tw-prose-pre-bg: rgb(30 41 59);
+		--tw-prose-th-borders: rgb(203 213 225);
+		--tw-prose-td-borders: rgb(226 232 240);
+	}
+
+	.prose :where(code):not(:where([class~="not-prose"] *)) {
+		background-color: rgb(241 245 249);
+		padding: 0.125rem 0.25rem;
+		border-radius: 0.25rem;
+		font-weight: 400;
+	}
+
+	.prose :where(code):not(:where([class~="not-prose"] *))::before,
+	.prose :where(code):not(:where([class~="not-prose"] *))::after {
+		content: none;
+	}
+
+	.dark .prose {
+		--tw-prose-body: rgb(203 213 225);
+		--tw-prose-headings: rgb(241 245 249);
+		--tw-prose-lead: rgb(148 163 184);
+		--tw-prose-links: rgb(249 115 22);
+		--tw-prose-bold: rgb(241 245 249);
+		--tw-prose-counters: rgb(148 163 184);
+		--tw-prose-bullets: rgb(148 163 184);
+		--tw-prose-hr: rgb(51 65 85);
+		--tw-prose-quotes: rgb(241 245 249);
+		--tw-prose-quote-borders: rgb(51 65 85);
+		--tw-prose-captions: rgb(148 163 184);
+		--tw-prose-code: rgb(20 184 166);
+		--tw-prose-pre-code: rgb(226 232 240);
+		--tw-prose-pre-bg: rgb(30 41 59);
+		--tw-prose-th-borders: rgb(71 85 105);
+		--tw-prose-td-borders: rgb(51 65 85);
+	}
+
+	.dark .prose :where(code):not(:where([class~="not-prose"] *)) {
+		background-color: rgb(30 41 59);
+	}
+}

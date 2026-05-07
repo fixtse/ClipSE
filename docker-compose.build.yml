@@ -1,0 +1,20 @@
+services:
+  garage-init:
+    build:
+      context: .
+      dockerfile: services/garage/Dockerfile.init
+
+  whisper:
+    build:
+      context: ./services/whisper
+      dockerfile: Dockerfile
+
+  app:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
