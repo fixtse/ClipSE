@@ -64,4 +64,45 @@ describe("contentclip subtitles", () => {
 		]);
 		expect(cues.every((cue) => cue.endSeconds > cue.startSeconds)).toBe(true);
 	});
+
+	it("uses Whisper word timestamps when available", () => {
+		const cues = buildRenderSubtitleCues({
+			clipStartSeconds: 10,
+			clipEndSeconds: 15,
+			segments: [
+				{
+					start: 10,
+					end: 15,
+					text: "This pause lands better",
+					words: [
+						{ start: 10.1, end: 10.35, text: "This" },
+						{ start: 10.4, end: 10.7, text: "pause" },
+						{ start: 12.2, end: 12.55, text: "lands" },
+						{ start: 14.1, end: 14.45, text: "better" },
+					],
+				},
+			],
+		});
+
+		expect(cues).toMatchObject([
+			{
+				startSeconds: 0.1,
+				endSeconds: 0.7,
+				text: "This pause",
+				words: [
+					{ startSeconds: 0.1, endSeconds: 0.35, text: "This" },
+					{ startSeconds: 0.4, endSeconds: 0.7, text: "pause" },
+				],
+			},
+			{
+				startSeconds: 2.2,
+				endSeconds: 4.45,
+				text: "lands better",
+				words: [
+					{ startSeconds: 2.2, endSeconds: 2.55, text: "lands" },
+					{ startSeconds: 4.1, endSeconds: 4.45, text: "better" },
+				],
+			},
+		]);
+	});
 });

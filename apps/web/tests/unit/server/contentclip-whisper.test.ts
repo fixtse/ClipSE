@@ -37,7 +37,14 @@ describe("transcribeWithWhisperService", () => {
 					text: "hello",
 					language: "en",
 					duration: 1,
-					segments: [],
+					segments: [
+						{
+							start: 0,
+							end: 1,
+							text: "hello",
+							words: [{ start: 0.1, end: 0.4, text: "hello" }],
+						},
+					],
 				}),
 				{ status: 200 },
 			);
@@ -54,6 +61,11 @@ describe("transcribeWithWhisperService", () => {
 			transcribeWithWhisperService({ audioFilePath }),
 		).resolves.toMatchObject({
 			model: "large-v3-turbo",
+			segments: [
+				{
+					words: [{ start: 0.1, end: 0.4, text: "hello" }],
+				},
+			],
 		});
 		expect(fetchMock).toHaveBeenCalledWith(
 			"http://whisper.test/transcribe",

@@ -1,9 +1,20 @@
 import { z } from "zod";
 
+export const ContentTranscriptionWordSchema = z.object({
+	start: z.number().nonnegative(),
+	end: z.number().nonnegative(),
+	text: z.string().min(1),
+});
+
+export type ContentTranscriptionWord = z.infer<
+	typeof ContentTranscriptionWordSchema
+>;
+
 export const ContentTranscriptionSegmentSchema = z.object({
 	start: z.number().nonnegative(),
 	end: z.number().nonnegative(),
 	text: z.string().min(1),
+	words: z.array(ContentTranscriptionWordSchema).optional(),
 });
 
 export type ContentTranscriptionSegment = z.infer<

@@ -76,6 +76,7 @@ async def transcribe(
                     language=None if language in (None, "", "auto") else language,
                     vad_filter=True,
                     beam_size=5,
+                    word_timestamps=True,
                 )
 
                 segment_items = []
@@ -86,11 +87,26 @@ async def transcribe(
                     if not text:
                         continue
 
+                    word_items = []
+                    for word in segment.words or []:
+                        word_text = word.word.strip()
+                        if not word_text:
+                            continue
+
+                        word_items.append(
+                            {
+                                "start": round(word.start, 3),
+                                "end": round(word.end, 3),
+                                "text": word_text,
+                            }
+                        )
+
                     segment_items.append(
                         {
                             "start": round(segment.start, 3),
                             "end": round(segment.end, 3),
                             "text": text,
+                            "words": word_items,
                         }
                     )
                     full_text_parts.append(text)

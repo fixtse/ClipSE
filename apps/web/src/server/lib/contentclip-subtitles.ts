@@ -52,6 +52,88 @@ function splitWords(text: string): string[] {
 	return text.split(/\s+/).filter(Boolean);
 }
 
+function roundSubtitleTime(value: number): number {
+	return Number(value.toFixed(3));
+}
+
+function hasUsableWordTimestamps(
+	segment: ContentTranscriptionSegment,
+): boolean {
+	return (
+		segment.words?.some(
+			(word) =>
+				word.end > word.start &&
+				word.end > segment.start &&
+				word.start < segment.end &&
+				word.text.trim().length > 0,
+		) ?? false
+	);
+}
+
+function buildTimedWordCues(input: {
+	segment: ContentTranscriptionSegment;
+	clipStartSeconds: number;
+	clipEndSeconds: number;
+	clipDurationSeconds: number;
+}): RenderSubtitleCue[] {
+	const timedWords =
+		input.segment.words
+			?.map((word) => {
+				const startSeconds = Math.max(
+					input.clipStartSeconds,
+					input.segment.start,
+					word.start,
+				);
+				const endSeconds = Math.min(
+					input.clipEndSeconds,
+					input.segment.end,
+					word.end,
+				);
+
+				return {
+					startSeconds: roundSubtitleTime(
+						Math.max(0, startSeconds - input.clipStartSeconds),
+					),
+					endSeconds: roundSubtitleTime(
+						Math.min(
+							input.clipDurationSeconds,
+							endSeconds - input.clipStartSeconds,
+						),
+					),
+					text: word.text.trim(),
+				};
+			})
+			.filter(
+				(word) =>
+					word.text.length > 0 &&
+					word.endSeconds - word.startSeconds >= MIN_CUE_DURATION_SECONDS,
+			) ?? [];
+
+	const cues: RenderSubtitleCue[] = [];
+	for (
+		let index = 0;
+		index < timedWords.length;
+		index += SUBTITLE_WORDS_PER_CUE
+	) {
+		const words = timedWords.slice(index, index + SUBTITLE_WORDS_PER_CUE);
+		const firstWord = words[0];
+		const lastWord = words.at(-1);
+
+		if (!firstWord || !lastWord) {
+			continue;
+		}
+
+		cues.push({
+			startSeconds: firstWord.startSeconds,
+			endSeconds: lastWord.endSeconds,
+			text: words.map((word) => word.text).join(" "),
+			words,
+		});
+	}
+
+	return cues;
+}
+
 export function buildRenderSubtitleCues(input: {
 	segments: readonly ContentTranscriptionSegment[];
 	clipStartSeconds: number;
@@ -71,6 +153,15 @@ export function buildRenderSubtitleCues(input: {
 
 		if (durationSeconds <= 0 || chunks.length === 0 || words.length === 0) {
 			return [];
+		}
+
+		if (hasUsableWordTimestamps(segment)) {
+			return buildTimedWordCues({
+				segment,
+				clipStartSeconds: input.clipStartSeconds,
+				clipEndSeconds: input.clipEndSeconds,
+				clipDurationSeconds,
+			});
 		}
 
 		const chunkDurationSeconds = durationSeconds / chunks.length;
