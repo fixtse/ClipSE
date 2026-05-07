@@ -107,7 +107,7 @@ async function processTranscriptionJob(
 		videoId,
 		language: transcription.language,
 		provider: "whisper-service",
-		model: "whisper",
+		model: transcription.model,
 		segments: transcription.segments,
 		fullText: transcription.text,
 		metadata: {

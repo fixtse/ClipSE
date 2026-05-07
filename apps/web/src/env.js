@@ -15,11 +15,7 @@ export const env = createEnv({
 		NODE_ENV: z
 			.enum(["development", "test", "production"])
 			.default("development"),
-		OPENAI_API_KEY: z.string().default(""),
-		OPENAI_BASE_URL: z.string().default(""),
-		OPENAI_MODEL: z.string().default("gpt-4o-mini"),
 		WHISPER_SERVICE_URL: z.string().url().default("http://whisper:8000"),
-		WHISPER_MODEL: z.string().default("medium"),
 		CONTENTCLIP_S3_ENDPOINT: z.string().url().default("http://garage:3900"),
 		CONTENTCLIP_S3_PUBLIC_ENDPOINT: z
 			.string()
@@ -60,11 +56,7 @@ export const env = createEnv({
 		BETTER_AUTH_BASE_URL: process.env.BETTER_AUTH_BASE_URL,
 		DATABASE_URL: process.env.DATABASE_URL,
 		NODE_ENV: process.env.NODE_ENV,
-		OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-		OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
-		OPENAI_MODEL: process.env.OPENAI_MODEL,
 		WHISPER_SERVICE_URL: process.env.WHISPER_SERVICE_URL,
-		WHISPER_MODEL: process.env.WHISPER_MODEL,
 		CONTENTCLIP_S3_ENDPOINT: process.env.CONTENTCLIP_S3_ENDPOINT,
 		CONTENTCLIP_S3_PUBLIC_ENDPOINT: process.env.CONTENTCLIP_S3_PUBLIC_ENDPOINT,
 		CONTENTCLIP_S3_REGION: process.env.CONTENTCLIP_S3_REGION,

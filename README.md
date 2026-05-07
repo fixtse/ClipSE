@@ -45,11 +45,7 @@ Open:
 http://localhost:3000
 ```
 
-On first launch, create a local account from the sign-up page. Set these values in `.env` before using analysis:
-
-- `OPENAI_API_KEY`
-- `OPENAI_BASE_URL`, when using a non-default OpenAI-compatible provider
-- `OPENAI_MODEL`
+On first launch, create a local account from the sign-up page. Configure the AI provider, analysis model, and Whisper transcription model in the app settings.
 
 For production, replace `BETTER_AUTH_SECRET` with a strong random value:
 

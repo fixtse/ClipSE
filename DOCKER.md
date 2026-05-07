@@ -70,8 +70,8 @@ Copy `.env.example` to `.env` and set:
 
 - `BETTER_AUTH_SECRET` for local authentication cookies
 - `BETTER_AUTH_BASE_URL`, usually `http://localhost:3000` for local Docker
-- `OPENAI_API_KEY`
-- `OPENAI_BASE_URL` and `OPENAI_MODEL` if using another OpenAI-compatible provider
+
+Configure the AI provider, analysis model, and Whisper transcription model in the app settings after sign-in.
 
 The compose file supplies internal container URLs for PostgreSQL, Garage, and Whisper.
 

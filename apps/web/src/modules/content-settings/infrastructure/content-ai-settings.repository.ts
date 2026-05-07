@@ -1,5 +1,4 @@
 import { eq } from "drizzle-orm";
-import { env } from "~/env";
 import { db } from "~/server/db";
 import { contentAiSettings } from "~/server/db/schema";
 import type { ContentAiSettingsRepositoryInterface } from "../domain/content-ai-settings.repository.interface";
@@ -37,14 +36,14 @@ export class ContentAiSettingsRepository
 			.values({
 				id: SETTINGS_ID,
 				provider: "openai",
-				openaiApiKey: env.OPENAI_API_KEY,
-				openaiBaseUrl: env.OPENAI_BASE_URL,
-				openaiModel: env.OPENAI_MODEL,
+				openaiApiKey: "",
+				openaiBaseUrl: "",
+				openaiModel: "gpt-4o-mini",
 				geminiApiKey: "",
 				geminiModel: "gemini-2.5-flash",
 				openrouterApiKey: "",
 				openrouterModel: "",
-				whisperModel: normalizeWhisperModel(env.WHISPER_MODEL),
+				whisperModel: "medium",
 				createdAt: new Date(),
 				updatedAt: new Date(),
 			})

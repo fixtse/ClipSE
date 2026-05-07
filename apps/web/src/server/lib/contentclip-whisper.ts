@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { z } from "zod";
 import { env } from "~/env";
+import type { ContentAiSettings } from "~/modules/content-settings/domain/content-ai-settings.valueobject";
 import { contentAiSettingsRepository } from "~/modules/content-settings/infrastructure/content-ai-settings.repository";
 import {
 	type ContentTranscriptionSegment,
@@ -18,6 +19,7 @@ const whisperResponseSchema = z.object({
 export interface WhisperTranscriptionResult {
 	text: string;
 	language: string;
+	model: ContentAiSettings["whisperModel"];
 	segments: ContentTranscriptionSegment[];
 	durationSeconds?: number;
 }
@@ -38,7 +40,8 @@ export async function transcribeWithWhisperService(input: {
 	);
 
 	const aiSettings = await contentAiSettingsRepository.get();
-	formData.set("model", aiSettings.whisperModel ?? env.WHISPER_MODEL);
+	const model = aiSettings.whisperModel;
+	formData.set("model", model);
 
 	if (input.languageHint && input.languageHint !== "auto") {
 		formData.set("language", input.languageHint);
@@ -61,6 +64,7 @@ export async function transcribeWithWhisperService(input: {
 	return {
 		text: payload.text,
 		language: payload.language,
+		model,
 		segments: payload.segments,
 		durationSeconds: payload.duration,
 	};
