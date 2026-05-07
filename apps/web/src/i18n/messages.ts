@@ -175,8 +175,7 @@ export const messages = {
 				endVideoDescription: "Appended after every rendered clip.",
 				verticalStartVideoDescription:
 					"Prepended before vertical rendered clips.",
-				verticalEndVideoDescription:
-					"Appended after vertical rendered clips.",
+				verticalEndVideoDescription: "Appended after vertical rendered clips.",
 				noVideoConfigured: "No {position} video configured.",
 				uploadLabel: "Upload {label}",
 				dropTitle: "Drop {label} here",
