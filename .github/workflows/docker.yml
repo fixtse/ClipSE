@@ -1,12 +1,21 @@
 name: Docker Images
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - "v*.*.*"
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      event-name:
+        required: true
+        type: string
+      ref:
+        required: true
+        type: string
+      sha:
+        required: true
+        type: string
+      before-sha:
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -16,27 +25,86 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+
+      - name: Build image matrix
+        id: matrix
+        env:
+          EVENT_NAME: ${{ inputs.event-name }}
+          REF: ${{ inputs.ref }}
+          SHA: ${{ inputs.sha }}
+          BEFORE_SHA: ${{ inputs.before-sha }}
+        run: |
+          set -euo pipefail
+
+          append_image() {
+            local image="$1"
+            local context="$2"
+            local dockerfile="$3"
+
+            if [ "$matrix" != "[" ]; then
+              matrix="${matrix},"
+            fi
+
+            matrix="${matrix}{\"image\":\"${image}\",\"context\":\"${context}\",\"dockerfile\":\"${dockerfile}\"}"
+          }
+
+          changed_any() {
+            local pattern="$1"
+            grep -Eq "$pattern" changed-files.txt
+          }
+
+          matrix="["
+
+          if [[ "$REF" == refs/tags/v*.*.* || "$EVENT_NAME" == "workflow_dispatch" || -z "$BEFORE_SHA" || "$BEFORE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            append_image "contentclip-app" "." "apps/web/Dockerfile"
+            append_image "contentclip-worker" "." "apps/worker/Dockerfile"
+            append_image "contentclip-migrate" "." "services/postgres/Dockerfile.migrate"
+            append_image "contentclip-whisper" "./services/whisper" "./services/whisper/Dockerfile"
+            append_image "contentclip-garage-init" "." "services/garage/Dockerfile.init"
+          else
+            git diff --name-only "$BEFORE_SHA" "$SHA" > changed-files.txt
+
+            if changed_any '^(\.dockerignore|\.github/workflows/docker\.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig\.json|apps/web/)'; then
+              append_image "contentclip-app" "." "apps/web/Dockerfile"
+            fi
+
+            if changed_any '^(\.dockerignore|\.github/workflows/docker\.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig\.json|apps/worker/|apps/web/src/)'; then
+              append_image "contentclip-worker" "." "apps/worker/Dockerfile"
+            fi
+
+            if changed_any '^(\.dockerignore|\.github/workflows/docker\.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|services/postgres/|apps/web/src/server/db/schema\.ts)'; then
+              append_image "contentclip-migrate" "." "services/postgres/Dockerfile.migrate"
+            fi
+
+            if changed_any '^(\.github/workflows/docker\.yml|services/whisper/)'; then
+              append_image "contentclip-whisper" "./services/whisper" "./services/whisper/Dockerfile"
+            fi
+
+            if changed_any '^(\.github/workflows/docker\.yml|services/garage/)'; then
+              append_image "contentclip-garage-init" "." "services/garage/Dockerfile.init"
+            fi
+          fi
+
+          matrix="${matrix}]"
+          echo "matrix={\"include\":${matrix}}" >> "$GITHUB_OUTPUT"
+
   build-and-push:
+    needs: changes
+    if: needs.changes.outputs.matrix != '{"include":[]}'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - image: contentclip-app
-            context: .
-            dockerfile: apps/web/Dockerfile
-          - image: contentclip-worker
-            context: .
-            dockerfile: apps/worker/Dockerfile
-          - image: contentclip-migrate
-            context: .
-            dockerfile: services/postgres/Dockerfile.migrate
-          - image: contentclip-whisper
-            context: ./services/whisper
-            dockerfile: ./services/whisper/Dockerfile
-          - image: contentclip-garage-init
-            context: .
-            dockerfile: services/garage/Dockerfile.init
+      matrix: ${{ fromJson(needs.changes.outputs.matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
