@@ -74,23 +74,23 @@ jobs:
           else
             git diff --name-only "$BEFORE_SHA" "$SHA" > changed-files.txt
 
-            if changed_any '^(\.dockerignore|\.github/workflows/docker\.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig\.json|apps/web/)'; then
+            if changed_any '^(\.dockerignore|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig\.json|apps/web/)'; then
               append_image "contentclip-app" "." "apps/web/Dockerfile"
             fi
 
-            if changed_any '^(\.dockerignore|\.github/workflows/docker\.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig\.json|apps/worker/|apps/web/src/)'; then
+            if changed_any '^(\.dockerignore|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig\.json|apps/worker/|apps/web/src/)'; then
               append_image "contentclip-worker" "." "apps/worker/Dockerfile"
             fi
 
-            if changed_any '^(\.dockerignore|\.github/workflows/docker\.yml|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|services/postgres/|apps/web/src/server/db/schema\.ts)'; then
+            if changed_any '^(\.dockerignore|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|services/postgres/|apps/web/src/server/db/schema\.ts)'; then
               append_image "contentclip-migrate" "." "services/postgres/Dockerfile.migrate"
             fi
 
-            if changed_any '^(\.github/workflows/docker\.yml|services/whisper/)'; then
+            if changed_any '^(services/whisper/)'; then
               append_image "contentclip-whisper" "./services/whisper" "./services/whisper/Dockerfile"
             fi
 
-            if changed_any '^(\.github/workflows/docker\.yml|services/garage/)'; then
+            if changed_any '^(services/garage/)'; then
               append_image "contentclip-garage-init" "." "services/garage/Dockerfile.init"
             fi
           fi
