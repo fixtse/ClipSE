@@ -154,6 +154,8 @@ export interface MediaMetadata {
 }
 
 const INTERNAL_TRANSITION_SECONDS = 0.35;
+const DEFAULT_CAPTION_Y_RATIO = 0.73;
+const STACKED_VERTICAL_CAPTION_Y_RATIO = 0.84;
 
 export async function getMediaMetadata(
 	filePath: string,
@@ -453,6 +455,7 @@ async function renderVerticalClipSegment(input: {
 		(window) => window.endSeconds > window.startSeconds,
 	);
 	const workspace = dirname(input.outputFilePath);
+	const hasStackedLayout = windows.some((window) => window.regions.length >= 2);
 
 	if (windows.length > 1) {
 		const scenePaths = await Promise.all(
@@ -506,12 +509,16 @@ async function renderVerticalClipSegment(input: {
 				durationSeconds: input.durationSeconds,
 				width: 1080,
 				height: 1920,
+				captionYRatio: hasStackedLayout
+					? STACKED_VERTICAL_CAPTION_Y_RATIO
+					: DEFAULT_CAPTION_Y_RATIO,
 			});
 		}
 		return;
 	}
 
 	const staticRegions = windows[0]?.regions ?? input.focusPlan.regions;
+	const hasStaticStackedLayout = staticRegions.length >= 2;
 	const sceneOutputPath = input.subtitleFilePath
 		? join(workspace, "vertical-scene-no-captions.mp4")
 		: input.outputFilePath;
@@ -533,6 +540,9 @@ async function renderVerticalClipSegment(input: {
 			durationSeconds: input.durationSeconds,
 			width: 1080,
 			height: 1920,
+			captionYRatio: hasStaticStackedLayout
+				? STACKED_VERTICAL_CAPTION_Y_RATIO
+				: DEFAULT_CAPTION_Y_RATIO,
 		});
 	}
 }
@@ -871,6 +881,7 @@ function drawCaptionFrame(input: {
 	timeSeconds: number;
 	width: number;
 	height: number;
+	captionYRatio: number;
 }): Buffer {
 	const canvas = createCanvas(input.width, input.height);
 	const context = canvas.getContext("2d");
@@ -899,7 +910,7 @@ function drawCaptionFrame(input: {
 		wordWidths.reduce((total, width) => total + width, 0) +
 		Math.max(0, words.length - 1) * gap;
 	const x = (input.width - textWidth) / 2;
-	const y = input.height * 0.73;
+	const y = input.height * input.captionYRatio;
 	const paddingX = fontSize * 0.34;
 	const paddingY = fontSize * 0.22;
 
@@ -969,6 +980,7 @@ async function renderCaptionConcatList(input: {
 	durationSeconds: number;
 	width: number;
 	height: number;
+	captionYRatio: number;
 }): Promise<string> {
 	await mkdir(input.outputDirectory, { recursive: true });
 	const boundaries = getCaptionStateBoundaries({
@@ -998,6 +1010,7 @@ async function renderCaptionConcatList(input: {
 				timeSeconds,
 				width: input.width,
 				height: input.height,
+				captionYRatio: input.captionYRatio,
 			}),
 		);
 		lines.push(`file ${quoteFfmpegConcatPath(framePath)}`);
@@ -1014,6 +1027,7 @@ async function renderCaptionConcatList(input: {
 				timeSeconds: 0,
 				width: input.width,
 				height: input.height,
+				captionYRatio: input.captionYRatio,
 			}),
 		);
 		lines.push(`file ${quoteFfmpegConcatPath(lastFramePath)}`);
@@ -1034,6 +1048,7 @@ async function renderCaptionOverlayAndComposite(input: {
 	durationSeconds: number;
 	width: number;
 	height: number;
+	captionYRatio?: number;
 }): Promise<void> {
 	const cues = await readSubtitleCues(input.subtitleFilePath);
 	const workspace = dirname(input.outputFilePath);
@@ -1043,6 +1058,7 @@ async function renderCaptionOverlayAndComposite(input: {
 		durationSeconds: input.durationSeconds,
 		width: input.width,
 		height: input.height,
+		captionYRatio: input.captionYRatio ?? DEFAULT_CAPTION_Y_RATIO,
 	});
 	const filterComplex = `[1:v]fps=30,format=rgba[caption];[0:v][caption]overlay=0:0:format=auto:eof_action=pass,format=yuv420p[v]`;
 
