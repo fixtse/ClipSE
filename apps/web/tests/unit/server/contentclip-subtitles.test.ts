@@ -41,4 +41,27 @@ describe("contentclip subtitles", () => {
 		expect(ass).toContain("0:00:00.00,0:00:01.19");
 		expect(ass).toContain("Use \\{braces\\} and \\\\ slash");
 	});
+
+	it("keeps fast Spanish two-word cues instead of dropping sentences", () => {
+		const cues = buildRenderSubtitleCues({
+			clipStartSeconds: 0,
+			clipEndSeconds: 2,
+			segments: [
+				{
+					start: 0,
+					end: 2,
+					text: "Entonces aquí tenemos una prueba rápida para verificar subtítulos",
+				},
+			],
+		});
+
+		expect(cues.map((cue) => cue.text)).toEqual([
+			"Entonces aquí",
+			"tenemos una",
+			"prueba rápida",
+			"para verificar",
+			"subtítulos",
+		]);
+		expect(cues.every((cue) => cue.endSeconds > cue.startSeconds)).toBe(true);
+	});
 });

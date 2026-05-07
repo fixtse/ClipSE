@@ -14,7 +14,7 @@ export interface RenderSubtitleWord {
 }
 
 const SUBTITLE_WORDS_PER_CUE = 2;
-const MIN_CUE_DURATION_SECONDS = 0.45;
+const MIN_CUE_DURATION_SECONDS = 0.001;
 
 function escapeAssText(text: string): string {
 	return text
