@@ -13,7 +13,7 @@ export interface RenderSubtitleWord {
 	text: string;
 }
 
-const SUBTITLE_WORDS_PER_CUE = 4;
+const SUBTITLE_WORDS_PER_CUE = 2;
 const MIN_CUE_DURATION_SECONDS = 0.45;
 
 function escapeAssText(text: string): string {

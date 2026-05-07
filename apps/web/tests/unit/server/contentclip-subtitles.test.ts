@@ -5,7 +5,7 @@ import {
 } from "~/server/lib/contentclip-subtitles";
 
 describe("contentclip subtitles", () => {
-	it("clips transcription segments and splits long text into short cues", () => {
+	it("clips transcription segments and splits long text into one- or two-word cues", () => {
 		const cues = buildRenderSubtitleCues({
 			clipStartSeconds: 10,
 			clipEndSeconds: 16,
@@ -19,15 +19,12 @@ describe("contentclip subtitles", () => {
 		});
 
 		expect(cues).toMatchObject([
-			{ startSeconds: 0, endSeconds: 2.5, text: "This is a very" },
-			{ startSeconds: 2.5, endSeconds: 5, text: "useful clip moment" },
+			{ startSeconds: 0, endSeconds: 1.25, text: "This is" },
+			{ startSeconds: 1.25, endSeconds: 2.5, text: "a very" },
+			{ startSeconds: 2.5, endSeconds: 3.75, text: "useful clip" },
+			{ startSeconds: 3.75, endSeconds: 5, text: "moment" },
 		]);
-		expect(cues[0]?.words.map((word) => word.text)).toEqual([
-			"This",
-			"is",
-			"a",
-			"very",
-		]);
+		expect(cues[0]?.words.map((word) => word.text)).toEqual(["This", "is"]);
 	});
 
 	it("escapes ASS syntax in generated subtitle files", () => {

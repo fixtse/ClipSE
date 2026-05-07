@@ -47,6 +47,7 @@
 		"@dnd-kit/utilities": "^3.2.2",
 		"@electric-sql/pglite": "^0.4.5",
 		"browser-transcription-runtime": "^4.2.0",
+		"@napi-rs/canvas": "^1.0.0",
 		"@t3-oss/env-nextjs": "^0.13.11",
 		"@tanstack/react-query": "^5.100.9",
 		"@trpc/client": "^11.17.0",

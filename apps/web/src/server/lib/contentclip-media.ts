@@ -1,7 +1,15 @@
 import { execFile, spawn } from "node:child_process";
-import { open, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import {
+	mkdir,
+	open,
+	readdir,
+	readFile,
+	stat,
+	writeFile,
+} from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
+import { createCanvas } from "@napi-rs/canvas";
 import {
 	detectFocusRegions,
 	type FocusPlan,
@@ -751,56 +759,272 @@ async function renderSourceClipSegmentWithSubtitles(input: {
 	});
 }
 
-function escapeDrawtextText(text: string): string {
-	return text
-		.replaceAll("\\", "\\\\")
-		.replaceAll(":", "\\:")
-		.replaceAll("'", "\\'")
-		.replaceAll(",", "\\,")
-		.replaceAll("%", "\\%")
-		.replace(/\s+/g, " ")
-		.trim()
-		.toUpperCase();
-}
-
-function buildCaptionDrawtextFilters(
-	cues: readonly RenderSubtitleCue[],
-): string {
-	const filters: string[] = [];
-
-	for (const cue of cues) {
-		const cueText = escapeDrawtextText(cue.text);
-		const timedWords = cue.words.length > 0 ? cue.words : [cue];
-
-		for (const [index, timedWord] of timedWords.entries()) {
-			const isEvenPulse = index % 2 === 0;
-			filters.push(
-				[
-					`drawtext=text='${cueText}'`,
-					`fontcolor=${isEvenPulse ? "0xFFE45C" : "white"}`,
-					`fontsize=${isEvenPulse ? "96" : "88"}`,
-					`borderw=${isEvenPulse ? "9" : "8"}`,
-					"bordercolor=black",
-					"shadowx=0",
-					"shadowy=6",
-					"shadowcolor=black@0.45",
-					"x=(w-text_w)/2",
-					"y=h*0.71",
-					`enable='between(t,${timedWord.startSeconds.toFixed(3)},${timedWord.endSeconds.toFixed(3)})'`,
-				].join(":"),
-			);
-		}
-	}
-
-	return filters.join(",");
-}
-
 async function readSubtitleCues(
 	filePath: string,
 ): Promise<RenderSubtitleCue[]> {
 	const contents = await readFile(filePath, "utf8");
 	const parsed = JSON.parse(contents) as RenderSubtitleCue[];
 	return Array.isArray(parsed) ? parsed : [];
+}
+
+function getActiveCue(
+	cues: readonly RenderSubtitleCue[],
+	timeSeconds: number,
+): RenderSubtitleCue | null {
+	return (
+		cues.find(
+			(cue) => timeSeconds >= cue.startSeconds && timeSeconds < cue.endSeconds,
+		) ?? null
+	);
+}
+
+function getActiveWordIndex(
+	cue: RenderSubtitleCue,
+	timeSeconds: number,
+): number {
+	const index = cue.words.findIndex(
+		(word) => timeSeconds >= word.startSeconds && timeSeconds < word.endSeconds,
+	);
+
+	return index >= 0 ? index : 0;
+}
+
+function getCaptionWords(cue: RenderSubtitleCue): string[] {
+	const words =
+		cue.words.length > 0
+			? cue.words.map((word) => word.text)
+			: cue.text.split(/\s+/);
+	return words.slice(0, 2).map((word) => word.toUpperCase());
+}
+
+function quoteFfmpegConcatPath(filePath: string): string {
+	return `'${filePath.replaceAll("'", "'\\''")}'`;
+}
+
+function clampSubtitleTime(value: number, durationSeconds: number): number {
+	if (!Number.isFinite(value)) {
+		return 0;
+	}
+
+	return Math.min(durationSeconds, Math.max(0, value));
+}
+
+function setCaptionFont(
+	context: ReturnType<ReturnType<typeof createCanvas>["getContext"]>,
+	fontSize: number,
+): void {
+	context.font = `900 ${fontSize}px Arial, Helvetica, sans-serif`;
+	context.textBaseline = "middle";
+}
+
+function fitCaptionFontSize(input: {
+	context: ReturnType<ReturnType<typeof createCanvas>["getContext"]>;
+	words: readonly string[];
+	maxWidth: number;
+}): number {
+	for (let fontSize = 108; fontSize >= 58; fontSize -= 4) {
+		setCaptionFont(input.context, fontSize);
+		const totalWidth =
+			input.words.reduce(
+				(width, word) => width + input.context.measureText(word).width,
+				0,
+			) +
+			Math.max(0, input.words.length - 1) * fontSize * 0.34;
+
+		if (totalWidth <= input.maxWidth) {
+			return fontSize;
+		}
+	}
+
+	return 58;
+}
+
+function drawRoundedRect(input: {
+	context: ReturnType<ReturnType<typeof createCanvas>["getContext"]>;
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	radius: number;
+}): void {
+	const { context, x, y, width, height, radius } = input;
+	context.beginPath();
+	context.moveTo(x + radius, y);
+	context.lineTo(x + width - radius, y);
+	context.quadraticCurveTo(x + width, y, x + width, y + radius);
+	context.lineTo(x + width, y + height - radius);
+	context.quadraticCurveTo(
+		x + width,
+		y + height,
+		x + width - radius,
+		y + height,
+	);
+	context.lineTo(x + radius, y + height);
+	context.quadraticCurveTo(x, y + height, x, y + height - radius);
+	context.lineTo(x, y + radius);
+	context.quadraticCurveTo(x, y, x + radius, y);
+	context.closePath();
+}
+
+function drawCaptionFrame(input: {
+	cue: RenderSubtitleCue | null;
+	timeSeconds: number;
+	width: number;
+	height: number;
+}): Buffer {
+	const canvas = createCanvas(input.width, input.height);
+	const context = canvas.getContext("2d");
+	context.clearRect(0, 0, input.width, input.height);
+
+	if (!input.cue) {
+		return canvas.encodeSync("png");
+	}
+
+	const words = getCaptionWords(input.cue);
+	if (words.length === 0) {
+		return canvas.encodeSync("png");
+	}
+
+	const activeWordIndex = getActiveWordIndex(input.cue, input.timeSeconds);
+	const fontSize = fitCaptionFontSize({
+		context,
+		words,
+		maxWidth: input.width * 0.86,
+	});
+	setCaptionFont(context, fontSize);
+
+	const gap = fontSize * 0.34;
+	const wordWidths = words.map((word) => context.measureText(word).width);
+	const textWidth =
+		wordWidths.reduce((total, width) => total + width, 0) +
+		Math.max(0, words.length - 1) * gap;
+	const x = (input.width - textWidth) / 2;
+	const y = input.height * 0.73;
+	const paddingX = fontSize * 0.34;
+	const paddingY = fontSize * 0.22;
+
+	context.save();
+	context.fillStyle = "rgba(0,0,0,0.28)";
+	drawRoundedRect({
+		context,
+		x: x - paddingX,
+		y: y - fontSize / 2 - paddingY,
+		width: textWidth + paddingX * 2,
+		height: fontSize + paddingY * 2,
+		radius: fontSize * 0.24,
+	});
+	context.fill();
+	context.restore();
+
+	let cursorX = x;
+	for (const [index, word] of words.entries()) {
+		context.lineJoin = "round";
+		context.strokeStyle = "black";
+		context.lineWidth = index === activeWordIndex ? 12 : 9;
+		context.shadowColor = "rgba(0,0,0,0.55)";
+		context.shadowBlur = 4;
+		context.shadowOffsetY = 7;
+		context.strokeText(word, cursorX, y);
+		context.shadowColor = "transparent";
+		context.fillStyle = index === activeWordIndex ? "#ffe45c" : "#ffffff";
+		context.fillText(word, cursorX, y);
+		cursorX += (wordWidths[index] ?? 0) + gap;
+	}
+
+	return canvas.encodeSync("png");
+}
+
+function getCaptionStateBoundaries(input: {
+	cues: readonly RenderSubtitleCue[];
+	durationSeconds: number;
+}): number[] {
+	const boundaries = [0, input.durationSeconds];
+
+	for (const cue of input.cues) {
+		boundaries.push(
+			clampSubtitleTime(cue.startSeconds, input.durationSeconds),
+			clampSubtitleTime(cue.endSeconds, input.durationSeconds),
+		);
+
+		for (const word of cue.words) {
+			boundaries.push(
+				clampSubtitleTime(word.startSeconds, input.durationSeconds),
+				clampSubtitleTime(word.endSeconds, input.durationSeconds),
+			);
+		}
+	}
+
+	return Array.from(
+		new Set(
+			boundaries
+				.filter((value) => Number.isFinite(value))
+				.map((value) => Number(value.toFixed(3))),
+		),
+	).sort((a, b) => a - b);
+}
+
+async function renderCaptionConcatList(input: {
+	outputDirectory: string;
+	cues: readonly RenderSubtitleCue[];
+	durationSeconds: number;
+	width: number;
+	height: number;
+}): Promise<string> {
+	await mkdir(input.outputDirectory, { recursive: true });
+	const boundaries = getCaptionStateBoundaries({
+		cues: input.cues,
+		durationSeconds: input.durationSeconds,
+	});
+	const lines: string[] = [];
+	let lastFramePath: string | null = null;
+
+	for (let index = 0; index < boundaries.length - 1; index += 1) {
+		const startSeconds = boundaries[index] ?? 0;
+		const endSeconds = boundaries[index + 1] ?? input.durationSeconds;
+		const durationSeconds = endSeconds - startSeconds;
+		if (durationSeconds <= 0.001) {
+			continue;
+		}
+
+		const timeSeconds = startSeconds + durationSeconds / 2;
+		const framePath = join(
+			input.outputDirectory,
+			`state-${index.toString().padStart(6, "0")}.png`,
+		);
+		await writeFile(
+			framePath,
+			drawCaptionFrame({
+				cue: getActiveCue(input.cues, timeSeconds),
+				timeSeconds,
+				width: input.width,
+				height: input.height,
+			}),
+		);
+		lines.push(`file ${quoteFfmpegConcatPath(framePath)}`);
+		lines.push(`duration ${durationSeconds.toFixed(3)}`);
+		lastFramePath = framePath;
+	}
+
+	if (!lastFramePath) {
+		lastFramePath = join(input.outputDirectory, "state-000000.png");
+		await writeFile(
+			lastFramePath,
+			drawCaptionFrame({
+				cue: null,
+				timeSeconds: 0,
+				width: input.width,
+				height: input.height,
+			}),
+		);
+		lines.push(`file ${quoteFfmpegConcatPath(lastFramePath)}`);
+		lines.push(`duration ${Math.max(0.001, input.durationSeconds).toFixed(3)}`);
+	}
+
+	lines.push(`file ${quoteFfmpegConcatPath(lastFramePath)}`);
+
+	const listPath = join(input.outputDirectory, "captions.concat");
+	await writeFile(listPath, `${lines.join("\n")}\n`, "utf8");
+	return listPath;
 }
 
 async function renderCaptionOverlayAndComposite(input: {
@@ -812,25 +1036,33 @@ async function renderCaptionOverlayAndComposite(input: {
 	height: number;
 }): Promise<void> {
 	const cues = await readSubtitleCues(input.subtitleFilePath);
-	const drawtextFilters = buildCaptionDrawtextFilters(cues);
-	const videoFilter = [
-		`scale=${input.width}:${input.height}:force_original_aspect_ratio=decrease`,
-		`pad=${input.width}:${input.height}:(ow-iw)/2:(oh-ih)/2`,
-		...(drawtextFilters ? [drawtextFilters] : []),
-		"format=yuv420p",
-	].join(",");
+	const workspace = dirname(input.outputFilePath);
+	const captionListPath = await renderCaptionConcatList({
+		outputDirectory: join(workspace, "caption-frames"),
+		cues,
+		durationSeconds: input.durationSeconds,
+		width: input.width,
+		height: input.height,
+	});
+	const filterComplex = `[1:v]fps=30,format=rgba[caption];[0:v][caption]overlay=0:0:format=auto:eof_action=pass,format=yuv420p[v]`;
 
 	await runFfmpegWithFallback({
 		nvidiaArgs: [
 			"-y",
 			"-i",
 			input.inputFilePath,
+			"-f",
+			"concat",
+			"-safe",
+			"0",
+			"-i",
+			captionListPath,
+			"-filter_complex",
+			filterComplex,
 			"-map",
-			"0:v:0",
+			"[v]",
 			"-map",
 			"0:a:0?",
-			"-vf",
-			videoFilter,
 			...getNvencOutputArgs(),
 			"-c:a",
 			"copy",
@@ -842,12 +1074,18 @@ async function renderCaptionOverlayAndComposite(input: {
 			"-y",
 			"-i",
 			input.inputFilePath,
+			"-f",
+			"concat",
+			"-safe",
+			"0",
+			"-i",
+			captionListPath,
+			"-filter_complex",
+			filterComplex,
 			"-map",
-			"0:v:0",
+			"[v]",
 			"-map",
 			"0:a:0?",
-			"-vf",
-			videoFilter,
 			...getX264OutputArgs(),
 			"-c:a",
 			"copy",
