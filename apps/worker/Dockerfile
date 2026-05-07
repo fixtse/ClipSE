@@ -20,4 +20,4 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-CMD ["pnpm", "worker"]
+CMD ["pnpm", "worker:docker"]

@@ -34,6 +34,7 @@
 		"test:unit:watch": "vitest --config apps/web/vitest.config.ts",
 		"typecheck": "tsc --noEmit",
 		"worker": "tsx --env-file=.env apps/worker/src/contentclip-worker.ts",
+		"worker:docker": "tsx apps/worker/src/contentclip-worker.ts",
 		"worker:dev": "tsx watch --env-file=.env apps/worker/src/contentclip-worker.ts"
 	},
 	"dependencies": {
