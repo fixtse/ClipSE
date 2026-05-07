@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { contentChannelRepository } from "~/modules/content-channels/infrastructure/content-channel.repository";
@@ -29,9 +29,21 @@ import {
 	downloadStorageObjectToFile,
 	uploadLocalFileToStorage,
 } from "~/server/lib/contentclip-storage";
+import {
+	buildAssSubtitleFile,
+	buildRenderSubtitleCues,
+} from "~/server/lib/contentclip-subtitles";
 import { transcribeWithWhisperService } from "~/server/lib/contentclip-whisper";
 
 const runnerId = `contentclip-worker-${randomUUID()}`;
+
+function readRenderAspectMode(value: unknown): "source" | "vertical9x16" {
+	return value === "vertical9x16" ? "vertical9x16" : "source";
+}
+
+function readRenderBurnSubtitles(value: unknown): boolean {
+	return value === true;
+}
 
 function scaleProgress(progress: number, base: number, span: number): number {
 	return base + Math.floor((Math.max(0, Math.min(100, progress)) / 100) * span);
@@ -384,6 +396,9 @@ async function processRenderJob(
 	const channel = video.channelId
 		? await contentChannelRepository.findById(video.channelId)
 		: null;
+	const job = await contentJobRepository.findById(jobId);
+	const aspectMode = readRenderAspectMode(job?.payload.aspectMode);
+	const burnSubtitles = readRenderBurnSubtitles(job?.payload.burnSubtitles);
 
 	await contentClipRepository.updateStatus({
 		id: clipId,
@@ -405,6 +420,7 @@ async function processRenderJob(
 		? join(workspace, "outro.mp4")
 		: null;
 	const outputPath = join(workspace, `${clip.id}.mp4`);
+	const subtitlePath = burnSubtitles ? join(workspace, `${clip.id}.ass`) : null;
 
 	await downloadStorageObjectToFile({
 		key: video.storageKey,
@@ -422,13 +438,36 @@ async function processRenderJob(
 			filePath: outroPath,
 		});
 	}
+
+	if (burnSubtitles && subtitlePath) {
+		await contentJobRepository.updateProgress({
+			id: jobId,
+			progress: 32,
+			message: "Preparing burned subtitles",
+		});
+		const transcription = await contentTranscriptionRepository.findByVideoId(
+			video.id,
+		);
+		if (!transcription) {
+			throw new Error("Transcription is required to burn subtitles");
+		}
+		const cues = buildRenderSubtitleCues({
+			segments: transcription.segments,
+			clipStartSeconds: clip.startSeconds,
+			clipEndSeconds: clip.endSeconds,
+		});
+		await writeFile(subtitlePath, buildAssSubtitleFile(cues), "utf8");
+	}
+
 	await contentJobRepository.updateProgress({
 		id: jobId,
 		progress: 35,
 		message:
-			introPath || outroPath
-				? "Rendering clip with start/end videos"
-				: "Rendering clip segment with ffmpeg",
+			aspectMode === "vertical9x16"
+				? "Rendering vertical 9:16 clip"
+				: introPath || outroPath
+					? "Rendering clip with start/end videos"
+					: "Rendering clip segment with ffmpeg",
 	});
 
 	await renderClipSegment({
@@ -438,6 +477,8 @@ async function processRenderJob(
 		endSeconds: clip.endSeconds,
 		introFilePath: introPath,
 		outroFilePath: outroPath,
+		aspectMode,
+		subtitleFilePath: subtitlePath,
 	});
 	await contentJobRepository.updateProgress({
 		id: jobId,
@@ -469,6 +510,8 @@ async function processRenderJob(
 		result: {
 			outputStorageKey,
 			outputFilename,
+			aspectMode,
+			burnSubtitles,
 		},
 	});
 }

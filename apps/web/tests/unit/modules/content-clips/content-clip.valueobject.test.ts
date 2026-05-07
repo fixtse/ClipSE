@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	getClipDurationSeconds,
 	normalizeClipCandidate,
+	parseContentClipRenderOptions,
 } from "~/modules/content-clips/domain/content-clip.valueobject";
 import { GeneratedClipCandidateMother } from "../../../mothers/domain-mothers";
 
@@ -53,5 +54,37 @@ describe("normalizeClipCandidate", () => {
 
 	it("returns zero for reversed durations", () => {
 		expect(getClipDurationSeconds({ startSeconds: 10, endSeconds: 4 })).toBe(0);
+	});
+});
+
+describe("parseContentClipRenderOptions", () => {
+	it("uses source render defaults", () => {
+		expect(parseContentClipRenderOptions({})).toEqual({
+			aspectMode: "source",
+			burnSubtitles: false,
+			focusMode: undefined,
+		});
+	});
+
+	it("defaults vertical renders to auto speaker focus", () => {
+		expect(
+			parseContentClipRenderOptions({
+				aspectMode: "vertical9x16",
+				burnSubtitles: true,
+			}),
+		).toEqual({
+			aspectMode: "vertical9x16",
+			burnSubtitles: true,
+			focusMode: "auto-speaker",
+		});
+	});
+
+	it("rejects invalid render options", () => {
+		expect(() =>
+			parseContentClipRenderOptions({
+				aspectMode: "square",
+				burnSubtitles: "yes",
+			}),
+		).toThrow();
 	});
 });

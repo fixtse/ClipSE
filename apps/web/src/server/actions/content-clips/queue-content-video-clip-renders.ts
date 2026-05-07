@@ -1,6 +1,7 @@
 "use server";
 
 import { queueContentVideoClipRenders } from "~/modules/content-clips/application/queue-content-video-clip-renders";
+import type { QueueContentVideoClipRendersInput } from "~/modules/content-clips/domain/content-clip.valueobject";
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
 import { contentJobRepository } from "~/modules/content-jobs/infrastructure/content-job.repository";
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
@@ -16,9 +17,16 @@ type QueueContentVideoClipRendersActionResult =
 			error: string;
 	  };
 
-export async function queueContentVideoClipRendersAction(input: {
-	videoId: string;
-}): Promise<QueueContentVideoClipRendersActionResult> {
+export async function queueContentVideoClipRendersAction(
+	input: {
+		videoId: string;
+	} & Partial<
+		Pick<
+			QueueContentVideoClipRendersInput,
+			"aspectMode" | "burnSubtitles" | "focusMode"
+		>
+	>,
+): Promise<QueueContentVideoClipRendersActionResult> {
 	try {
 		await requireSession();
 		const result = await queueContentVideoClipRenders(

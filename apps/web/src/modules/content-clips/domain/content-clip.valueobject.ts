@@ -76,6 +76,63 @@ export const UpdateContentClipSchema = z.object({
 
 export type UpdateContentClipInput = z.infer<typeof UpdateContentClipSchema>;
 
+export const CONTENT_CLIP_RENDER_ASPECT_MODES = [
+	"source",
+	"vertical9x16",
+] as const;
+
+export const CONTENT_CLIP_RENDER_FOCUS_MODES = ["auto-speaker"] as const;
+
+export type ContentClipRenderAspectMode =
+	(typeof CONTENT_CLIP_RENDER_ASPECT_MODES)[number];
+export type ContentClipRenderFocusMode =
+	(typeof CONTENT_CLIP_RENDER_FOCUS_MODES)[number];
+
+const ContentClipRenderOptionsBaseSchema = z.object({
+	aspectMode: z.enum(CONTENT_CLIP_RENDER_ASPECT_MODES).default("source"),
+	burnSubtitles: z.boolean().default(false),
+	focusMode: z.enum(CONTENT_CLIP_RENDER_FOCUS_MODES).optional(),
+});
+
+export const ContentClipRenderOptionsSchema =
+	ContentClipRenderOptionsBaseSchema.transform((options) => ({
+		...options,
+		focusMode:
+			options.aspectMode === "vertical9x16"
+				? (options.focusMode ?? "auto-speaker")
+				: options.focusMode,
+	}));
+
+export type ContentClipRenderOptions = z.infer<
+	typeof ContentClipRenderOptionsSchema
+>;
+
+export const QueueContentClipRenderInputSchema = z.object({
+	clipId: z.string().uuid(),
+	...ContentClipRenderOptionsBaseSchema.shape,
+});
+
+export type QueueContentClipRenderInput = z.input<
+	typeof QueueContentClipRenderInputSchema
+>;
+
+export const QueueContentVideoClipRendersInputSchema = z.object({
+	videoId: z.string().uuid(),
+	...ContentClipRenderOptionsBaseSchema.shape,
+});
+
+export type QueueContentVideoClipRendersInput = z.input<
+	typeof QueueContentVideoClipRendersInputSchema
+>;
+
+export function parseContentClipRenderOptions(input: {
+	aspectMode?: unknown;
+	burnSubtitles?: unknown;
+	focusMode?: unknown;
+}): ContentClipRenderOptions {
+	return ContentClipRenderOptionsSchema.parse(input);
+}
+
 export function normalizeClipCandidate(
 	input: GeneratedClipCandidate,
 	videoDurationSeconds: number | null,

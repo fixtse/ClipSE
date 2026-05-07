@@ -2,6 +2,10 @@ import { execFile, spawn } from "node:child_process";
 import { open, readdir, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
+import {
+	detectFocusRegions,
+	type FocusPlan,
+} from "~/server/lib/contentclip-focus";
 
 const execFileAsync = promisify(execFile);
 
@@ -101,6 +105,8 @@ export interface MediaMetadata {
 	durationSeconds: number;
 	frameRate: number | null;
 	hasAudio: boolean;
+	width: number | null;
+	height: number | null;
 }
 
 const INTERNAL_TRANSITION_SECONDS = 0.35;
@@ -114,13 +120,18 @@ export async function getMediaMetadata(
 		"-print_format",
 		"json",
 		"-show_entries",
-		"format=duration:stream=codec_type,avg_frame_rate",
+		"format=duration:stream=codec_type,avg_frame_rate,width,height",
 		filePath,
 	]);
 
 	const parsed = JSON.parse(stdout) as {
 		format?: { duration?: string };
-		streams?: Array<{ codec_type?: string; avg_frame_rate?: string }>;
+		streams?: Array<{
+			codec_type?: string;
+			avg_frame_rate?: string;
+			width?: number;
+			height?: number;
+		}>;
 	};
 
 	const duration = Number.parseFloat(parsed.format?.duration ?? "");
@@ -139,6 +150,8 @@ export async function getMediaMetadata(
 		durationSeconds: duration,
 		frameRate: parseFrameRate(videoStream?.avg_frame_rate),
 		hasAudio: Boolean(audioStream),
+		width: videoStream?.width ?? null,
+		height: videoStream?.height ?? null,
 	};
 }
 
@@ -168,74 +181,109 @@ export async function renderClipSegment(input: {
 	endSeconds: number;
 	introFilePath?: string | null;
 	outroFilePath?: string | null;
+	aspectMode?: "source" | "vertical9x16";
+	subtitleFilePath?: string | null;
 }): Promise<void> {
 	const durationSeconds = Math.max(1, input.endSeconds - input.startSeconds);
 	const workspace = dirname(input.outputFilePath);
+	const aspectMode = input.aspectMode ?? "source";
 	const segmentOutputPath =
 		input.introFilePath || input.outroFilePath
 			? join(workspace, "clip-segment.mp4")
 			: input.outputFilePath;
 
-	const baseArgs = [
-		"-y",
-		"-ss",
-		input.startSeconds.toFixed(3),
-		"-i",
-		input.inputFilePath,
-		"-t",
-		durationSeconds.toFixed(3),
-	] as const;
+	if (aspectMode === "vertical9x16") {
+		const metadata = await getMediaMetadata(input.inputFilePath);
+		const frameWidth = metadata.width ?? 1920;
+		const frameHeight = metadata.height ?? 1080;
+		const focusPlan = await detectFocusRegions({
+			inputFilePath: input.inputFilePath,
+			startSeconds: input.startSeconds,
+			endSeconds: input.endSeconds,
+			frameWidth,
+			frameHeight,
+		});
 
-	await runFfmpegWithFallback({
-		nvidiaArgs: [
+		await renderVerticalClipSegment({
+			inputFilePath: input.inputFilePath,
+			outputFilePath: segmentOutputPath,
+			startSeconds: input.startSeconds,
+			durationSeconds,
+			frameWidth,
+			frameHeight,
+			focusPlan,
+			subtitleFilePath: input.subtitleFilePath,
+		});
+	} else if (input.subtitleFilePath) {
+		await renderSourceClipSegmentWithSubtitles({
+			inputFilePath: input.inputFilePath,
+			outputFilePath: segmentOutputPath,
+			startSeconds: input.startSeconds,
+			durationSeconds,
+			subtitleFilePath: input.subtitleFilePath,
+		});
+	} else {
+		const baseArgs = [
 			"-y",
-			"-hwaccel",
-			"cuda",
-			"-hwaccel_output_format",
-			"cuda",
 			"-ss",
 			input.startSeconds.toFixed(3),
 			"-i",
 			input.inputFilePath,
 			"-t",
 			durationSeconds.toFixed(3),
-			"-c:v",
-			"h264_nvenc",
-			"-profile:v",
-			"high",
-			"-preset",
-			"p4",
-			"-tune",
-			"hq",
-			"-rc",
-			"vbr",
-			"-cq",
-			"22",
-			"-b:v",
-			"0",
-			"-pix_fmt",
-			"yuv420p",
-			"-c:a",
-			"copy",
-			"-movflags",
-			"+faststart",
-			segmentOutputPath,
-		],
-		cpuArgs: [
-			...baseArgs,
-			"-c:v",
-			"libx264",
-			"-preset",
-			"veryfast",
-			"-crf",
-			"22",
-			"-c:a",
-			"aac",
-			"-movflags",
-			"+faststart",
-			segmentOutputPath,
-		],
-	});
+		] as const;
+
+		await runFfmpegWithFallback({
+			nvidiaArgs: [
+				"-y",
+				"-hwaccel",
+				"cuda",
+				"-hwaccel_output_format",
+				"cuda",
+				"-ss",
+				input.startSeconds.toFixed(3),
+				"-i",
+				input.inputFilePath,
+				"-t",
+				durationSeconds.toFixed(3),
+				"-c:v",
+				"h264_nvenc",
+				"-profile:v",
+				"high",
+				"-preset",
+				"p4",
+				"-tune",
+				"hq",
+				"-rc",
+				"vbr",
+				"-cq",
+				"22",
+				"-b:v",
+				"0",
+				"-pix_fmt",
+				"yuv420p",
+				"-c:a",
+				"copy",
+				"-movflags",
+				"+faststart",
+				segmentOutputPath,
+			],
+			cpuArgs: [
+				...baseArgs,
+				"-c:v",
+				"libx264",
+				"-preset",
+				"veryfast",
+				"-crf",
+				"22",
+				"-c:a",
+				"aac",
+				"-movflags",
+				"+faststart",
+				segmentOutputPath,
+			],
+		});
+	}
 
 	const concatInputs = [
 		input.introFilePath,
@@ -253,6 +301,7 @@ export async function renderClipSegment(input: {
 			await normalizeVideoForConcat({
 				inputFilePath: filePath,
 				outputFilePath: normalizedPath,
+				aspectMode,
 			});
 			return normalizedPath;
 		}),
@@ -297,6 +346,204 @@ export async function renderClipSegment(input: {
 		concatListPath,
 		"-c",
 		"copy",
+		"-movflags",
+		"+faststart",
+		input.outputFilePath,
+	]);
+}
+
+function escapeFilterPath(filePath: string): string {
+	return filePath
+		.replaceAll("\\", "\\\\")
+		.replaceAll(":", "\\:")
+		.replaceAll("'", "\\'");
+}
+
+function getCrop(input: {
+	frameWidth: number;
+	frameHeight: number;
+	centerX: number;
+	centerY: number;
+	targetAspectRatio: number;
+}): { x: number; y: number; width: number; height: number } {
+	const frameAspectRatio = input.frameWidth / input.frameHeight;
+	const cropWidth =
+		frameAspectRatio > input.targetAspectRatio
+			? input.frameHeight * input.targetAspectRatio
+			: input.frameWidth;
+	const cropHeight = cropWidth / input.targetAspectRatio;
+	const x = Math.max(
+		0,
+		Math.min(input.frameWidth - cropWidth, input.centerX - cropWidth / 2),
+	);
+	const y = Math.max(
+		0,
+		Math.min(input.frameHeight - cropHeight, input.centerY - cropHeight / 2),
+	);
+
+	return {
+		x: Math.round(x / 2) * 2,
+		y: Math.round(y / 2) * 2,
+		width: Math.max(2, Math.round(cropWidth / 2) * 2),
+		height: Math.max(2, Math.round(cropHeight / 2) * 2),
+	};
+}
+
+function buildSubtitleFilter(
+	subtitleFilePath: string | null | undefined,
+): string {
+	return subtitleFilePath
+		? `,subtitles='${escapeFilterPath(subtitleFilePath)}'`
+		: "";
+}
+
+async function renderVerticalClipSegment(input: {
+	inputFilePath: string;
+	outputFilePath: string;
+	startSeconds: number;
+	durationSeconds: number;
+	frameWidth: number;
+	frameHeight: number;
+	focusPlan: FocusPlan;
+	subtitleFilePath?: string | null;
+}): Promise<void> {
+	const regions = input.focusPlan.regions.slice(0, 2);
+	const subtitleFilter = buildSubtitleFilter(input.subtitleFilePath);
+
+	if (regions.length >= 2) {
+		const [topRegion, bottomRegion] = regions as [
+			(typeof regions)[number],
+			(typeof regions)[number],
+		];
+		const topCrop = getCrop({
+			frameWidth: input.frameWidth,
+			frameHeight: input.frameHeight,
+			centerX: topRegion.centerX,
+			centerY: topRegion.centerY,
+			targetAspectRatio: 1080 / 960,
+		});
+		const bottomCrop = getCrop({
+			frameWidth: input.frameWidth,
+			frameHeight: input.frameHeight,
+			centerX: bottomRegion.centerX,
+			centerY: bottomRegion.centerY,
+			targetAspectRatio: 1080 / 960,
+		});
+		const filterComplex =
+			`[0:v]crop=${topCrop.width}:${topCrop.height}:${topCrop.x}:${topCrop.y},scale=1080:960,setsar=1[top];` +
+			`[0:v]crop=${bottomCrop.width}:${bottomCrop.height}:${bottomCrop.x}:${bottomCrop.y},scale=1080:960,setsar=1[bottom];` +
+			`[top][bottom]vstack=inputs=2,format=yuv420p${subtitleFilter}[v]`;
+
+		await runBinary("ffmpeg", [
+			"-y",
+			"-ss",
+			input.startSeconds.toFixed(3),
+			"-i",
+			input.inputFilePath,
+			"-t",
+			input.durationSeconds.toFixed(3),
+			"-filter_complex",
+			filterComplex,
+			"-map",
+			"[v]",
+			"-map",
+			"0:a:0?",
+			"-c:v",
+			"libx264",
+			"-preset",
+			"veryfast",
+			"-crf",
+			"22",
+			"-pix_fmt",
+			"yuv420p",
+			"-c:a",
+			"aac",
+			"-b:a",
+			"160k",
+			"-movflags",
+			"+faststart",
+			input.outputFilePath,
+		]);
+		return;
+	}
+
+	const region = regions[0] ?? {
+		centerX: input.frameWidth / 2,
+		centerY: input.frameHeight / 2,
+	};
+	const crop = getCrop({
+		frameWidth: input.frameWidth,
+		frameHeight: input.frameHeight,
+		centerX: region.centerX,
+		centerY: region.centerY,
+		targetAspectRatio: 9 / 16,
+	});
+
+	await runBinary("ffmpeg", [
+		"-y",
+		"-ss",
+		input.startSeconds.toFixed(3),
+		"-i",
+		input.inputFilePath,
+		"-t",
+		input.durationSeconds.toFixed(3),
+		"-map",
+		"0:v:0",
+		"-map",
+		"0:a:0?",
+		"-vf",
+		`crop=${crop.width}:${crop.height}:${crop.x}:${crop.y},scale=1080:1920,setsar=1,format=yuv420p${subtitleFilter}`,
+		"-c:v",
+		"libx264",
+		"-preset",
+		"veryfast",
+		"-crf",
+		"22",
+		"-pix_fmt",
+		"yuv420p",
+		"-c:a",
+		"aac",
+		"-b:a",
+		"160k",
+		"-movflags",
+		"+faststart",
+		input.outputFilePath,
+	]);
+}
+
+async function renderSourceClipSegmentWithSubtitles(input: {
+	inputFilePath: string;
+	outputFilePath: string;
+	startSeconds: number;
+	durationSeconds: number;
+	subtitleFilePath: string;
+}): Promise<void> {
+	await runBinary("ffmpeg", [
+		"-y",
+		"-ss",
+		input.startSeconds.toFixed(3),
+		"-i",
+		input.inputFilePath,
+		"-t",
+		input.durationSeconds.toFixed(3),
+		"-map",
+		"0:v:0",
+		"-map",
+		"0:a:0?",
+		"-vf",
+		`subtitles='${escapeFilterPath(input.subtitleFilePath)}'`,
+		"-c:v",
+		"libx264",
+		"-preset",
+		"veryfast",
+		"-crf",
+		"22",
+		"-pix_fmt",
+		"yuv420p",
+		"-c:a",
+		"aac",
+		"-b:a",
+		"160k",
 		"-movflags",
 		"+faststart",
 		input.outputFilePath,
@@ -407,7 +654,17 @@ async function applyInternalEdgeFades(input: {
 async function normalizeVideoForConcat(input: {
 	inputFilePath: string;
 	outputFilePath: string;
+	aspectMode?: "source" | "vertical9x16";
 }): Promise<void> {
+	const videoFilter =
+		input.aspectMode === "vertical9x16"
+			? "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2"
+			: "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2";
+	const cudaVideoFilter =
+		input.aspectMode === "vertical9x16"
+			? "scale_cuda=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2"
+			: "scale_cuda=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2";
+
 	await runFfmpegWithFallback({
 		nvidiaArgs: [
 			"-y",
@@ -422,7 +679,7 @@ async function normalizeVideoForConcat(input: {
 			"-map",
 			"0:a:0?",
 			"-vf",
-			"scale_cuda=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
+			cudaVideoFilter,
 			"-c:v",
 			"h264_nvenc",
 			"-profile:v",
@@ -458,7 +715,7 @@ async function normalizeVideoForConcat(input: {
 			"-map",
 			"0:a:0?",
 			"-vf",
-			"scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2",
+			videoFilter,
 			"-c:v",
 			"libx264",
 			"-preset",

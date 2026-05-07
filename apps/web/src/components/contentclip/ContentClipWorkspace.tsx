@@ -29,6 +29,7 @@ import ReactPlayer from "react-player";
 import { useTranslations } from "~/i18n/provider";
 import { cn } from "~/lib/utils";
 import { formatTimecode } from "~/modules/content-clips/application/clip-timing";
+import type { ContentClipRenderAspectMode } from "~/modules/content-clips/domain/content-clip.valueobject";
 import {
 	getAudioLanguageOptions,
 	getWhisperModelOptions,
@@ -131,6 +132,10 @@ type GeneratedClipMetadataResult = Pick<
 >;
 type IntakeSourceTab = "file" | "url";
 type WhisperModel = ContentAiSettings["whisperModel"];
+type RenderOptionsState = {
+	aspectMode: ContentClipRenderAspectMode;
+	burnSubtitles: boolean;
+};
 type UploadMessageKey =
 	| "workspace.intake.progress.idle"
 	| "workspace.intake.progress.creatingUploadDraft"
@@ -204,6 +209,10 @@ export function ContentClipWorkspace({
 	const [jobQueueOpen, setJobQueueOpen] = useState(false);
 	const [generateClips, setGenerateClips] = useState(true);
 	const [generateChapters, setGenerateChapters] = useState(true);
+	const [renderOptions, setRenderOptions] = useState<RenderOptionsState>({
+		aspectMode: "source",
+		burnSubtitles: false,
+	});
 	const [deleteSourceId, setDeleteSourceId] = useState<string | null>(null);
 	const [bumperMutationPosition, setBumperMutationPosition] = useState<
 		"intro" | "outro" | null
@@ -977,6 +986,11 @@ export function ContentClipWorkspace({
 	async function handleRenderClip(clipId: string) {
 		const result = await queueContentClipRenderAction({
 			clipId,
+			...renderOptions,
+			focusMode:
+				renderOptions.aspectMode === "vertical9x16"
+					? "auto-speaker"
+					: undefined,
 		});
 
 		if (!result.success) {
@@ -991,6 +1005,11 @@ export function ContentClipWorkspace({
 	async function handleRenderAllClips(videoId: string) {
 		const result = await queueContentVideoClipRendersAction({
 			videoId,
+			...renderOptions,
+			focusMode:
+				renderOptions.aspectMode === "vertical9x16"
+					? "auto-speaker"
+					: undefined,
 		});
 
 		if (!result.success) {
@@ -2625,6 +2644,52 @@ export function ContentClipWorkspace({
 															count: selectedVideo.clips.length,
 														})}
 													</div>
+													<Select
+														onValueChange={(value) =>
+															setRenderOptions((current) => ({
+																...current,
+																aspectMode:
+																	value === "vertical9x16"
+																		? "vertical9x16"
+																		: "source",
+															}))
+														}
+														value={renderOptions.aspectMode}
+													>
+														<SelectTrigger className="h-9 w-[150px] border-white/10 bg-slate-900/75 text-white">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="source">
+																{t("workspace.renderOptions.source")}
+															</SelectItem>
+															<SelectItem value="vertical9x16">
+																{t("workspace.renderOptions.vertical")}
+															</SelectItem>
+														</SelectContent>
+													</Select>
+													<button
+														className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-slate-900/75 px-3 text-slate-200 text-sm transition hover:bg-slate-900"
+														onClick={() =>
+															setRenderOptions((current) => ({
+																...current,
+																burnSubtitles: !current.burnSubtitles,
+															}))
+														}
+														type="button"
+													>
+														<Checkbox
+															checked={renderOptions.burnSubtitles}
+															onCheckedChange={(checked) =>
+																setRenderOptions((current) => ({
+																	...current,
+																	burnSubtitles: checked === true,
+																}))
+															}
+															onClick={(event) => event.stopPropagation()}
+														/>
+														{t("workspace.renderOptions.subtitles")}
+													</button>
 													<Button
 														className="border-teal-300/20 bg-teal-300/10 text-teal-100 hover:bg-teal-300/15"
 														disabled={isPending}

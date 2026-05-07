@@ -1,6 +1,7 @@
 "use server";
 
 import { queueContentClipRender } from "~/modules/content-clips/application/queue-content-clip-render";
+import type { QueueContentClipRenderInput } from "~/modules/content-clips/domain/content-clip.valueobject";
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
 import { contentJobRepository } from "~/modules/content-jobs/infrastructure/content-job.repository";
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
@@ -16,9 +17,16 @@ type QueueContentClipRenderActionResult =
 			error: string;
 	  };
 
-export async function queueContentClipRenderAction(input: {
-	clipId: string;
-}): Promise<QueueContentClipRenderActionResult> {
+export async function queueContentClipRenderAction(
+	input: {
+		clipId: string;
+	} & Partial<
+		Pick<
+			QueueContentClipRenderInput,
+			"aspectMode" | "burnSubtitles" | "focusMode"
+		>
+	>,
+): Promise<QueueContentClipRenderActionResult> {
 	try {
 		await requireSession();
 		const clip = await queueContentClipRender(

@@ -55,6 +55,54 @@ describe("queueContentClipRender", () => {
 				clipTitle: "Render me",
 				startSeconds: 12,
 				endSeconds: 34,
+				aspectMode: "source",
+				burnSubtitles: false,
+			},
+		});
+	});
+
+	it("queues a vertical render job with subtitle options", async () => {
+		const clip = ContentClipMother.create({
+			id: "33333333-3333-4333-8333-333333333333",
+			title: "Vertical render",
+		});
+		const video = ContentVideoMother.create({
+			id: clip.videoId,
+			storageKey: "videos/source.mp4",
+		});
+		const clipRepository = ContentClipRepositoryMother.create({
+			findById: vi.fn(async () => clip),
+			updateStatus: vi.fn(async () =>
+				ContentClipMother.create({ ...clip, status: "queued" }),
+			),
+		});
+		const videoRepository = ContentVideoRepositoryMother.create({
+			findById: vi.fn(async () => video),
+		});
+		const jobRepository = ContentJobRepositoryMother.create();
+
+		await queueContentClipRender(
+			clipRepository,
+			videoRepository,
+			jobRepository,
+			{
+				clipId: clip.id,
+				aspectMode: "vertical9x16",
+				burnSubtitles: true,
+			},
+		);
+
+		expect(jobRepository.enqueue).toHaveBeenCalledWith({
+			videoId: video.id,
+			clipId: clip.id,
+			type: "render-clip",
+			payload: {
+				clipTitle: "Vertical render",
+				startSeconds: clip.startSeconds,
+				endSeconds: clip.endSeconds,
+				aspectMode: "vertical9x16",
+				burnSubtitles: true,
+				focusMode: "auto-speaker",
 			},
 		});
 	});

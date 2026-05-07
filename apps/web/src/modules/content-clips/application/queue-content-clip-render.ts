@@ -1,17 +1,22 @@
 import type { ContentJobRepositoryInterface } from "~/modules/content-jobs/domain/content-job.repository.interface";
 import type { ContentVideoRepositoryInterface } from "~/modules/content-videos/domain/content-video.repository.interface";
 import type { ContentClipRepositoryInterface } from "../domain/content-clip.repository.interface";
-import type { ContentClip } from "../domain/content-clip.valueobject";
+import {
+	type ContentClip,
+	parseContentClipRenderOptions,
+	type QueueContentClipRenderInput,
+	QueueContentClipRenderInputSchema,
+} from "../domain/content-clip.valueobject";
 
 export async function queueContentClipRender(
 	clipRepository: ContentClipRepositoryInterface,
 	videoRepository: ContentVideoRepositoryInterface,
 	jobRepository: ContentJobRepositoryInterface,
-	input: {
-		clipId: string;
-	},
+	input: QueueContentClipRenderInput,
 ): Promise<ContentClip> {
-	const clip = await clipRepository.findById(input.clipId);
+	const validatedInput = QueueContentClipRenderInputSchema.parse(input);
+	const renderOptions = parseContentClipRenderOptions(validatedInput);
+	const clip = await clipRepository.findById(validatedInput.clipId);
 	if (!clip) {
 		throw new Error("Clip not found");
 	}
@@ -35,6 +40,11 @@ export async function queueContentClipRender(
 			clipTitle: clip.title,
 			startSeconds: clip.startSeconds,
 			endSeconds: clip.endSeconds,
+			aspectMode: renderOptions.aspectMode,
+			burnSubtitles: renderOptions.burnSubtitles,
+			...(renderOptions.focusMode
+				? { focusMode: renderOptions.focusMode }
+				: {}),
 		},
 	});
 

@@ -248,6 +248,11 @@ export const messages = {
 				noSourceDescription:
 					"Select a source from the library or add a new file/URL to show transcript, clip drafts, and render controls.",
 			},
+			renderOptions: {
+				source: "Source",
+				vertical: "9:16",
+				subtitles: "Subtitles",
+			},
 			clipEditor: {
 				score: "Score {score}",
 				exporting: "Exporting",
@@ -596,6 +601,11 @@ export const messages = {
 				noSourceTitle: "No hay un video seleccionado",
 				noSourceDescription:
 					"Selecciona un video desde la biblioteca o agrega un nuevo archivo/URL para mostrar transcripción, borradores de clips y controles de render.",
+			},
+			renderOptions: {
+				source: "Original",
+				vertical: "9:16",
+				subtitles: "Subtítulos",
 			},
 			clipEditor: {
 				score: "Puntuación {score}",

@@ -52,8 +52,65 @@ describe("queueContentVideoClipRenders", () => {
 				startSeconds: readyClip.startSeconds,
 				endSeconds: readyClip.endSeconds,
 				queuedBy: "render-all",
+				aspectMode: "source",
+				burnSubtitles: false,
 			},
 		});
+	});
+
+	it("passes vertical subtitle options to every queued render job", async () => {
+		const video = ContentVideoMother.create();
+		const clips = [
+			ContentClipMother.create({
+				id: "33333333-3333-4333-8333-333333333333",
+				title: "First",
+			}),
+			ContentClipMother.create({
+				id: "33333333-3333-4333-8333-333333333334",
+				title: "Second",
+			}),
+		];
+		const clipRepository = ContentClipRepositoryMother.create({
+			listByVideoId: vi.fn(async () => clips),
+		});
+		const jobRepository = ContentJobRepositoryMother.create();
+
+		await queueContentVideoClipRenders(
+			clipRepository,
+			ContentVideoRepositoryMother.create({
+				findById: vi.fn(async () => video),
+			}),
+			jobRepository,
+			{
+				videoId: video.id,
+				aspectMode: "vertical9x16",
+				burnSubtitles: true,
+			},
+		);
+
+		expect(jobRepository.enqueue).toHaveBeenCalledTimes(2);
+		expect(jobRepository.enqueue).toHaveBeenNthCalledWith(
+			1,
+			expect.objectContaining({
+				payload: expect.objectContaining({
+					clipTitle: "First",
+					aspectMode: "vertical9x16",
+					burnSubtitles: true,
+					focusMode: "auto-speaker",
+				}),
+			}),
+		);
+		expect(jobRepository.enqueue).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({
+				payload: expect.objectContaining({
+					clipTitle: "Second",
+					aspectMode: "vertical9x16",
+					burnSubtitles: true,
+					focusMode: "auto-speaker",
+				}),
+			}),
+		);
 	});
 
 	it("rejects when the source video is unavailable", async () => {
