@@ -2,13 +2,18 @@
 import os
 import json
 import sys
+import time
 
 
 SAMPLE_INTERVAL_SECONDS = 0.35
 MAX_SAMPLE_WIDTH = 640
 PERSON_CLASS_ID = 0
 MAX_GROUPS_PER_FRAME = 2
-ACTIVE_BOX_SCORE_RATIO = 1.55
+ACTIVE_BOX_SCORE_RATIO = 1.9
+ACTIVE_BOX_SCORE_MARGIN = 0.18
+MIN_ACTIVE_BOX_SCORE = 0.42
+YOLO_INIT_ATTEMPTS = 3
+YOLO_PREDICT_ATTEMPTS = 2
 
 
 def try_import_cv2():
@@ -41,7 +46,9 @@ def detect_yolo_cuda(file_path, start_seconds, end_seconds):
             return None
 
         model_name = os.environ.get("CONTENTCLIP_YOLO_MODEL", "yolo11n.pt")
-        model = YOLO(model_name)
+        model = load_yolo_model(YOLO, model_name)
+        if model is None:
+            return None
         detections = []
         previous_gray = read_gray_frame(
             cv2, capture, max(0, start_seconds - SAMPLE_INTERVAL_SECONDS)
@@ -67,13 +74,7 @@ def detect_yolo_cuda(file_path, start_seconds, end_seconds):
             )
             gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
-            results = model.predict(
-                resized,
-                classes=[PERSON_CLASS_ID],
-                device=0,
-                imgsz=MAX_SAMPLE_WIDTH,
-                verbose=False,
-            )
+            results = predict_yolo_people(model, resized)
             result = results[0] if results else None
             boxes = [] if result is None else result.boxes
             frame_boxes = []
@@ -105,6 +106,45 @@ def detect_yolo_cuda(file_path, start_seconds, end_seconds):
         return detections
     except Exception:
         return None
+
+
+def load_yolo_model(YOLO, model_name):
+    for attempt in range(YOLO_INIT_ATTEMPTS):
+        try:
+            return YOLO(model_name)
+        except Exception as error:
+            print(
+                f"YOLO model load attempt {attempt + 1} failed: {error}",
+                file=sys.stderr,
+            )
+            time.sleep(1.0 + attempt)
+
+    return None
+
+
+def predict_yolo_people(model, frame):
+    last_error = None
+    for attempt in range(YOLO_PREDICT_ATTEMPTS):
+        try:
+            return model.predict(
+                frame,
+                classes=[PERSON_CLASS_ID],
+                device=0,
+                imgsz=MAX_SAMPLE_WIDTH,
+                verbose=False,
+            )
+        except Exception as error:
+            last_error = error
+            print(
+                f"YOLO CUDA predict attempt {attempt + 1} failed: {error}",
+                file=sys.stderr,
+            )
+            time.sleep(0.75)
+
+    if last_error:
+        raise last_error
+
+    return []
 
 
 def scale_rect(rect, scale):
@@ -220,8 +260,12 @@ def select_focus_boxes(boxes, frame_width):
     secondary = sorted_by_score[1]
 
     if (
-        secondary["score"] <= 0
-        or primary["score"] >= secondary["score"] * ACTIVE_BOX_SCORE_RATIO
+        primary["score"] >= MIN_ACTIVE_BOX_SCORE
+        and primary["score"] - secondary["score"] >= ACTIVE_BOX_SCORE_MARGIN
+        and (
+            secondary["score"] <= 0
+            or primary["score"] >= secondary["score"] * ACTIVE_BOX_SCORE_RATIO
+        )
     ):
         return [primary]
 

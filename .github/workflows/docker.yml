@@ -141,7 +141,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
             type=gha,scope=${{ matrix.image }}
-            type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:buildcache
+            type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:latest
           cache-to: |
             type=gha,mode=max,scope=${{ matrix.image }}
-            type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:buildcache,mode=max
+            type=inline

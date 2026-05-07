@@ -123,6 +123,68 @@ describe("buildFocusPlan", () => {
 		expect(plan.windows[1]?.endSeconds).toBe(13);
 	});
 
+	it("ignores brief focus jumps that return to the previous speaker", () => {
+		const plan = buildFocusPlan({
+			frameWidth: 1920,
+			frameHeight: 1080,
+			clipStartSeconds: 0,
+			clipEndSeconds: 1.75,
+			detections: [
+				{
+					timestampSeconds: 0,
+					x: 360,
+					y: 120,
+					width: 320,
+					height: 480,
+					score: 0.9,
+					source: "person-group",
+				},
+				{
+					timestampSeconds: 0.35,
+					x: 370,
+					y: 120,
+					width: 320,
+					height: 480,
+					score: 0.9,
+					source: "person-group",
+				},
+				{
+					timestampSeconds: 0.7,
+					x: 1200,
+					y: 120,
+					width: 320,
+					height: 480,
+					score: 0.75,
+					source: "person-group",
+				},
+				{
+					timestampSeconds: 1.05,
+					x: 365,
+					y: 120,
+					width: 320,
+					height: 480,
+					score: 0.9,
+					source: "person-group",
+				},
+				{
+					timestampSeconds: 1.4,
+					x: 375,
+					y: 120,
+					width: 320,
+					height: 480,
+					score: 0.9,
+					source: "person-group",
+				},
+			],
+		});
+
+		expect(plan.windows).toHaveLength(1);
+		expect(plan.windows[0]?.startSeconds).toBe(0);
+		expect(plan.windows[0]?.endSeconds).toBe(1.75);
+		expect(plan.windows[0]?.regions).toHaveLength(1);
+		expect(plan.windows[0]?.regions[0]?.centerX).toBeLessThan(600);
+	});
+
 	it("keeps two-panel regions ordered left to right even when right scores higher", () => {
 		const plan = buildFocusPlan({
 			frameWidth: 1920,
