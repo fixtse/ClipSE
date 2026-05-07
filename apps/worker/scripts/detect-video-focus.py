@@ -8,12 +8,14 @@ SAMPLE_INTERVAL_SECONDS = 0.35
 MAX_SAMPLE_WIDTH = 640
 PERSON_CLASS_ID = 0
 MAX_GROUPS_PER_FRAME = 2
+ACTIVE_BOX_SCORE_RATIO = 1.55
 
 
 def try_import_cv2():
     try:
         import cv2
 
+        globals()["cv2"] = cv2
         return cv2
     except Exception:
         return None
@@ -41,6 +43,9 @@ def detect_yolo_cuda(file_path, start_seconds, end_seconds):
         model_name = os.environ.get("CONTENTCLIP_YOLO_MODEL", "yolo11n.pt")
         model = YOLO(model_name)
         detections = []
+        previous_gray = read_gray_frame(
+            cv2, capture, max(0, start_seconds - SAMPLE_INTERVAL_SECONDS)
+        )
         timestamp = start_seconds
 
         while timestamp < end_seconds:
@@ -60,6 +65,7 @@ def detect_yolo_cuda(file_path, start_seconds, end_seconds):
                 if scale < 1.0
                 else frame
             )
+            gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
             results = model.predict(
                 resized,
@@ -75,21 +81,24 @@ def detect_yolo_cuda(file_path, start_seconds, end_seconds):
                 for box in boxes:
                     confidence = float(box.conf[0].item())
                     x1, y1, x2, y2 = [float(value) for value in box.xyxy[0].tolist()]
-                    frame_boxes.append(
-                        {
-                            "x": x1 / scale,
-                            "y": y1 / scale,
-                            "width": max(1.0, (x2 - x1) / scale),
-                            "height": max(1.0, (y2 - y1) / scale),
-                            "score": confidence,
-                        }
+                    motion_score = get_box_motion_score(
+                        previous_gray,
+                        gray,
+                        (x1, y1, x2 - x1, y2 - y1),
+                        focus="upper-body",
                     )
+                    rect = scale_rect((x1, y1, x2 - x1, y2 - y1), scale)
+                    rect["score"] = combine_detection_and_motion_score(
+                        confidence, motion_score
+                    )
+                    frame_boxes.append(rect)
 
-            for group in group_boxes(frame_boxes, frame_width):
+            for group in select_focus_boxes(frame_boxes, frame_width):
                 group["timestampSeconds"] = timestamp
                 group["source"] = "person-group"
                 detections.append(group)
 
+            previous_gray = gray
             timestamp += SAMPLE_INTERVAL_SECONDS
 
         capture.release()
@@ -106,6 +115,64 @@ def scale_rect(rect, scale):
         "width": float(width / scale),
         "height": float(height / scale),
     }
+
+
+def read_gray_frame(cv2, capture, timestamp_seconds):
+    capture.set(cv2.CAP_PROP_POS_MSEC, timestamp_seconds * 1000)
+    ok, frame = capture.read()
+    if not ok:
+        return None
+
+    frame_height, frame_width = frame.shape[:2]
+    scale = min(1.0, MAX_SAMPLE_WIDTH / max(1, frame_width))
+    resized = (
+        cv2.resize(
+            frame,
+            (int(frame_width * scale), int(frame_height * scale)),
+            interpolation=cv2.INTER_AREA,
+        )
+        if scale < 1.0
+        else frame
+    )
+    return cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+
+
+def get_box_motion_score(previous_gray, gray, rect, focus):
+    if previous_gray is None or previous_gray.shape != gray.shape:
+        return 0.0
+
+    x, y, width, height = [int(round(value)) for value in rect]
+    frame_height, frame_width = gray.shape[:2]
+    left = max(0, min(frame_width - 1, x))
+    right = max(left + 1, min(frame_width, x + max(1, width)))
+    top = max(0, min(frame_height - 1, y))
+    bottom = max(top + 1, min(frame_height, y + max(1, height)))
+
+    if focus == "mouth":
+        region_top = top + int((bottom - top) * 0.45)
+        region_bottom = top + int((bottom - top) * 0.95)
+    elif focus == "upper-body":
+        region_top = top
+        region_bottom = top + int((bottom - top) * 0.65)
+    else:
+        region_top = top
+        region_bottom = bottom
+
+    region_top = max(top, min(bottom - 1, region_top))
+    region_bottom = max(region_top + 1, min(bottom, region_bottom))
+    previous_roi = previous_gray[region_top:region_bottom, left:right]
+    roi = gray[region_top:region_bottom, left:right]
+    if previous_roi.size == 0 or roi.size == 0:
+        return 0.0
+
+    diff = cv2.absdiff(previous_roi, roi)
+    mean_diff = float(diff.mean())
+    active_ratio = float((diff > 14).sum()) / float(diff.size)
+    return min(1.0, mean_diff / 18.0 + active_ratio * 3.0)
+
+
+def combine_detection_and_motion_score(detection_score, motion_score):
+    return min(1.0, detection_score * 0.35 + motion_score * 0.65)
 
 
 def group_boxes(boxes, frame_width):
@@ -142,6 +209,23 @@ def group_boxes(boxes, frame_width):
         merge_boxes(boxes_by_center[: split_index + 1]),
         merge_boxes(boxes_by_center[split_index + 1 :]),
     ]
+
+
+def select_focus_boxes(boxes, frame_width):
+    if len(boxes) <= 1:
+        return boxes
+
+    sorted_by_score = sorted(boxes, key=lambda box: box["score"], reverse=True)
+    primary = sorted_by_score[0]
+    secondary = sorted_by_score[1]
+
+    if (
+        secondary["score"] <= 0
+        or primary["score"] >= secondary["score"] * ACTIVE_BOX_SCORE_RATIO
+    ):
+        return [primary]
+
+    return group_boxes(boxes, frame_width)
 
 
 def merge_boxes(boxes):
@@ -197,7 +281,9 @@ def detect_opencv(file_path, start_seconds, end_seconds):
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
     detections = []
-    previous_gray = None
+    previous_gray = read_gray_frame(
+        cv2, capture, max(0, start_seconds - SAMPLE_INTERVAL_SECONDS)
+    )
     timestamp = start_seconds
 
     while timestamp < end_seconds:
@@ -232,9 +318,18 @@ def detect_opencv(file_path, start_seconds, end_seconds):
             frame_boxes = []
             for face in ranked_faces:
                 rect = scale_rect(face, scale)
-                rect["score"] = min(1.0, float((face[2] * face[3]) / 16000))
+                base_score = min(1.0, float((face[2] * face[3]) / 16000))
+                motion_score = get_box_motion_score(
+                    previous_gray,
+                    gray,
+                    face,
+                    focus="mouth",
+                )
+                rect["score"] = combine_detection_and_motion_score(
+                    base_score, motion_score
+                )
                 frame_boxes.append(rect)
-            for group in group_boxes(frame_boxes, frame_width):
+            for group in select_focus_boxes(frame_boxes, frame_width):
                 group["source"] = "face-group"
                 group["timestampSeconds"] = timestamp
                 detections.append(group)
