@@ -51,9 +51,7 @@ interface ClusterAccumulator {
 
 const MAX_FOCUS_REGIONS = 2;
 const MIN_SECONDARY_SCORE_RATIO = 0.45;
-const WINDOW_MERGE_DISTANCE_RATIO = 0.18;
-const WINDOW_HYSTERESIS_DISTANCE_RATIO = 0.28;
-const MIN_LAYOUT_CHANGE_SECONDS = 2.05;
+const WINDOW_MERGE_DISTANCE_RATIO = 0.12;
 
 function getDetectionCenter(detection: FocusDetection): {
 	centerX: number;
@@ -292,13 +290,8 @@ function buildFocusWindows(input: {
 			: [];
 	});
 
-	const stableWindows = suppressTransientWindows({
-		windows: sampledWindows,
-		frameWidth: input.frameWidth,
-	});
-
 	const mergedWindows: FocusWindow[] = [];
-	for (const window of stableWindows) {
+	for (const window of sampledWindows) {
 		const previousWindow = mergedWindows.at(-1);
 		if (
 			previousWindow &&
@@ -339,94 +332,10 @@ function buildFocusWindows(input: {
 			];
 }
 
-function getWindowDuration(window: FocusWindow): number {
-	return Math.max(0, window.endSeconds - window.startSeconds);
-}
-
-function suppressTransientWindows(input: {
-	windows: readonly FocusWindow[];
-	frameWidth: number;
-}): FocusWindow[] {
-	const windows = input.windows.map((window) => ({
-		startSeconds: window.startSeconds,
-		endSeconds: window.endSeconds,
-		regions: window.regions,
-	}));
-
-	if (windows.length <= 2) {
-		return windows;
-	}
-
-	const stabilized: FocusWindow[] = [];
-	for (let index = 0; index < windows.length; index += 1) {
-		const window = windows[index];
-		if (!window) {
-			continue;
-		}
-
-		const previousWindow = stabilized.at(-1);
-		const nextWindow = windows[index + 1];
-		const isInteriorWindow = Boolean(previousWindow && nextWindow);
-		const isBrief = getWindowDuration(window) < MIN_LAYOUT_CHANGE_SECONDS;
-		const returnsToPreviousLayout =
-			previousWindow &&
-			nextWindow &&
-			areSimilarWindows(previousWindow, nextWindow, input.frameWidth);
-
-		if (isInteriorWindow && isBrief && returnsToPreviousLayout) {
-			previousWindow.endSeconds = window.endSeconds;
-			continue;
-		}
-
-		if (
-			previousWindow &&
-			areSimilarWindows(previousWindow, window, input.frameWidth)
-		) {
-			previousWindow.endSeconds = window.endSeconds;
-			previousWindow.regions = mergeWindowRegions(
-				previousWindow.regions,
-				window.regions,
-			);
-			continue;
-		}
-
-		stabilized.push(window);
-	}
-
-	return stabilized;
-}
-
 function areCompatibleWindows(
 	left: FocusWindow,
 	right: FocusWindow,
 	frameWidth: number,
-): boolean {
-	return areWindowsWithinDistance(
-		left,
-		right,
-		frameWidth,
-		WINDOW_MERGE_DISTANCE_RATIO,
-	);
-}
-
-function areSimilarWindows(
-	left: FocusWindow,
-	right: FocusWindow,
-	frameWidth: number,
-): boolean {
-	return areWindowsWithinDistance(
-		left,
-		right,
-		frameWidth,
-		WINDOW_HYSTERESIS_DISTANCE_RATIO,
-	);
-}
-
-function areWindowsWithinDistance(
-	left: FocusWindow,
-	right: FocusWindow,
-	frameWidth: number,
-	distanceRatio: number,
 ): boolean {
 	if (left.regions.length !== right.regions.length) {
 		return false;
@@ -436,7 +345,7 @@ function areWindowsWithinDistance(
 		const rightRegion = right.regions[index];
 		return rightRegion
 			? Math.abs(leftRegion.centerX - rightRegion.centerX) <=
-					frameWidth * distanceRatio
+					frameWidth * WINDOW_MERGE_DISTANCE_RATIO
 			: false;
 	});
 }
