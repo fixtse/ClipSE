@@ -57,10 +57,6 @@ jobs:
             fi
 
             matrix="${matrix}{\"image\":\"${image}\",\"context\":\"${context}\",\"dockerfile\":\"${dockerfile}\"}"
-
-            if [ "$image" = "contentclip-worker" ]; then
-              worker_base_required="true"
-            fi
           }
 
           changed_any() {
@@ -86,6 +82,10 @@ jobs:
 
             if changed_any '^(\.dockerignore|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig\.json|apps/worker/|apps/web/src/)'; then
               append_image "contentclip-worker" "." "apps/worker/Dockerfile"
+            fi
+
+            if changed_any '^(apps/worker/Dockerfile\.base)$'; then
+              worker_base_required="true"
             fi
 
             if changed_any '^(\.dockerignore|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|services/postgres/|apps/web/src/server/db/schema\.ts)'; then
@@ -207,4 +207,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            CONTENTCLIP_WORKER_BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/contentclip-worker-base:sha-${{ inputs.sha }}
+            CONTENTCLIP_WORKER_BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/contentclip-worker-base:latest
