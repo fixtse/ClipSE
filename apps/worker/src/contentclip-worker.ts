@@ -445,7 +445,7 @@ async function processRenderJob(
 	});
 	await contentJobRepository.updateProgress({
 		id: jobId,
-		progress: 10,
+		progress: 2,
 		message: "Preparing render workspace",
 	});
 
@@ -461,6 +461,11 @@ async function processRenderJob(
 	await downloadStorageObjectToFile({
 		key: video.storageKey,
 		filePath: sourcePath,
+	});
+	await contentJobRepository.updateProgress({
+		id: jobId,
+		progress: 5,
+		message: "Downloaded source for render",
 	});
 	if (introStorageKey && introPath) {
 		await downloadStorageObjectToFile({
@@ -478,7 +483,7 @@ async function processRenderJob(
 	if (burnSubtitles && subtitlePath) {
 		await contentJobRepository.updateProgress({
 			id: jobId,
-			progress: 32,
+			progress: 8,
 			message: "Preparing burned subtitles",
 		});
 		const transcription = await contentTranscriptionRepository.findByVideoId(
@@ -493,11 +498,18 @@ async function processRenderJob(
 			clipEndSeconds: clip.endSeconds,
 		});
 		await writeFile(subtitlePath, JSON.stringify(cues), "utf8");
+		await contentJobRepository.updateProgress({
+			id: jobId,
+			progress: 12,
+			message: "Prepared burned subtitles",
+		});
 	}
 
+	const renderProgressBase = burnSubtitles ? 12 : 5;
+	const renderProgressSpan = burnSubtitles ? 80 : 87;
 	await contentJobRepository.updateProgress({
 		id: jobId,
-		progress: 35,
+		progress: renderProgressBase,
 		message:
 			aspectMode === "vertical9x16"
 				? "Rendering vertical 9:16 clip"
@@ -520,7 +532,9 @@ async function processRenderJob(
 		onProgress: async (progress) => {
 			await contentJobRepository.updateProgress({
 				id: jobId,
-				progress: 35 + Math.floor(progress * 0.39),
+				progress:
+					renderProgressBase +
+					Math.floor(progress * (renderProgressSpan / 100)),
 				message:
 					aspectMode === "vertical9x16"
 						? `Rendering vertical 9:16 clip: ${progress}%`
@@ -530,7 +544,7 @@ async function processRenderJob(
 	});
 	await contentJobRepository.updateProgress({
 		id: jobId,
-		progress: 75,
+		progress: 94,
 		message: "Uploading rendered clip",
 	});
 

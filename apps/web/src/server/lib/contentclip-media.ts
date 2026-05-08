@@ -595,6 +595,113 @@ function getCrop(input: {
 	};
 }
 
+function getOverlapArea(
+	left: { x: number; y: number; width: number; height: number },
+	right: { x: number; y: number; width: number; height: number },
+): number {
+	const overlapWidth = Math.max(
+		0,
+		Math.min(left.x + left.width, right.x + right.width) -
+			Math.max(left.x, right.x),
+	);
+	const overlapHeight = Math.max(
+		0,
+		Math.min(left.y + left.height, right.y + right.height) -
+			Math.max(left.y, right.y),
+	);
+
+	return overlapWidth * overlapHeight;
+}
+
+function getScreenCropAvoidingFocus(input: {
+	frameWidth: number;
+	frameHeight: number;
+	targetAspectRatio: number;
+	focusRegion?: FocusRegion | null;
+}): { x: number; y: number; width: number; height: number } {
+	const frameAspectRatio = input.frameWidth / input.frameHeight;
+	const cropWidth =
+		frameAspectRatio > input.targetAspectRatio
+			? input.frameHeight * input.targetAspectRatio
+			: input.frameWidth;
+	const cropHeight = cropWidth / input.targetAspectRatio;
+	const maxX = Math.max(0, input.frameWidth - cropWidth);
+	const maxY = Math.max(0, input.frameHeight - cropHeight);
+	const centerX = maxX / 2;
+	const centerY = maxY / 2;
+
+	if (!input.focusRegion?.width || !input.focusRegion.height) {
+		return {
+			x: Math.round(centerX / 2) * 2,
+			y: Math.round(centerY / 2) * 2,
+			width: Math.max(2, Math.round(cropWidth / 2) * 2),
+			height: Math.max(2, Math.round(cropHeight / 2) * 2),
+		};
+	}
+
+	const focusPadding = Math.max(input.frameWidth, input.frameHeight) * 0.035;
+	const focusBox = {
+		x: Math.max(
+			0,
+			input.focusRegion.centerX - input.focusRegion.width / 2 - focusPadding,
+		),
+		y: Math.max(
+			0,
+			input.focusRegion.centerY - input.focusRegion.height / 2 - focusPadding,
+		),
+		width: Math.min(
+			input.frameWidth,
+			input.focusRegion.width + focusPadding * 2,
+		),
+		height: Math.min(
+			input.frameHeight,
+			input.focusRegion.height + focusPadding * 2,
+		),
+	};
+	const clampX = (value: number) => Math.max(0, Math.min(maxX, value));
+	const clampY = (value: number) => Math.max(0, Math.min(maxY, value));
+	const candidateXs = [
+		centerX,
+		0,
+		maxX,
+		focusBox.x - cropWidth,
+		focusBox.x + focusBox.width,
+	].map(clampX);
+	const candidateYs = [
+		centerY,
+		0,
+		maxY,
+		focusBox.y - cropHeight,
+		focusBox.y + focusBox.height,
+	].map(clampY);
+	const candidates = candidateXs.flatMap((x) =>
+		candidateYs.map((y) => ({
+			x,
+			y,
+			width: cropWidth,
+			height: cropHeight,
+		})),
+	);
+	const bestCandidate = candidates
+		.map((crop) => ({
+			crop,
+			overlapArea: getOverlapArea(crop, focusBox),
+			centerDistance: Math.hypot(crop.x - centerX, crop.y - centerY),
+		}))
+		.sort(
+			(left, right) =>
+				left.overlapArea - right.overlapArea ||
+				left.centerDistance - right.centerDistance,
+		)[0]?.crop;
+
+	return {
+		x: Math.round((bestCandidate?.x ?? centerX) / 2) * 2,
+		y: Math.round((bestCandidate?.y ?? centerY) / 2) * 2,
+		width: Math.max(2, Math.round(cropWidth / 2) * 2),
+		height: Math.max(2, Math.round(cropHeight / 2) * 2),
+	};
+}
+
 async function renderVerticalClipSegment(input: {
 	inputFilePath: string;
 	outputFilePath: string;
@@ -761,8 +868,14 @@ async function renderVerticalSceneSegment(input: {
 			focusHeight: peopleRegion.height,
 			targetAspectRatio: 1080 / 960,
 		});
+		const screenCrop = getScreenCropAvoidingFocus({
+			frameWidth: input.frameWidth,
+			frameHeight: input.frameHeight,
+			focusRegion: hasPeopleDetection ? peopleRegion : null,
+			targetAspectRatio: 1080 / 960,
+		});
 		const filterComplex =
-			"[0:v]scale=1080:960:force_original_aspect_ratio=decrease,pad=1080:960:(ow-iw)/2:(oh-ih)/2,setsar=1[screen];" +
+			`[0:v]crop=${screenCrop.width}:${screenCrop.height}:${screenCrop.x}:${screenCrop.y},scale=1080:960,setsar=1[screen];` +
 			`[0:v]crop=${peopleCrop.width}:${peopleCrop.height}:${peopleCrop.x}:${peopleCrop.y},scale=1080:960,setsar=1[people];` +
 			"[screen][people]vstack=inputs=2,format=yuv420p[v]";
 
