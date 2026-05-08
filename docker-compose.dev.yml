@@ -138,6 +138,7 @@ services:
       CONTENTCLIP_YTDLP_COOKIES_FILE: ${CONTENTCLIP_YTDLP_COOKIES_FILE:-}
       CONTENTCLIP_YTDLP_USER_AGENT: ${CONTENTCLIP_YTDLP_USER_AGENT:-}
       CONTENTCLIP_YOLO_MODEL: ${CONTENTCLIP_YOLO_MODEL:-yolo11n.pt}
+      YOLO_CONFIG_DIR: /contentclip-yolo
       NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
       NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility,video}
       NEXT_TELEMETRY_DISABLED: 1
@@ -152,6 +153,7 @@ services:
       - .:/app
       - worker_node_modules:/app/node_modules
       - worker_pnpm_store:/pnpm/store
+      - worker_yolo_config:/contentclip-yolo
     command: sh -c "pnpm install --store-dir /pnpm/store --no-frozen-lockfile && pnpm worker:dev"
 
 volumes:
@@ -166,4 +168,6 @@ volumes:
   app_pnpm_store:
     driver: local
   worker_pnpm_store:
+    driver: local
+  worker_yolo_config:
     driver: local
