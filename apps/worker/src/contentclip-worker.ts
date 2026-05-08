@@ -33,6 +33,8 @@ import { buildRenderSubtitleCues } from "~/server/lib/contentclip-subtitles";
 import { transcribeWithWhisperService } from "~/server/lib/contentclip-whisper";
 
 const runnerId = `contentclip-worker-${randomUUID()}`;
+const STALE_RUNNING_JOB_MS = 5 * 60 * 1000;
+const STALE_RUNNING_JOB_SCAN_MS = 30 * 1000;
 
 function readRenderAspectMode(value: unknown): "source" | "vertical9x16" {
 	return value === "vertical9x16" ? "vertical9x16" : "source";
@@ -669,15 +671,27 @@ async function processJob(): Promise<boolean> {
 
 async function main(): Promise<void> {
 	console.info(`[worker] starting ${runnerId}`);
-	const recoveredJobs = await contentJobRepository.requeueStaleRunningJobs({
-		runnerId,
-		staleBefore: new Date(Date.now() - 5 * 60 * 1000),
-	});
-	if (recoveredJobs > 0) {
-		console.info(`[worker] requeued ${recoveredJobs} stale running job(s)`);
-	}
+	let lastStaleJobScanAt = 0;
+	const recoverStaleJobs = async (): Promise<void> => {
+		const now = Date.now();
+		if (now - lastStaleJobScanAt < STALE_RUNNING_JOB_SCAN_MS) {
+			return;
+		}
+
+		lastStaleJobScanAt = now;
+		const recoveredJobs = await contentJobRepository.requeueStaleRunningJobs({
+			runnerId,
+			staleBefore: new Date(now - STALE_RUNNING_JOB_MS),
+		});
+		if (recoveredJobs > 0) {
+			console.info(`[worker] requeued ${recoveredJobs} stale running job(s)`);
+		}
+	};
+
+	await recoverStaleJobs();
 
 	for (;;) {
+		await recoverStaleJobs();
 		const processedJob = await processJob();
 		if (!processedJob) {
 			await sleep(2000);

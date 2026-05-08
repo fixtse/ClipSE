@@ -384,7 +384,11 @@ export async function renderClipSegment(input: {
 			frameWidth,
 			frameHeight,
 			detectionMode:
-				input.shortDetectionMode === "screen_only" ? "screen" : "people",
+				input.shortDetectionMode === "screen_only"
+					? "screen"
+					: input.shortDetectionMode === "people_and_screen"
+						? "people_strict"
+						: "people",
 		});
 
 		await renderVerticalClipSegment({
@@ -952,7 +956,8 @@ async function renderVerticalSceneSegment(input: {
 	}
 
 	if (input.shortDetectionMode === "people_and_screen") {
-		const detectedPeopleRegion = regions[0] ?? null;
+		const detectedPeopleRegion =
+			[...regions].sort((left, right) => right.score - left.score)[0] ?? null;
 		const peopleRegion = detectedPeopleRegion ?? {
 			centerX: input.frameWidth / 2,
 			centerY: input.frameHeight / 2,

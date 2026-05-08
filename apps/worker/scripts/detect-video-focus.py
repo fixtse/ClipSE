@@ -2,6 +2,8 @@
 import os
 import json
 import sys
+from contextlib import redirect_stdout
+from pathlib import Path
 
 
 SAMPLE_INTERVAL_SECONDS = 0.35
@@ -9,38 +11,77 @@ MAX_SAMPLE_WIDTH = 640
 PERSON_CLASS_ID = 0
 MAX_GROUPS_PER_FRAME = 2
 SCREEN_INTEREST_MAX_BOXES = 3
+CV2_IMPORT_ATTEMPTED = False
+CV2_IMPORT_RESULT = None
+CV2_IMPORT_ERROR = None
 
 
 def try_import_cv2():
+    global CV2_IMPORT_ATTEMPTED, CV2_IMPORT_ERROR, CV2_IMPORT_RESULT
+    if CV2_IMPORT_ATTEMPTED:
+        return CV2_IMPORT_RESULT
+
+    CV2_IMPORT_ATTEMPTED = True
     try:
         import cv2
 
+        CV2_IMPORT_RESULT = cv2
         return cv2
-    except Exception:
+    except Exception as error:
+        CV2_IMPORT_ERROR = error
         return None
 
 
-def detect_yolo_cuda(file_path, start_seconds, end_seconds):
+def log_warning(message):
+    print(f"[detect-video-focus] {message}", file=sys.stderr)
+
+
+def resolve_yolo_model_path():
+    model_name = os.environ.get("CONTENTCLIP_YOLO_MODEL", "yolo11n.pt")
+    model_path = Path(model_name)
+    if model_path.is_absolute() or model_path.exists():
+        return str(model_path)
+
+    script_path = Path(__file__).resolve()
+    candidates = [
+        Path.cwd() / model_name,
+        script_path.parents[3] / model_name if len(script_path.parents) > 3 else None,
+        Path("/app") / model_name,
+    ]
+    for candidate in candidates:
+        if candidate is not None and candidate.exists():
+            return str(candidate)
+
+    return model_name
+
+
+def detect_yolo(file_path, start_seconds, end_seconds):
     cv2 = try_import_cv2()
     if cv2 is None:
+        log_warning(f"OpenCV is unavailable; skipping YOLO detection: {CV2_IMPORT_ERROR}")
         return None
 
     try:
-        import torch
-        from ultralytics import YOLO
-    except Exception:
+        with redirect_stdout(sys.stderr):
+            import torch
+            from ultralytics import YOLO
+    except Exception as error:
+        log_warning(f"YOLO dependencies are unavailable: {error}")
         return None
 
-    if not torch.cuda.is_available():
-        return None
+    device = 0 if torch.cuda.is_available() else "cpu"
+    if device == "cpu":
+        log_warning("CUDA is unavailable to torch; running YOLO on CPU.")
 
     try:
         capture = cv2.VideoCapture(file_path)
         if not capture.isOpened():
+            log_warning("Unable to open video capture for YOLO detection.")
             return None
 
-        model_name = os.environ.get("CONTENTCLIP_YOLO_MODEL", "yolo11n.pt")
-        model = YOLO(model_name)
+        model_path = resolve_yolo_model_path()
+        with redirect_stdout(sys.stderr):
+            model = YOLO(model_path)
         detections = []
         timestamp = start_seconds
 
@@ -62,13 +103,14 @@ def detect_yolo_cuda(file_path, start_seconds, end_seconds):
                 else frame
             )
 
-            results = model.predict(
-                resized,
-                classes=[PERSON_CLASS_ID],
-                device=0,
-                imgsz=MAX_SAMPLE_WIDTH,
-                verbose=False,
-            )
+            with redirect_stdout(sys.stderr):
+                results = model.predict(
+                    resized,
+                    classes=[PERSON_CLASS_ID],
+                    device=device,
+                    imgsz=MAX_SAMPLE_WIDTH,
+                    verbose=False,
+                )
             result = results[0] if results else None
             boxes = [] if result is None else result.boxes
             frame_boxes = []
@@ -94,8 +136,12 @@ def detect_yolo_cuda(file_path, start_seconds, end_seconds):
             timestamp += SAMPLE_INTERVAL_SECONDS
 
         capture.release()
-        return detections
-    except Exception:
+        return {
+            "detections": detections,
+            "detectorBackend": "yolo-cuda" if device != "cpu" else "yolo-cpu",
+        }
+    except Exception as error:
+        log_warning(f"YOLO detection failed: {error}")
         return None
 
 
@@ -268,9 +314,10 @@ def detect_screen_interest(file_path, start_seconds, end_seconds):
     return detections
 
 
-def detect_opencv(file_path, start_seconds, end_seconds):
+def detect_opencv(file_path, start_seconds, end_seconds, include_motion_fallback=True):
     cv2 = try_import_cv2()
     if cv2 is None:
+        log_warning(f"OpenCV is unavailable; skipping OpenCV detection: {CV2_IMPORT_ERROR}")
         return None
 
     capture = cv2.VideoCapture(file_path)
@@ -322,7 +369,7 @@ def detect_opencv(file_path, start_seconds, end_seconds):
                 group["source"] = "face-group"
                 group["timestampSeconds"] = timestamp
                 detections.append(group)
-        else:
+        elif include_motion_fallback:
             for rect in detect_motion(previous_gray, gray, scale):
                 rect["timestampSeconds"] = timestamp
                 detections.append(rect)
@@ -356,16 +403,19 @@ def main():
         )
         return
 
-    yolo_detections = detect_yolo_cuda(file_path, start_seconds, end_seconds)
-    if yolo_detections is not None and len(yolo_detections) > 0:
-        print(
-            json.dumps(
-                {"detections": yolo_detections, "detectorBackend": "yolo-cuda"}
-            )
-        )
+    yolo_result = detect_yolo(file_path, start_seconds, end_seconds)
+    if yolo_result is not None and len(yolo_result["detections"]) > 0:
+        print(json.dumps(yolo_result))
         return
+    if yolo_result is not None:
+        log_warning("YOLO ran but found no person detections; falling back to OpenCV.")
 
-    opencv_detections = detect_opencv(file_path, start_seconds, end_seconds)
+    opencv_detections = detect_opencv(
+        file_path,
+        start_seconds,
+        end_seconds,
+        include_motion_fallback=detection_mode != "people_strict",
+    )
     print(
         json.dumps(
             {

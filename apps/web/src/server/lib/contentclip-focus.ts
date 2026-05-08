@@ -20,7 +20,7 @@ export interface FocusDetection {
 		| "screen-interest";
 }
 
-export type DetectorBackend = "opencv" | "yolo-cuda";
+export type DetectorBackend = "opencv" | "yolo-cpu" | "yolo-cuda";
 
 export interface FocusRegion {
 	centerX: number;
@@ -396,7 +396,7 @@ export async function detectFocusRegions(input: {
 	endSeconds: number;
 	frameWidth: number;
 	frameHeight: number;
-	detectionMode?: "people" | "screen";
+	detectionMode?: "people" | "people_strict" | "screen";
 }): Promise<FocusPlan> {
 	const scriptPath = join(
 		process.cwd(),
@@ -404,7 +404,7 @@ export async function detectFocusRegions(input: {
 	);
 
 	try {
-		const { stdout } = await execFileAsync(
+		const { stderr, stdout } = await execFileAsync(
 			"python3",
 			[
 				scriptPath,
@@ -415,10 +415,20 @@ export async function detectFocusRegions(input: {
 			],
 			{ maxBuffer: 1024 * 1024 * 5 },
 		);
-		const parsed = JSON.parse(stdout) as {
+		const stdoutLines = stdout.trim().split(/\r?\n/);
+		const jsonLine = [...stdoutLines]
+			.reverse()
+			.find((line: string) => line.trim().startsWith("{"));
+		if (!jsonLine) {
+			throw new Error("Focus detector did not return JSON");
+		}
+		const parsed = JSON.parse(jsonLine) as {
 			detections?: FocusDetection[];
 			detectorBackend?: DetectorBackend;
 		};
+		if (stderr) {
+			console.info(stderr.trim());
+		}
 		return buildFocusPlan({
 			detections: parsed.detections ?? [],
 			frameWidth: input.frameWidth,
@@ -426,7 +436,10 @@ export async function detectFocusRegions(input: {
 			clipStartSeconds: input.startSeconds,
 			clipEndSeconds: input.endSeconds,
 			detectorBackend:
-				parsed.detectorBackend === "yolo-cuda" ? "yolo-cuda" : "opencv",
+				parsed.detectorBackend === "yolo-cuda" ||
+				parsed.detectorBackend === "yolo-cpu"
+					? parsed.detectorBackend
+					: "opencv",
 		});
 	} catch (error) {
 		console.warn("Focus detection failed; using centered crop:", error);
