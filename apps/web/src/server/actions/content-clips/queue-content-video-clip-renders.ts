@@ -23,7 +23,7 @@ export async function queueContentVideoClipRendersAction(
 	} & Partial<
 		Pick<
 			QueueContentVideoClipRendersInput,
-			"aspectMode" | "burnSubtitles" | "focusMode"
+			"aspectMode" | "burnSubtitles" | "clipKind" | "focusMode"
 		>
 	>,
 ): Promise<QueueContentVideoClipRendersActionResult> {

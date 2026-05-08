@@ -22,6 +22,7 @@ export async function reanalyzeContentVideoAction(input: {
 	videoId: string;
 	analysisPrompt?: string;
 	generateClips?: boolean;
+	generateShorts?: boolean;
 	generateChapters?: boolean;
 }): Promise<ReanalyzeContentVideoActionResult> {
 	try {

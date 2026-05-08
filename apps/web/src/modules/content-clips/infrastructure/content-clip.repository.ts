@@ -1,9 +1,10 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { contentClips } from "~/server/db/schema";
 import type { ContentClipRepositoryInterface } from "../domain/content-clip.repository.interface";
 import type {
 	ContentClip,
+	ContentClipKind,
 	CreateContentClipInput,
 	GeneratedClipCandidate,
 	UpdateContentClipInput,
@@ -19,11 +20,21 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 		return clip ? this.map(clip) : null;
 	}
 
-	async listByVideoId(videoId: string): Promise<ContentClip[]> {
+	async listByVideoId(
+		videoId: string,
+		clipKind?: ContentClipKind,
+	): Promise<ContentClip[]> {
 		const clips = await db
 			.select()
 			.from(contentClips)
-			.where(eq(contentClips.videoId, videoId))
+			.where(
+				clipKind
+					? and(
+							eq(contentClips.videoId, videoId),
+							eq(contentClips.clipKind, clipKind),
+						)
+					: eq(contentClips.videoId, videoId),
+			)
 			.orderBy(asc(contentClips.orderIndex), asc(contentClips.createdAt));
 
 		return clips.map((clip) => this.map(clip));
@@ -32,8 +43,16 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 	async replaceForVideo(
 		videoId: string,
 		clips: GeneratedClipCandidate[],
+		clipKind: ContentClipKind = "standard",
 	): Promise<ContentClip[]> {
-		await db.delete(contentClips).where(eq(contentClips.videoId, videoId));
+		await db
+			.delete(contentClips)
+			.where(
+				and(
+					eq(contentClips.videoId, videoId),
+					eq(contentClips.clipKind, clipKind),
+				),
+			);
 
 		if (clips.length === 0) {
 			return [];
@@ -42,6 +61,8 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 		await db.insert(contentClips).values(
 			clips.map((clip, index) => ({
 				videoId,
+				clipKind,
+				shortDetectionMode: "people",
 				orderIndex: index,
 				title: clip.title,
 				hook: clip.hook,
@@ -58,11 +79,13 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 			})),
 		);
 
-		return this.listByVideoId(videoId);
+		return this.listByVideoId(videoId, clipKind);
 	}
 
 	async create(input: CreateContentClipInput): Promise<ContentClip> {
-		const existingClips = await this.listByVideoId(input.videoId);
+		const clipKind = input.clipKind ?? "standard";
+		const shortDetectionMode = input.shortDetectionMode ?? "people";
+		const existingClips = await this.listByVideoId(input.videoId, clipKind);
 		const orderIndex =
 			Math.max(-1, ...existingClips.map((clip) => clip.orderIndex)) + 1;
 
@@ -70,6 +93,8 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 			.insert(contentClips)
 			.values({
 				videoId: input.videoId,
+				clipKind,
+				shortDetectionMode,
 				orderIndex,
 				title: input.title.trim(),
 				hook: input.hook,
@@ -95,7 +120,9 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 
 	async update(input: UpdateContentClipInput): Promise<ContentClip> {
 		const shouldResetRenderedAsset =
-			input.startSeconds !== undefined || input.endSeconds !== undefined;
+			input.startSeconds !== undefined ||
+			input.endSeconds !== undefined ||
+			input.shortDetectionMode !== undefined;
 
 		const [updated] = await db
 			.update(contentClips)
@@ -118,6 +145,7 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 					input.tags === undefined
 						? undefined
 						: (input.tags as unknown as typeof contentClips.$inferInsert.tags),
+				shortDetectionMode: input.shortDetectionMode,
 				status: shouldResetRenderedAsset ? "suggested" : undefined,
 				outputStorageKey: shouldResetRenderedAsset ? null : undefined,
 				outputFilename: shouldResetRenderedAsset ? null : undefined,
@@ -212,6 +240,9 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 		return {
 			id: row.id,
 			videoId: row.videoId,
+			clipKind: row.clipKind as ContentClip["clipKind"],
+			shortDetectionMode:
+				row.shortDetectionMode as ContentClip["shortDetectionMode"],
 			orderIndex: row.orderIndex,
 			title: row.title,
 			hook: row.hook,

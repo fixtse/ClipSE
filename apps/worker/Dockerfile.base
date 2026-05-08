@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:24-bookworm-slim
+
+ENV PIP_DEFAULT_TIMEOUT=300
+ENV PIP_RETRIES=10
+
+RUN --mount=type=tmpfs,target=/tmp --mount=type=tmpfs,target=/var/cache/apt apt-get update \
+	&& apt-get install -y --no-install-recommends ffmpeg ca-certificates openssl yt-dlp python3-pip python3-opencv \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN --mount=type=tmpfs,target=/tmp python3 -m pip install --break-system-packages --no-cache-dir --upgrade typing-extensions \
+	&& python3 -m pip install --break-system-packages --no-cache-dir torch==2.7.1+cu128 torchvision==0.22.1+cu128 --index-url https://download.pytorch.org/whl/cu128 \
+	&& python3 -m pip install --break-system-packages --no-cache-dir --upgrade yt-dlp ultralytics

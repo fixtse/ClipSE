@@ -10,9 +10,21 @@ export const CONTENT_CLIP_STATUSES = [
 
 export type ContentClipStatus = (typeof CONTENT_CLIP_STATUSES)[number];
 
+export const CONTENT_CLIP_KINDS = ["standard", "short"] as const;
+export type ContentClipKind = (typeof CONTENT_CLIP_KINDS)[number];
+
+export const CONTENT_CLIP_SHORT_DETECTION_MODES = [
+	"people",
+	"people_and_screen",
+] as const;
+export type ContentClipShortDetectionMode =
+	(typeof CONTENT_CLIP_SHORT_DETECTION_MODES)[number];
+
 export const ContentClipSchema = z.object({
 	id: z.string().uuid(),
 	videoId: z.string().uuid(),
+	clipKind: z.enum(CONTENT_CLIP_KINDS),
+	shortDetectionMode: z.enum(CONTENT_CLIP_SHORT_DETECTION_MODES),
 	orderIndex: z.number().int().nonnegative(),
 	title: z.string().min(1).max(255),
 	hook: z.string().max(1000),
@@ -52,6 +64,10 @@ export type GeneratedClipCandidate = z.infer<
 
 export const CreateContentClipSchema = z.object({
 	videoId: z.string().uuid(),
+	clipKind: z.enum(CONTENT_CLIP_KINDS).default("standard"),
+	shortDetectionMode: z
+		.enum(CONTENT_CLIP_SHORT_DETECTION_MODES)
+		.default("people"),
 	title: z.string().min(1).max(255),
 	hook: z.string().max(1000).default(""),
 	summary: z.string().max(2000).default(""),
@@ -59,7 +75,7 @@ export const CreateContentClipSchema = z.object({
 	endSeconds: z.number().positive(),
 });
 
-export type CreateContentClipInput = z.infer<typeof CreateContentClipSchema>;
+export type CreateContentClipInput = z.input<typeof CreateContentClipSchema>;
 
 export const UpdateContentClipSchema = z.object({
 	id: z.string().uuid(),
@@ -72,6 +88,7 @@ export const UpdateContentClipSchema = z.object({
 	endSeconds: z.number().positive().optional(),
 	score: z.number().int().min(0).max(100).optional(),
 	tags: z.array(z.string().min(1).max(40)).max(10).optional(),
+	shortDetectionMode: z.enum(CONTENT_CLIP_SHORT_DETECTION_MODES).optional(),
 });
 
 export type UpdateContentClipInput = z.infer<typeof UpdateContentClipSchema>;
@@ -118,6 +135,7 @@ export type QueueContentClipRenderInput = z.input<
 
 export const QueueContentVideoClipRendersInputSchema = z.object({
 	videoId: z.string().uuid(),
+	clipKind: z.enum(CONTENT_CLIP_KINDS).optional(),
 	...ContentClipRenderOptionsBaseSchema.shape,
 });
 

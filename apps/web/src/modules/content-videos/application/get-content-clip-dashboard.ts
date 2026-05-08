@@ -28,6 +28,8 @@ export interface ContentClipDashboardVideo extends ContentVideo {
 		| null;
 	clipCount: number;
 	readyClipCount: number;
+	shortCount: number;
+	readyShortCount: number;
 }
 
 export interface ContentClipDashboardSelectedVideo {
@@ -38,6 +40,17 @@ export interface ContentClipDashboardSelectedVideo {
 	transcription: ContentTranscription | null;
 	chapters: ContentChapter[];
 	clips: Array<
+		ContentClip & {
+			sourceUrl: string | null;
+			downloadUrl: string | null;
+			renderJob:
+				| (Pick<ContentJob, "id" | "status" | "progress"> & {
+						message: string | null;
+				  })
+				| null;
+		}
+	>;
+	shorts: Array<
 		ContentClip & {
 			sourceUrl: string | null;
 			downloadUrl: string | null;
@@ -132,22 +145,26 @@ export async function getContentClipDashboard(
 	const videos = await videoRepository.listByChannelId(selectedChannel.id);
 
 	const clipsByVideo = new Map<string, ContentClip[]>();
+	const shortsByVideo = new Map<string, ContentClip[]>();
 	const jobsByVideo = new Map<string, ContentJob[]>();
 
 	await Promise.all(
 		videos.map(async (video) => {
-			const [clips, videoJobs] = await Promise.all([
-				clipRepository.listByVideoId(video.id),
+			const [clips, shorts, videoJobs] = await Promise.all([
+				clipRepository.listByVideoId(video.id, "standard"),
+				clipRepository.listByVideoId(video.id, "short"),
 				jobRepository.listByVideoId(video.id),
 			]);
 
 			clipsByVideo.set(video.id, clips);
+			shortsByVideo.set(video.id, shorts);
 			jobsByVideo.set(video.id, videoJobs);
 		}),
 	);
 
 	const dashboardVideos = videos.map((video) => {
 		const clips = clipsByVideo.get(video.id) ?? [];
+		const shorts = shortsByVideo.get(video.id) ?? [];
 		const jobs = jobsByVideo.get(video.id) ?? [];
 
 		return {
@@ -155,6 +172,8 @@ export async function getContentClipDashboard(
 			activeJob: getActiveJob(jobs),
 			clipCount: clips.length,
 			readyClipCount: clips.filter((clip) => clip.status === "ready").length,
+			shortCount: shorts.length,
+			readyShortCount: shorts.filter((clip) => clip.status === "ready").length,
 		};
 	});
 
@@ -172,11 +191,12 @@ export async function getContentClipDashboard(
 		};
 	}
 
-	const [selectedVideo, transcription, clips, chapters, jobs] =
+	const [selectedVideo, transcription, clips, shorts, chapters, jobs] =
 		await Promise.all([
 			videoRepository.findById(selectedVideoId),
 			transcriptionRepository.findByVideoId(selectedVideoId),
-			clipRepository.listByVideoId(selectedVideoId),
+			clipRepository.listByVideoId(selectedVideoId, "standard"),
+			clipRepository.listByVideoId(selectedVideoId, "short"),
 			chapterRepository.listByVideoId(selectedVideoId),
 			jobRepository.listByVideoId(selectedVideoId),
 		]);
@@ -209,6 +229,40 @@ export async function getContentClipDashboard(
 			transcription,
 			chapters,
 			clips: clips.map((clip) => ({
+				...clip,
+				sourceUrl: clip.outputStorageKey
+					? `/api/content/clips/${clip.id}/source`
+					: null,
+				downloadUrl: clip.outputStorageKey
+					? `/api/content/clips/${clip.id}/download`
+					: null,
+				renderJob: (() => {
+					const renderJob =
+						jobs.find(
+							(job) =>
+								job.clipId === clip.id &&
+								job.type === "render-clip" &&
+								(job.status === "running" || job.status === "pending"),
+						) ??
+						jobs.find(
+							(job) => job.clipId === clip.id && job.type === "render-clip",
+						) ??
+						null;
+
+					return renderJob
+						? {
+								id: renderJob.id,
+								status: renderJob.status,
+								progress: renderJob.progress,
+								message:
+									typeof renderJob.result.message === "string"
+										? renderJob.result.message
+										: null,
+							}
+						: null;
+				})(),
+			})),
+			shorts: shorts.map((clip) => ({
 				...clip,
 				sourceUrl: clip.outputStorageKey
 					? `/api/content/clips/${clip.id}/source`

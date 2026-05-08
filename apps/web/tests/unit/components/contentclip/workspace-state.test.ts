@@ -103,6 +103,7 @@ describe("workspace state helpers", () => {
 		const selectedVideo = {
 			chapters: [],
 			clips: [],
+			shorts: [],
 			introUrl: null,
 			jobs: [],
 			outroUrl: null,
@@ -223,6 +224,7 @@ describe("workspace state helpers", () => {
 					}),
 				],
 				clips: [],
+				shorts: [],
 				introUrl: null,
 				jobs: [],
 				outroUrl: null,

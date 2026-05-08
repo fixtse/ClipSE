@@ -116,10 +116,23 @@ export function getJobLabel(
 		case "transcribe-video":
 			return translate("workspace.jobType.transcribeVideo");
 		case "analyze-video":
-			if (job.payload.generateClips === false) {
+			if (
+				job.payload.generateClips === false &&
+				job.payload.generateShorts === true &&
+				job.payload.generateChapters === false
+			) {
+				return translate("workspace.jobType.generateShorts");
+			}
+			if (
+				job.payload.generateClips === false &&
+				job.payload.generateShorts !== true
+			) {
 				return translate("workspace.jobType.generateChapters");
 			}
-			if (job.payload.generateChapters === false) {
+			if (
+				job.payload.generateChapters === false &&
+				job.payload.generateShorts !== true
+			) {
 				return translate("workspace.jobType.generateClips");
 			}
 			return translate("workspace.jobType.generateClipsAndChapters");
@@ -290,6 +303,8 @@ export function buildLibraryVideoSignature(
 				video.sizeBytes,
 				video.clipCount,
 				video.readyClipCount,
+				video.shortCount,
+				video.readyShortCount,
 				video.sourceType,
 			].join(":"),
 		)

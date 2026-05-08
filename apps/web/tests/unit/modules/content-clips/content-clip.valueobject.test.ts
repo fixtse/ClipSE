@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+	ContentClipSchema,
+	CreateContentClipSchema,
 	getClipDurationSeconds,
 	normalizeClipCandidate,
 	parseContentClipRenderOptions,
+	UpdateContentClipSchema,
 } from "~/modules/content-clips/domain/content-clip.valueobject";
-import { GeneratedClipCandidateMother } from "../../../mothers/domain-mothers";
+import {
+	ContentClipMother,
+	GeneratedClipCandidateMother,
+} from "../../../mothers/domain-mothers";
 
 describe("normalizeClipCandidate", () => {
 	it("preserves sub-second precision and enforces a minimum duration", () => {
@@ -86,5 +92,49 @@ describe("parseContentClipRenderOptions", () => {
 				burnSubtitles: "yes",
 			}),
 		).toThrow();
+	});
+});
+
+describe("content clip short fields", () => {
+	it("accepts clip kind and short detection mode on clip records", () => {
+		expect(
+			ContentClipSchema.parse(
+				ContentClipMother.create({
+					clipKind: "short",
+					shortDetectionMode: "people_and_screen",
+				}),
+			),
+		).toMatchObject({
+			clipKind: "short",
+			shortDetectionMode: "people_and_screen",
+		});
+	});
+
+	it("defaults manual clips to standard people detection", () => {
+		expect(
+			CreateContentClipSchema.parse({
+				videoId: "11111111-1111-4111-8111-111111111111",
+				title: "Manual clip",
+				hook: "",
+				summary: "",
+				startSeconds: 1,
+				endSeconds: 20,
+			}),
+		).toMatchObject({
+			clipKind: "standard",
+			shortDetectionMode: "people",
+		});
+	});
+
+	it("accepts detection-only updates for shorts", () => {
+		expect(
+			UpdateContentClipSchema.parse({
+				id: "33333333-3333-4333-8333-333333333333",
+				shortDetectionMode: "people_and_screen",
+			}),
+		).toEqual({
+			id: "33333333-3333-4333-8333-333333333333",
+			shortDetectionMode: "people_and_screen",
+		});
 	});
 });

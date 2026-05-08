@@ -71,6 +71,8 @@ export const ContentClipMother = {
 		const clip: ContentClip = {
 			id: "33333333-3333-4333-8333-333333333333",
 			videoId: "11111111-1111-4111-8111-111111111111",
+			clipKind: "standard",
+			shortDetectionMode: "people",
 			orderIndex: 0,
 			title: "Clip title",
 			hook: "Clip hook",
@@ -172,6 +174,8 @@ export const DashboardVideoMother = {
 			activeJob: overrides.activeJob ?? null,
 			clipCount: overrides.clipCount ?? 0,
 			readyClipCount: overrides.readyClipCount ?? 0,
+			shortCount: overrides.shortCount ?? 0,
+			readyShortCount: overrides.readyShortCount ?? 0,
 		};
 	},
 };

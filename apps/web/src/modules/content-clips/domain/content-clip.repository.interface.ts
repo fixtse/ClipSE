@@ -1,5 +1,6 @@
 import type {
 	ContentClip,
+	ContentClipKind,
 	CreateContentClipInput,
 	GeneratedClipCandidate,
 	UpdateContentClipInput,
@@ -7,10 +8,14 @@ import type {
 
 export interface ContentClipRepositoryInterface {
 	findById(id: string): Promise<ContentClip | null>;
-	listByVideoId(videoId: string): Promise<ContentClip[]>;
+	listByVideoId(
+		videoId: string,
+		clipKind?: ContentClipKind,
+	): Promise<ContentClip[]>;
 	replaceForVideo(
 		videoId: string,
 		clips: GeneratedClipCandidate[],
+		clipKind?: ContentClipKind,
 	): Promise<ContentClip[]>;
 	create(input: CreateContentClipInput): Promise<ContentClip>;
 	update(input: UpdateContentClipInput): Promise<ContentClip>;

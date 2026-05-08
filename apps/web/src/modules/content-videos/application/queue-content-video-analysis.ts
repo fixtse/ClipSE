@@ -15,13 +15,19 @@ export async function queueContentVideoAnalysis(
 		videoId: string;
 		analysisPrompt?: string;
 		generateClips?: boolean;
+		generateShorts?: boolean;
 		generateChapters?: boolean;
 	},
 ): Promise<ContentVideo> {
 	const shouldGenerateClips = input.generateClips ?? true;
+	const shouldGenerateShorts = input.generateShorts ?? false;
 	const shouldGenerateChapters = input.generateChapters ?? true;
-	if (!shouldGenerateClips && !shouldGenerateChapters) {
-		throw new Error("Select clips, chapters, or both.");
+	if (
+		!shouldGenerateClips &&
+		!shouldGenerateShorts &&
+		!shouldGenerateChapters
+	) {
+		throw new Error("Select clips, shorts, chapters, or a combination.");
 	}
 
 	const video = await videoRepository.findById(input.videoId);
@@ -46,7 +52,10 @@ export async function queueContentVideoAnalysis(
 	}
 
 	if (shouldGenerateClips) {
-		await clipRepository.replaceForVideo(input.videoId, []);
+		await clipRepository.replaceForVideo(input.videoId, [], "standard");
+	}
+	if (shouldGenerateShorts) {
+		await clipRepository.replaceForVideo(input.videoId, [], "short");
 	}
 	if (shouldGenerateChapters) {
 		await chapterRepository.replaceForVideo(input.videoId, []);
@@ -62,6 +71,7 @@ export async function queueContentVideoAnalysis(
 		type: "analyze-video",
 		payload: {
 			generateClips: shouldGenerateClips,
+			generateShorts: shouldGenerateShorts,
 			generateChapters: shouldGenerateChapters,
 			requestedAt: new Date().toISOString(),
 		},

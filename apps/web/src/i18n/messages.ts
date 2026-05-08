@@ -60,6 +60,7 @@ export const messages = {
 				downloadSource: "Download",
 				transcribeVideo: "Transcript",
 				generateClips: "Clips generation",
+				generateShorts: "Shorts generation",
 				generateChapters: "Chapters generation",
 				generateClipsAndChapters: "Clips/chapters generation",
 				renderClip: "Render",
@@ -230,6 +231,9 @@ export const messages = {
 				clipsTitle: "Clips",
 				clipsDescription:
 					"Generate editable clip candidates from the transcript.",
+				shortsTitle: "Shorts",
+				shortsDescription:
+					"Generate more short-form candidates for Shorts, Reels, and TikTok.",
 				chaptersTitle: "Chapters",
 				chaptersDescription:
 					"Generate YouTube description chapters using clips as anchors when available.",
@@ -251,6 +255,8 @@ export const messages = {
 				eyebrow: "Clip Candidates",
 				title: "Draft clips",
 				candidates: "{count} candidates",
+				normalClips: "Normal clips",
+				shorts: "Shorts",
 				addClip: "Add Clip",
 				exportAll: "Export All",
 				emptyTitle: "Clip candidates will appear here.",
@@ -295,6 +301,9 @@ export const messages = {
 				copyTitle: "Copy clip title",
 				hook: "Hook",
 				copyHook: "Copy hook",
+				shortDetectionMode: "Short Detection",
+				peopleOnly: "People only",
+				peopleAndScreen: "People + screen",
 				editorNotes: "Editor Notes",
 				aiGenerate: "AI Generate",
 				aiGenerateTitle: "Generate title and hook?",
@@ -332,7 +341,8 @@ export const messages = {
 				enterChannelName: "Enter a channel name.",
 				channelCreated: "Channel created.",
 				choosePositionVideo: "Choose a {position} video.",
-				selectGenerationTargets: "Select clips, chapters, or both.",
+				selectGenerationTargets:
+					"Select clips, shorts, chapters, or a combination.",
 				noChaptersToCopy: "No chapters to copy yet.",
 				uploadFailed: "Upload failed",
 				uploadInitializeFailed: "Failed to initialize multipart upload.",
@@ -424,6 +434,7 @@ export const messages = {
 				downloadSource: "Descarga",
 				transcribeVideo: "Transcripción",
 				generateClips: "Generación de clips",
+				generateShorts: "Generación de shorts",
 				generateChapters: "Generación de capítulos",
 				generateClipsAndChapters: "Generación de clips/capítulos",
 				renderClip: "Render",
@@ -596,6 +607,9 @@ export const messages = {
 				clipsTitle: "Clips",
 				clipsDescription:
 					"Genera candidatos de clips editables a partir de la transcripción.",
+				shortsTitle: "Shorts",
+				shortsDescription:
+					"Genera más candidatos de formato corto para Shorts, Reels y TikTok.",
 				chaptersTitle: "Capítulos",
 				chaptersDescription:
 					"Genera capítulos para la descripción de YouTube usando clips como anclas cuando estén disponibles.",
@@ -618,6 +632,8 @@ export const messages = {
 				eyebrow: "Candidatos de clips",
 				title: "Clips en borrador",
 				candidates: "{count} candidatos",
+				normalClips: "Clips normales",
+				shorts: "Shorts",
 				addClip: "Agregar clip",
 				exportAll: "Exportar todo",
 				emptyTitle: "Los candidatos de clips aparecerán aquí.",
@@ -664,6 +680,9 @@ export const messages = {
 				copyTitle: "Copiar título del clip",
 				hook: "Hook",
 				copyHook: "Copiar hook",
+				shortDetectionMode: "Detección de short",
+				peopleOnly: "Solo personas",
+				peopleAndScreen: "Personas + pantalla",
 				editorNotes: "Notas del editor",
 				aiGenerate: "Generar con IA",
 				aiGenerateTitle: "¿Generar título y hook?",
@@ -701,7 +720,8 @@ export const messages = {
 				enterChannelName: "Ingresa el nombre del canal.",
 				channelCreated: "Canal creado.",
 				choosePositionVideo: "Elige un video {position}.",
-				selectGenerationTargets: "Selecciona clips, capítulos o ambos.",
+				selectGenerationTargets:
+					"Selecciona clips, shorts, capítulos o una combinación.",
 				noChaptersToCopy: "Todavía no hay capítulos para copiar.",
 				uploadFailed: "La subida falló",
 				uploadInitializeFailed: "No se pudo inicializar la subida multipart.",

@@ -39,7 +39,16 @@ describe("queueContentVideoAnalysis", () => {
 				{ videoId },
 			),
 		).resolves.toEqual(updatedVideo);
-		expect(clipRepository.replaceForVideo).toHaveBeenCalledWith(videoId, []);
+		expect(clipRepository.replaceForVideo).toHaveBeenCalledWith(
+			videoId,
+			[],
+			"standard",
+		);
+		expect(clipRepository.replaceForVideo).not.toHaveBeenCalledWith(
+			videoId,
+			[],
+			"short",
+		);
 		expect(chapterRepository.replaceForVideo).toHaveBeenCalledWith(videoId, []);
 		expect(videoRepository.updateStage).toHaveBeenCalledWith({
 			id: videoId,
@@ -51,6 +60,7 @@ describe("queueContentVideoAnalysis", () => {
 			type: "analyze-video",
 			payload: expect.objectContaining({
 				generateClips: true,
+				generateShorts: false,
 				generateChapters: true,
 				requestedAt: expect.any(String),
 			}),
@@ -95,7 +105,48 @@ describe("queueContentVideoAnalysis", () => {
 			type: "analyze-video",
 			payload: expect.objectContaining({
 				generateClips: false,
+				generateShorts: false,
 				generateChapters: true,
+			}),
+		});
+	});
+
+	it("clears and queues shorts independently from normal clips", async () => {
+		const videoRepository = ContentVideoRepositoryMother.create();
+		const clipRepository = ContentClipRepositoryMother.create();
+		const jobRepository = ContentJobRepositoryMother.create();
+
+		await queueContentVideoAnalysis(
+			videoRepository,
+			ContentTranscriptionRepositoryMother.create(),
+			jobRepository,
+			clipRepository,
+			ContentChapterRepositoryMother.create(),
+			{
+				videoId,
+				generateClips: false,
+				generateShorts: true,
+				generateChapters: false,
+			},
+		);
+
+		expect(clipRepository.replaceForVideo).toHaveBeenCalledWith(
+			videoId,
+			[],
+			"short",
+		);
+		expect(clipRepository.replaceForVideo).not.toHaveBeenCalledWith(
+			videoId,
+			[],
+			"standard",
+		);
+		expect(jobRepository.enqueue).toHaveBeenCalledWith({
+			videoId,
+			type: "analyze-video",
+			payload: expect.objectContaining({
+				generateClips: false,
+				generateShorts: true,
+				generateChapters: false,
 			}),
 		});
 	});
@@ -108,9 +159,14 @@ describe("queueContentVideoAnalysis", () => {
 				ContentJobRepositoryMother.create(),
 				ContentClipRepositoryMother.create(),
 				ContentChapterRepositoryMother.create(),
-				{ videoId, generateClips: false, generateChapters: false },
+				{
+					videoId,
+					generateClips: false,
+					generateShorts: false,
+					generateChapters: false,
+				},
 			),
-		).rejects.toThrow("Select clips, chapters, or both.");
+		).rejects.toThrow("Select clips, shorts, chapters, or a combination.");
 	});
 
 	it("rejects when the video is missing", async () => {

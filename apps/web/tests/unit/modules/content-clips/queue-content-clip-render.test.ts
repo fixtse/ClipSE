@@ -57,6 +57,7 @@ describe("queueContentClipRender", () => {
 				endSeconds: 34,
 				aspectMode: "source",
 				burnSubtitles: false,
+				clipKind: "standard",
 			},
 		});
 	});
@@ -102,8 +103,47 @@ describe("queueContentClipRender", () => {
 				endSeconds: clip.endSeconds,
 				aspectMode: "vertical9x16",
 				burnSubtitles: true,
+				clipKind: "standard",
 				focusMode: "auto-speaker",
 			},
+		});
+	});
+
+	it("forces shorts to vertical render jobs with their detection mode", async () => {
+		const clip = ContentClipMother.create({
+			clipKind: "short",
+			shortDetectionMode: "people_and_screen",
+		});
+		const video = ContentVideoMother.create({
+			id: clip.videoId,
+			storageKey: "videos/source.mp4",
+		});
+		const jobRepository = ContentJobRepositoryMother.create();
+
+		await queueContentClipRender(
+			ContentClipRepositoryMother.create({
+				findById: vi.fn(async () => clip),
+			}),
+			ContentVideoRepositoryMother.create({
+				findById: vi.fn(async () => video),
+			}),
+			jobRepository,
+			{
+				clipId: clip.id,
+				aspectMode: "source",
+			},
+		);
+
+		expect(jobRepository.enqueue).toHaveBeenCalledWith({
+			videoId: video.id,
+			clipId: clip.id,
+			type: "render-clip",
+			payload: expect.objectContaining({
+				clipKind: "short",
+				aspectMode: "vertical9x16",
+				focusMode: "auto-speaker",
+				shortDetectionMode: "people_and_screen",
+			}),
 		});
 	});
 

@@ -210,6 +210,6 @@ describe("content clip dashboard view helpers", () => {
 					sourceType: "url",
 				}),
 			]),
-		).toBe("video-a:Video A:failed:Failed::2048:2:1:url");
+		).toBe("video-a:Video A:failed:Failed::2048:2:1:0:0:url");
 	});
 });

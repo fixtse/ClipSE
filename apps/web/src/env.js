@@ -38,6 +38,12 @@ export const env = createEnv({
 			.min(1)
 			.max(20)
 			.default(8),
+		CONTENTCLIP_MAX_SHORTS_PER_VIDEO: z.coerce
+			.number()
+			.int()
+			.min(1)
+			.max(40)
+			.default(16),
 	},
 
 	/**
@@ -68,6 +74,8 @@ export const env = createEnv({
 			process.env.CONTENTCLIP_S3_FORCE_PATH_STYLE,
 		CONTENTCLIP_MAX_CLIPS_PER_VIDEO:
 			process.env.CONTENTCLIP_MAX_CLIPS_PER_VIDEO,
+		CONTENTCLIP_MAX_SHORTS_PER_VIDEO:
+			process.env.CONTENTCLIP_MAX_SHORTS_PER_VIDEO,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

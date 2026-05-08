@@ -27,7 +27,11 @@ describe("createContentClip", () => {
 			createContentClip(clipRepository, videoRepository, input),
 		).resolves.toEqual(createdClip);
 		expect(videoRepository.findById).toHaveBeenCalledWith(input.videoId);
-		expect(clipRepository.create).toHaveBeenCalledWith(input);
+		expect(clipRepository.create).toHaveBeenCalledWith({
+			...input,
+			clipKind: "standard",
+			shortDetectionMode: "people",
+		});
 	});
 
 	it("rejects when the source video is missing", async () => {

@@ -1,14 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24-bookworm-slim
-
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ffmpeg ca-certificates openssl yt-dlp python3-pip python3-opencv \
-	&& rm -rf /var/lib/apt/lists/*
-
-RUN python3 -m pip install --break-system-packages --no-cache-dir --upgrade typing-extensions \
-	&& python3 -m pip install --break-system-packages --no-cache-dir torch==2.7.1+cu128 torchvision==0.22.1+cu128 --index-url https://download.pytorch.org/whl/cu128 \
-	&& python3 -m pip install --break-system-packages --no-cache-dir --upgrade yt-dlp ultralytics
+ARG CONTENTCLIP_WORKER_BASE_IMAGE=ghcr.io/fixtse/contentclip-worker-base:latest
+FROM ${CONTENTCLIP_WORKER_BASE_IMAGE}
 
 WORKDIR /app
 

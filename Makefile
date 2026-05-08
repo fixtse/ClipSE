@@ -1,9 +1,12 @@
 SHELL := /bin/sh
 
-.PHONY: dev dev-down prod prod-down logs app-logs worker-logs whisper-logs db-generate db-migrate typecheck test
+.PHONY: dev dev-down worker-base-dev prod prod-down logs app-logs worker-logs whisper-logs db-generate db-migrate typecheck test
 
-dev:
+dev: worker-base-dev
 	docker compose -f docker-compose.dev.yml up --build
+
+worker-base-dev:
+	docker build -f apps/worker/Dockerfile.base.dev -t contentclip-worker-base:dev .
 
 dev-down:
 	docker compose -f docker-compose.dev.yml down

@@ -62,6 +62,13 @@ import {
 	PopoverTrigger,
 } from "~/components/ui/popover";
 import { Progress } from "~/components/ui/progress";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
@@ -77,6 +84,7 @@ import {
 	formatTimecode,
 	roundToFrame,
 } from "~/modules/content-clips/application/clip-timing";
+import type { ContentClipShortDetectionMode } from "~/modules/content-clips/domain/content-clip.valueobject";
 import type { ContentAiModelOption } from "~/modules/content-settings/domain/content-ai-models";
 import {
 	type ClipItem,
@@ -124,6 +132,10 @@ interface ClipEditorCardProps {
 	}) => Promise<GeneratedClipMetadataResult | undefined>;
 	onRender: (clipId: string) => Promise<void>;
 	onDelete: (clipId: string) => Promise<void>;
+	onShortDetectionModeChange?: (
+		clipId: string,
+		mode: ContentClipShortDetectionMode,
+	) => Promise<void>;
 }
 
 interface ModelComboboxProps {
@@ -562,6 +574,7 @@ export function ClipEditorCard({
 	onAiGenerate,
 	onRender,
 	onDelete,
+	onShortDetectionModeChange,
 }: ClipEditorCardProps) {
 	const t = useTranslations();
 	const [title, setTitle] = useState(clip.title);
@@ -1172,6 +1185,35 @@ export function ClipEditorCard({
 				</div>
 				<div className="space-y-4">
 					<div className="space-y-4 rounded-md border border-white/8 bg-white/4 p-4">
+						{clip.clipKind === "short" ? (
+							<div className="space-y-2">
+								<p className="font-medium text-slate-200 text-xs uppercase tracking-[0.18em]">
+									{t("workspace.clipEditor.shortDetectionMode")}
+								</p>
+								<Select
+									onValueChange={(value) => {
+										const mode =
+											value === "people_and_screen"
+												? "people_and_screen"
+												: "people";
+										void onShortDetectionModeChange?.(clip.id, mode);
+									}}
+									value={clip.shortDetectionMode}
+								>
+									<SelectTrigger className="border-white/10 bg-slate-900/75 text-white">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="people">
+											{t("workspace.clipEditor.peopleOnly")}
+										</SelectItem>
+										<SelectItem value="people_and_screen">
+											{t("workspace.clipEditor.peopleAndScreen")}
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						) : null}
 						<div className="space-y-2">
 							<div className="flex items-center justify-between gap-2">
 								<p className="font-medium text-slate-200 text-xs uppercase tracking-[0.18em]">

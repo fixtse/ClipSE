@@ -232,6 +232,14 @@ export const contentClips = createTable(
 			.uuid("video_id")
 			.notNull()
 			.references(() => contentVideos.id, { onDelete: "cascade" }),
+		clipKind: d
+			.varchar("clip_kind", { length: 20 })
+			.notNull()
+			.default("standard"),
+		shortDetectionMode: d
+			.varchar("short_detection_mode", { length: 40 })
+			.notNull()
+			.default("people"),
 		orderIndex: d.integer("order_index").notNull().default(0),
 		title: d.varchar({ length: 255 }).notNull(),
 		hook: d.text().notNull().default(""),
@@ -259,6 +267,7 @@ export const contentClips = createTable(
 	}),
 	(t) => [
 		index("content_clip_video_idx").on(t.videoId),
+		index("content_clip_video_kind_idx").on(t.videoId, t.clipKind),
 		index("content_clip_status_idx").on(t.status),
 	],
 );

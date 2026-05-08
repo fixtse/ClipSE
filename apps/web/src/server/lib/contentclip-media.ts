@@ -348,6 +348,7 @@ export async function renderClipSegment(input: {
 	introFilePath?: string | null;
 	outroFilePath?: string | null;
 	aspectMode?: "source" | "vertical9x16";
+	shortDetectionMode?: "people" | "people_and_screen";
 	subtitleFilePath?: string | null;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
@@ -392,6 +393,7 @@ export async function renderClipSegment(input: {
 			frameWidth,
 			frameHeight,
 			focusPlan,
+			shortDetectionMode: input.shortDetectionMode,
 			subtitleFilePath: input.subtitleFilePath,
 			onProgress: async (progress) => reportProgress(progress * 0.72),
 		});
@@ -601,6 +603,7 @@ async function renderVerticalClipSegment(input: {
 	frameWidth: number;
 	frameHeight: number;
 	focusPlan: FocusPlan;
+	shortDetectionMode?: "people" | "people_and_screen";
 	subtitleFilePath?: string | null;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
@@ -608,7 +611,9 @@ async function renderVerticalClipSegment(input: {
 		(window) => window.endSeconds > window.startSeconds,
 	);
 	const workspace = dirname(input.outputFilePath);
-	const hasStackedLayout = windows.some((window) => window.regions.length >= 2);
+	const hasStackedLayout =
+		input.shortDetectionMode === "people_and_screen" ||
+		windows.some((window) => window.regions.length >= 2);
 
 	if (windows.length > 1) {
 		const scenePaths = await Promise.all(
@@ -622,6 +627,7 @@ async function renderVerticalClipSegment(input: {
 					frameWidth: input.frameWidth,
 					frameHeight: input.frameHeight,
 					regions: window.regions,
+					shortDetectionMode: input.shortDetectionMode,
 					onProgress: async (progress) =>
 						input.onProgress?.(
 							((index + progress / 100) / windows.length) *
@@ -698,6 +704,7 @@ async function renderVerticalClipSegment(input: {
 		frameWidth: input.frameWidth,
 		frameHeight: input.frameHeight,
 		regions: staticRegions,
+		shortDetectionMode: input.shortDetectionMode,
 		onProgress: async (progress) =>
 			input.onProgress?.(input.subtitleFilePath ? progress * 0.75 : progress),
 	});
@@ -726,9 +733,91 @@ async function renderVerticalSceneSegment(input: {
 	frameWidth: number;
 	frameHeight: number;
 	regions: readonly FocusRegion[];
+	shortDetectionMode?: "people" | "people_and_screen";
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const regions = input.regions.slice(0, 2);
+
+	if (input.shortDetectionMode === "people_and_screen") {
+		const detectedPeopleRegion = regions[0] ?? null;
+		const peopleRegion = detectedPeopleRegion ?? {
+			centerX: input.frameWidth / 2,
+			centerY: input.frameHeight / 2,
+			width: null,
+			height: null,
+		};
+		const hasPeopleDetection =
+			"score" in peopleRegion &&
+			"detectionCount" in peopleRegion &&
+			peopleRegion.detectionCount > 0;
+		const peopleCrop = getCrop({
+			frameWidth: input.frameWidth,
+			frameHeight: input.frameHeight,
+			centerX: peopleRegion.centerX,
+			centerY: hasPeopleDetection
+				? peopleRegion.centerY
+				: input.frameHeight * 0.58,
+			focusWidth: peopleRegion.width,
+			focusHeight: peopleRegion.height,
+			targetAspectRatio: 1080 / 960,
+		});
+		const filterComplex =
+			"[0:v]scale=1080:960:force_original_aspect_ratio=decrease,pad=1080:960:(ow-iw)/2:(oh-ih)/2,setsar=1[screen];" +
+			`[0:v]crop=${peopleCrop.width}:${peopleCrop.height}:${peopleCrop.x}:${peopleCrop.y},scale=1080:960,setsar=1[people];` +
+			"[screen][people]vstack=inputs=2,format=yuv420p[v]";
+
+		await runFfmpegWithFallback({
+			nvidiaArgs: [
+				"-y",
+				"-ss",
+				input.startSeconds.toFixed(3),
+				"-i",
+				input.inputFilePath,
+				"-t",
+				input.durationSeconds.toFixed(3),
+				"-filter_complex",
+				filterComplex,
+				"-map",
+				"[v]",
+				"-map",
+				"0:a:0?",
+				...getNvencOutputArgs(),
+				"-c:a",
+				"aac",
+				"-b:a",
+				"160k",
+				"-movflags",
+				"+faststart",
+				input.outputFilePath,
+			],
+			cpuArgs: [
+				"-y",
+				"-ss",
+				input.startSeconds.toFixed(3),
+				"-i",
+				input.inputFilePath,
+				"-t",
+				input.durationSeconds.toFixed(3),
+				"-filter_complex",
+				filterComplex,
+				"-map",
+				"[v]",
+				"-map",
+				"0:a:0?",
+				...getX264OutputArgs(),
+				"-c:a",
+				"aac",
+				"-b:a",
+				"160k",
+				"-movflags",
+				"+faststart",
+				input.outputFilePath,
+			],
+			durationSeconds: input.durationSeconds,
+			onProgress: input.onProgress,
+		});
+		return;
+	}
 
 	if (regions.length >= 2) {
 		const [topRegion, bottomRegion] = regions as [

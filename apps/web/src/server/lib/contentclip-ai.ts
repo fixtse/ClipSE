@@ -35,6 +35,12 @@ const clipAnalysisSchema = z.object({
 		.min(1)
 		.max(env.CONTENTCLIP_MAX_CLIPS_PER_VIDEO),
 });
+const shortAnalysisSchema = z.object({
+	clips: z
+		.array(GeneratedClipCandidateSchema)
+		.min(1)
+		.max(env.CONTENTCLIP_MAX_SHORTS_PER_VIDEO),
+});
 const chapterAnalysisSchema = z.object({
 	chapters: z.array(GeneratedChapterSchema).min(1).max(80),
 });
@@ -139,6 +145,31 @@ function buildTimestampedTranscript(
 				`[${formatContentTimestamp(segment.start)} - ${formatContentTimestamp(segment.end)}] ${segment.text}`,
 		)
 		.join("\n");
+}
+
+function normalizeShortClipCandidate(
+	input: GeneratedClipCandidate,
+	videoDurationSeconds: number | null,
+): GeneratedClipCandidate {
+	const minDurationSeconds = 20;
+	const maxDurationSeconds = 75;
+	const maxEnd = videoDurationSeconds ?? Number.MAX_SAFE_INTEGER;
+	const safeStart = Math.max(0, Number(input.startSeconds.toFixed(3)));
+	const requestedEnd = Number(input.endSeconds.toFixed(3));
+	const safeEnd = Math.min(
+		Math.max(
+			Math.min(requestedEnd, safeStart + maxDurationSeconds),
+			safeStart + minDurationSeconds,
+		),
+		maxEnd,
+	);
+
+	return {
+		...input,
+		startSeconds: safeStart,
+		endSeconds: Number(safeEnd.toFixed(3)),
+		score: Math.round(input.score),
+	};
 }
 
 async function withAiRetry<T>(operation: () => Promise<T>): Promise<T> {
@@ -384,28 +415,182 @@ ${buildTimestampedTranscript(chunk.segments)}`;
 	);
 }
 
+export async function generateShortCandidatesFromTranscription(input: {
+	video: ContentVideo;
+	transcription: ContentTranscription;
+	onProgress?: (progress: number) => Promise<void>;
+}): Promise<GeneratedClipCandidate[]> {
+	const aiSettings = await contentAiSettingsRepository.get();
+	const chunks = buildAnalysisChunks(
+		input.transcription.segments,
+		input.video.durationSeconds,
+	);
+
+	const buildPrompt = (chunk: AnalysisChunk) => {
+		const chunkDurationSeconds = chunk.endSeconds - chunk.startSeconds;
+		const targetClipCount = Math.min(
+			env.CONTENTCLIP_MAX_SHORTS_PER_VIDEO,
+			Math.max(4, Math.round(chunkDurationSeconds / 180)),
+		);
+
+		return `You are a short-form producer finding Shorts/Reels/TikTok cuts from a long-form source video.
+
+Find clips that can stop a feed scroll quickly and deliver a complete payoff without extra context.
+
+Prioritize:
+- a strong first 1-3 seconds: surprising claim, direct question, tension, mistake, result, useful warning, or named takeaway
+- single-idea moments that are easy to understand on a phone
+- quick payoffs, practical examples, demonstrations, memorable phrases, contrasts, lists, or sharp explanations
+- natural starts before the hook/setup and endings immediately after the payoff resolves
+- clips that work as vertical short-form videos in the same language as the transcript
+
+Avoid:
+- slow introductions, broad summaries, rambling context, housekeeping, sponsor-like sections, and multi-topic clips
+- clips that need earlier context to understand
+- clips that start mid-sentence or end before the key takeaway lands
+- near-duplicates and timestamps outside this analysis batch
+
+Short boundaries:
+- Each short should usually be 20-75 seconds.
+- Prefer 25-60 seconds when the idea is complete.
+- Keep every candidate tightly focused on one short-form idea.
+
+Return about ${targetClipCount} candidates from this batch, with higher scores only for shorts likely to perform in Shorts/Reels/TikTok.
+Only use timestamps inside this analysis batch:
+${formatContentTimestamp(chunk.startSeconds)} - ${formatContentTimestamp(chunk.endSeconds)}
+
+VIDEO TITLE:
+${input.video.title}
+
+OPTIONAL TOPIC GUIDANCE:
+${input.video.analysisPrompt || "No extra topic guidance supplied."}
+
+TRANSCRIPT:
+${buildTimestampedTranscript(chunk.segments)}`;
+	};
+
+	const model = createContentAiLanguageModel(aiSettings);
+
+	const candidates: GeneratedClipCandidate[] = [];
+	for (const chunk of chunks) {
+		if (chunk.segments.length === 0) {
+			await input.onProgress?.(((chunk.index + 1) / chunks.length) * 100);
+			continue;
+		}
+
+		const object = await withAiRetry(() =>
+			generateContentAiObject({
+				model,
+				provider: aiSettings.provider,
+				schema: shortAnalysisSchema,
+				prompt: buildPrompt(chunk),
+				jsonInstructions: `{
+  "clips": [
+    {
+      "title": "string",
+      "hook": "string",
+      "summary": "string",
+      "rationale": "string",
+      "startSeconds": number,
+      "endSeconds": number,
+      "score": number,
+      "tags": ["string"]
+    }
+  ]
+}`,
+			}),
+		);
+
+		candidates.push(
+			...object.clips.map((candidate) => {
+				const normalizedCandidate = normalizeShortClipCandidate(
+					candidate,
+					input.video.durationSeconds,
+				);
+
+				return {
+					...normalizedCandidate,
+					summary: "",
+					transcriptExcerpt: "",
+				};
+			}),
+		);
+		await input.onProgress?.(((chunk.index + 1) / chunks.length) * 100);
+	}
+
+	const selectedCandidates: GeneratedClipCandidate[] = [];
+	for (const candidate of candidates.sort(
+		(left, right) => right.score - left.score,
+	)) {
+		const overlapsSelectedCandidate = selectedCandidates.some(
+			(selectedCandidate) =>
+				candidate.startSeconds < selectedCandidate.endSeconds &&
+				candidate.endSeconds > selectedCandidate.startSeconds,
+		);
+
+		if (!overlapsSelectedCandidate) {
+			selectedCandidates.push(candidate);
+		}
+
+		if (selectedCandidates.length >= env.CONTENTCLIP_MAX_SHORTS_PER_VIDEO) {
+			break;
+		}
+	}
+
+	return selectedCandidates.sort(
+		(left, right) => left.startSeconds - right.startSeconds,
+	);
+}
+
 export async function generateClipAndChapterStrategyFromTranscription(input: {
 	video: ContentVideo;
 	transcription: ContentTranscription;
 	generateClips?: boolean;
+	generateShorts?: boolean;
 	generateChapters?: boolean;
 	existingClips?: GeneratedClipCandidate[];
+	existingShorts?: GeneratedClipCandidate[];
 	onProgress?: (progress: number) => Promise<void>;
-}): Promise<{ clips: GeneratedClipCandidate[]; chapters: GeneratedChapter[] }> {
+}): Promise<{
+	clips: GeneratedClipCandidate[];
+	shorts: GeneratedClipCandidate[];
+	chapters: GeneratedChapter[];
+}> {
 	const shouldGenerateClips = input.generateClips ?? true;
+	const shouldGenerateShorts = input.generateShorts ?? false;
 	const shouldGenerateChapters = input.generateChapters ?? true;
+	const analysisProgressSpan = shouldGenerateChapters ? 55 : 100;
+	let completedAnalysisSteps = 0;
+	const analysisStepCount = Math.max(
+		1,
+		[shouldGenerateClips, shouldGenerateShorts].filter(Boolean).length,
+	);
 	const clips = shouldGenerateClips
 		? await generateClipCandidatesFromTranscription({
 				...input,
 				onProgress: async (progress) =>
 					input.onProgress?.(
-						shouldGenerateChapters ? progress * 0.55 : progress,
+						((completedAnalysisSteps + progress / 100) / analysisStepCount) *
+							analysisProgressSpan,
 					),
 			})
 		: (input.existingClips ?? []);
+	if (shouldGenerateClips) {
+		completedAnalysisSteps += 1;
+	}
+	const shorts = shouldGenerateShorts
+		? await generateShortCandidatesFromTranscription({
+				...input,
+				onProgress: async (progress) =>
+					input.onProgress?.(
+						((completedAnalysisSteps + progress / 100) / analysisStepCount) *
+							analysisProgressSpan,
+					),
+			})
+		: (input.existingShorts ?? []);
 	if (!shouldGenerateChapters) {
 		await input.onProgress?.(100);
-		return { clips, chapters: [] };
+		return { clips, shorts, chapters: [] };
 	}
 	await input.onProgress?.(58);
 
@@ -487,7 +672,7 @@ ${buildTimestampedTranscript(input.transcription.segments)}`;
 		.filter((chapter) => chapter.endSeconds > chapter.startSeconds)
 		.sort((left, right) => left.startSeconds - right.startSeconds);
 
-	return { clips, chapters };
+	return { clips, shorts, chapters };
 }
 
 export async function generateClipMetadataForTranscriptRange(input: {

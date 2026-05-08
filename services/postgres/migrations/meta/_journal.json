@@ -71,6 +71,13 @@
       "when": 1778180020780,
       "tag": "0009_thick_taskmaster",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1778215112125,
+      "tag": "0010_magical_preak",
+      "breakpoints": true
     }
   ]
 }

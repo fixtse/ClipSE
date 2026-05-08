@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      worker-base-required: ${{ steps.matrix.outputs.worker-base-required }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,6 +57,10 @@ jobs:
             fi
 
             matrix="${matrix}{\"image\":\"${image}\",\"context\":\"${context}\",\"dockerfile\":\"${dockerfile}\"}"
+
+            if [ "$image" = "contentclip-worker" ]; then
+              worker_base_required="true"
+            fi
           }
 
           changed_any() {
@@ -64,6 +69,7 @@ jobs:
           }
 
           matrix="["
+          worker_base_required="false"
 
           if [[ "$REF" == refs/tags/v*.*.* || "$EVENT_NAME" == "workflow_dispatch" || -z "$BEFORE_SHA" || "$BEFORE_SHA" == "0000000000000000000000000000000000000000" ]]; then
             append_image "contentclip-app" "." "apps/web/Dockerfile"
@@ -97,6 +103,7 @@ jobs:
 
           matrix="${matrix}]"
           echo "matrix={\"include\":${matrix}}" >> "$GITHUB_OUTPUT"
+          echo "worker-base-required=${worker_base_required}" >> "$GITHUB_OUTPUT"
 
           {
             echo "### Docker image matrix"
@@ -113,9 +120,52 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-  build-and-push:
+  build-worker-base:
     needs: changes
-    if: needs.changes.outputs.matrix != '{"include":[]}'
+    if: needs.changes.outputs.worker-base-required == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.sha }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract worker base metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/contentclip-worker-base
+          tags: |
+            type=raw,value=sha-${{ inputs.sha }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push worker base
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/worker/Dockerfile.base
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  build-and-push:
+    needs:
+      - changes
+      - build-worker-base
+    if: always() && needs.changes.outputs.matrix != '{"include":[]}' && (needs.build-worker-base.result == 'success' || needs.build-worker-base.result == 'skipped')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -156,3 +206,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            CONTENTCLIP_WORKER_BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/contentclip-worker-base:sha-${{ inputs.sha }}

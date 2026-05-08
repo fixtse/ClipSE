@@ -42,6 +42,12 @@ function readRenderBurnSubtitles(value: unknown): boolean {
 	return value === true;
 }
 
+function readShortDetectionMode(
+	value: unknown,
+): "people" | "people_and_screen" {
+	return value === "people_and_screen" ? "people_and_screen" : "people";
+}
+
 function scaleProgress(progress: number, base: number, span: number): number {
 	return base + Math.floor((Math.max(0, Math.min(100, progress)) / 100) * span);
 }
@@ -316,10 +322,14 @@ async function processAnalysisJob(
 	}
 	const job = await contentJobRepository.findById(jobId);
 	const shouldGenerateClips = job?.payload.generateClips !== false;
+	const shouldGenerateShorts = job?.payload.generateShorts === true;
 	const shouldGenerateChapters = job?.payload.generateChapters !== false;
 	const existingClips = shouldGenerateClips
 		? []
-		: await contentClipRepository.listByVideoId(videoId);
+		: await contentClipRepository.listByVideoId(videoId, "standard");
+	const existingShorts = shouldGenerateShorts
+		? []
+		: await contentClipRepository.listByVideoId(videoId, "short");
 
 	await contentVideoRepository.updateStage({
 		id: videoId,
@@ -332,8 +342,20 @@ async function processAnalysisJob(
 		video,
 		transcription,
 		generateClips: shouldGenerateClips,
+		generateShorts: shouldGenerateShorts,
 		generateChapters: shouldGenerateChapters,
 		existingClips: existingClips.map((clip) => ({
+			title: clip.title,
+			hook: clip.hook,
+			summary: clip.summary,
+			rationale: clip.rationale,
+			transcriptExcerpt: clip.transcriptExcerpt,
+			startSeconds: clip.startSeconds,
+			endSeconds: clip.endSeconds,
+			score: clip.score,
+			tags: clip.tags,
+		})),
+		existingShorts: existingShorts.map((clip) => ({
 			title: clip.title,
 			hook: clip.hook,
 			summary: clip.summary,
@@ -355,7 +377,14 @@ async function processAnalysisJob(
 
 	await Promise.all([
 		shouldGenerateClips
-			? contentClipRepository.replaceForVideo(videoId, strategy.clips)
+			? contentClipRepository.replaceForVideo(
+					videoId,
+					strategy.clips,
+					"standard",
+				)
+			: Promise.resolve([]),
+		shouldGenerateShorts
+			? contentClipRepository.replaceForVideo(videoId, strategy.shorts, "short")
 			: Promise.resolve([]),
 		shouldGenerateChapters
 			? contentChapterRepository.replaceForVideo(videoId, strategy.chapters)
@@ -371,6 +400,7 @@ async function processAnalysisJob(
 		id: jobId,
 		result: {
 			clipCount: strategy.clips.length,
+			shortCount: strategy.shorts.length,
 			chapterCount: strategy.chapters.length,
 		},
 	});
@@ -396,6 +426,9 @@ async function processRenderJob(
 	const job = await contentJobRepository.findById(jobId);
 	const aspectMode = readRenderAspectMode(job?.payload.aspectMode);
 	const burnSubtitles = readRenderBurnSubtitles(job?.payload.burnSubtitles);
+	const shortDetectionMode = readShortDetectionMode(
+		job?.payload.shortDetectionMode,
+	);
 	const introStorageKey =
 		aspectMode === "vertical9x16"
 			? (channel?.verticalIntroStorageKey ?? channel?.introStorageKey)
@@ -481,6 +514,8 @@ async function processRenderJob(
 		introFilePath: introPath,
 		outroFilePath: outroPath,
 		aspectMode,
+		shortDetectionMode:
+			aspectMode === "vertical9x16" ? shortDetectionMode : undefined,
 		subtitleFilePath: subtitlePath,
 		onProgress: async (progress) => {
 			await contentJobRepository.updateProgress({
@@ -525,6 +560,8 @@ async function processRenderJob(
 			outputFilename,
 			aspectMode,
 			burnSubtitles,
+			shortDetectionMode:
+				aspectMode === "vertical9x16" ? shortDetectionMode : undefined,
 		},
 	});
 }

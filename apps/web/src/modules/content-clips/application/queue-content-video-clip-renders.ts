@@ -20,13 +20,25 @@ export async function queueContentVideoClipRenders(
 		throw new Error("Source video is not available yet");
 	}
 
-	const clips = await clipRepository.listByVideoId(video.id);
+	const clips = await clipRepository.listByVideoId(
+		video.id,
+		validatedInput.clipKind,
+	);
 	const renderableClips = clips.filter(
 		(clip) => clip.status !== "queued" && clip.status !== "rendering",
 	);
 
 	await Promise.all(
 		renderableClips.map(async (clip) => {
+			const effectiveRenderOptions =
+				clip.clipKind === "short"
+					? {
+							...renderOptions,
+							aspectMode: "vertical9x16" as const,
+							focusMode: "auto-speaker" as const,
+						}
+					: renderOptions;
+
 			await clipRepository.updateStatus({
 				id: clip.id,
 				status: "queued",
@@ -42,10 +54,14 @@ export async function queueContentVideoClipRenders(
 					startSeconds: clip.startSeconds,
 					endSeconds: clip.endSeconds,
 					queuedBy: "render-all",
-					aspectMode: renderOptions.aspectMode,
-					burnSubtitles: renderOptions.burnSubtitles,
-					...(renderOptions.focusMode
-						? { focusMode: renderOptions.focusMode }
+					aspectMode: effectiveRenderOptions.aspectMode,
+					burnSubtitles: effectiveRenderOptions.burnSubtitles,
+					clipKind: clip.clipKind,
+					...(clip.clipKind === "short"
+						? { shortDetectionMode: clip.shortDetectionMode }
+						: {}),
+					...(effectiveRenderOptions.focusMode
+						? { focusMode: effectiveRenderOptions.focusMode }
 						: {}),
 				},
 			});

@@ -34,7 +34,11 @@ import { authClient } from "~/lib/auth-client";
 import { cn } from "~/lib/utils";
 import type { ContentChannelBumperPosition } from "~/modules/content-channels/domain/content-channel.valueobject";
 import { formatTimecode } from "~/modules/content-clips/application/clip-timing";
-import type { ContentClipRenderAspectMode } from "~/modules/content-clips/domain/content-clip.valueobject";
+import type {
+	ContentClipKind,
+	ContentClipRenderAspectMode,
+	ContentClipShortDetectionMode,
+} from "~/modules/content-clips/domain/content-clip.valueobject";
 import {
 	getAudioLanguageOptions,
 	getWhisperModelOptions,
@@ -136,6 +140,7 @@ type GeneratedClipMetadataResult = Pick<
 	"title" | "hook" | "summary" | "startSeconds" | "endSeconds"
 >;
 type IntakeSourceTab = "file" | "url";
+type ClipListTab = ContentClipKind;
 type WhisperModel = ContentAiSettings["whisperModel"];
 type RenderOptionsState = {
 	aspectMode: ContentClipRenderAspectMode;
@@ -220,7 +225,9 @@ export function ContentClipWorkspace({
 	const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
 	const [jobQueueOpen, setJobQueueOpen] = useState(false);
 	const [generateClips, setGenerateClips] = useState(true);
+	const [generateShorts, setGenerateShorts] = useState(true);
 	const [generateChapters, setGenerateChapters] = useState(true);
+	const [clipListTab, setClipListTab] = useState<ClipListTab>("standard");
 	const [renderOptions, setRenderOptions] = useState<RenderOptionsState>({
 		aspectMode: "source",
 		burnSubtitles: false,
@@ -973,7 +980,7 @@ export function ContentClipWorkspace({
 			return;
 		}
 
-		if (!generateClips && !generateChapters) {
+		if (!generateClips && !generateShorts && !generateChapters) {
 			toast.error(t("workspace.toasts.selectGenerationTargets"));
 			return;
 		}
@@ -983,6 +990,7 @@ export function ContentClipWorkspace({
 				videoId: selectedVideo.video.id,
 				analysisPrompt: videoPromptDraft,
 				generateClips,
+				generateShorts,
 				generateChapters,
 			});
 
@@ -1060,6 +1068,24 @@ export function ContentClipWorkspace({
 		await refreshDashboard();
 	}
 
+	async function handleShortDetectionModeChange(
+		clipId: string,
+		shortDetectionMode: ContentClipShortDetectionMode,
+	) {
+		const result = await updateContentClipAction({
+			id: clipId,
+			shortDetectionMode,
+		});
+
+		if (!result.success) {
+			toast.error(result.error);
+			return;
+		}
+
+		toast.success(t("workspace.toasts.clipTimingSaved"));
+		await refreshDashboard();
+	}
+
 	async function handleGenerateClipMetadata(input: {
 		clipId: string;
 		startSeconds: number;
@@ -1095,9 +1121,13 @@ export function ContentClipWorkspace({
 		await refreshDashboard();
 	}
 
-	async function handleRenderAllClips(videoId: string) {
+	async function handleRenderAllClips(
+		videoId: string,
+		clipKind: ContentClipKind,
+	) {
 		const result = await queueContentVideoClipRendersAction({
 			videoId,
+			clipKind,
 			...renderOptions,
 			focusMode:
 				renderOptions.aspectMode === "vertical9x16"
@@ -1149,8 +1179,9 @@ export function ContentClipWorkspace({
 
 		const result = await createContentClipAction({
 			videoId: selectedVideo.video.id,
+			clipKind: clipListTab,
 			title: t("workspace.toasts.manualClipTitle", {
-				count: selectedVideo.clips.length + 1,
+				count: visibleClips.length + 1,
 			}),
 			hook: "",
 			summary: "",
@@ -1190,10 +1221,13 @@ export function ContentClipWorkspace({
 		void videoRef.current.play().catch(() => undefined);
 	}
 
-	const renderableClipCount =
-		selectedVideo?.clips.filter(
-			(clip) => clip.status !== "queued" && clip.status !== "rendering",
-		).length ?? 0;
+	const visibleClips =
+		clipListTab === "short"
+			? (selectedVideo?.shorts ?? [])
+			: (selectedVideo?.clips ?? []);
+	const renderableClipCount = visibleClips.filter(
+		(clip) => clip.status !== "queued" && clip.status !== "rendering",
+	).length;
 
 	const modelOptions = aiModelsQuery.data ?? [];
 	const whisperModelOptions = getWhisperModelOptions(t);
@@ -2492,6 +2526,35 @@ export function ContentClipWorkspace({
 																	<button
 																		className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"
 																		onClick={() =>
+																			setGenerateShorts((value) => !value)
+																		}
+																		type="button"
+																	>
+																		<Checkbox
+																			checked={generateShorts}
+																			onCheckedChange={(checked) =>
+																				setGenerateShorts(checked === true)
+																			}
+																			onClick={(event) =>
+																				event.stopPropagation()
+																			}
+																		/>
+																		<span>
+																			<span className="block font-medium text-sm text-white">
+																				{t(
+																					"workspace.generateDialog.shortsTitle",
+																				)}
+																			</span>
+																			<span className="block text-slate-400 text-xs leading-5">
+																				{t(
+																					"workspace.generateDialog.shortsDescription",
+																				)}
+																			</span>
+																		</span>
+																	</button>
+																	<button
+																		className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"
+																		onClick={() =>
 																			setGenerateChapters((value) => !value)
 																		}
 																		type="button"
@@ -2522,7 +2585,9 @@ export function ContentClipWorkspace({
 																		className="w-full border-orange-300/20 bg-orange-300/10 text-orange-100 hover:bg-orange-300/15"
 																		disabled={
 																			isPending ||
-																			(!generateClips && !generateChapters)
+																			(!generateClips &&
+																				!generateShorts &&
+																				!generateChapters)
 																		}
 																		onClick={() =>
 																			startTransition(() => {
@@ -2776,36 +2841,59 @@ export function ContentClipWorkspace({
 													</h2>
 												</div>
 												<div className="flex flex-wrap items-center justify-end gap-2">
+													<Tabs
+														onValueChange={(value) =>
+															setClipListTab(
+																value === "short" ? "short" : "standard",
+															)
+														}
+														value={clipListTab}
+													>
+														<TabsList className="grid h-9 grid-cols-2 border border-white/10 bg-slate-900/80">
+															<TabsTrigger value="standard">
+																{t("workspace.clipList.normalClips")}
+															</TabsTrigger>
+															<TabsTrigger value="short">
+																{t("workspace.clipList.shorts")}
+															</TabsTrigger>
+														</TabsList>
+													</Tabs>
 													<div className="flex items-center gap-2 text-slate-400 text-sm">
 														<Scissors className="h-4 w-4" />
 														{t("workspace.clipList.candidates", {
-															count: selectedVideo.clips.length,
+															count: visibleClips.length,
 														})}
 													</div>
-													<Select
-														onValueChange={(value) =>
-															setRenderOptions((current) => ({
-																...current,
-																aspectMode:
-																	value === "vertical9x16"
-																		? "vertical9x16"
-																		: "source",
-															}))
-														}
-														value={renderOptions.aspectMode}
-													>
-														<SelectTrigger className="h-9 w-[150px] border-white/10 bg-slate-900/75 text-white">
-															<SelectValue />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="source">
-																{t("workspace.renderOptions.source")}
-															</SelectItem>
-															<SelectItem value="vertical9x16">
-																{t("workspace.renderOptions.vertical")}
-															</SelectItem>
-														</SelectContent>
-													</Select>
+													{clipListTab === "standard" ? (
+														<Select
+															onValueChange={(value) =>
+																setRenderOptions((current) => ({
+																	...current,
+																	aspectMode:
+																		value === "vertical9x16"
+																			? "vertical9x16"
+																			: "source",
+																}))
+															}
+															value={renderOptions.aspectMode}
+														>
+															<SelectTrigger className="h-9 w-[150px] border-white/10 bg-slate-900/75 text-white">
+																<SelectValue />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="source">
+																	{t("workspace.renderOptions.source")}
+																</SelectItem>
+																<SelectItem value="vertical9x16">
+																	{t("workspace.renderOptions.vertical")}
+																</SelectItem>
+															</SelectContent>
+														</Select>
+													) : (
+														<Badge className="h-9 border-white/10 bg-slate-900/75 px-3 text-slate-200">
+															{t("workspace.renderOptions.vertical")}
+														</Badge>
+													)}
 													<button
 														className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-slate-900/75 px-3 text-slate-200 text-sm transition hover:bg-slate-900"
 														onClick={() =>
@@ -2846,13 +2934,14 @@ export function ContentClipWorkspace({
 														className="border-orange-300/25 bg-orange-400/15 text-orange-50 hover:bg-orange-400/20"
 														disabled={
 															isPending ||
-															!selectedVideo.clips.length ||
+															!visibleClips.length ||
 															renderableClipCount === 0
 														}
 														onClick={() =>
 															startTransition(() => {
 																void handleRenderAllClips(
 																	selectedVideo.video.id,
+																	clipListTab,
 																);
 															})
 														}
@@ -2863,8 +2952,8 @@ export function ContentClipWorkspace({
 													</Button>
 												</div>
 											</div>
-											{selectedVideo.clips.length ? (
-												selectedVideo.clips.map((clip) => (
+											{visibleClips.length ? (
+												visibleClips.map((clip) => (
 													<ClipEditorCard
 														clip={clip}
 														currentTime={currentTime}
@@ -2886,6 +2975,15 @@ export function ContentClipWorkspace({
 														}}
 														onSave={async (input) => {
 															await handleSaveClip(input);
+														}}
+														onShortDetectionModeChange={async (
+															clipId,
+															mode,
+														) => {
+															await handleShortDetectionModeChange(
+																clipId,
+																mode,
+															);
 														}}
 														sourceUrl={selectedVideo.sourceUrl}
 													/>

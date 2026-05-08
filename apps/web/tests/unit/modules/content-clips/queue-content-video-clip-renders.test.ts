@@ -38,6 +38,10 @@ describe("queueContentVideoClipRenders", () => {
 				{ videoId: video.id },
 			),
 		).resolves.toEqual({ queuedCount: 1 });
+		expect(clipRepository.listByVideoId).toHaveBeenCalledWith(
+			video.id,
+			undefined,
+		);
 		expect(clipRepository.updateStatus).toHaveBeenCalledWith({
 			id: readyClip.id,
 			status: "queued",
@@ -54,6 +58,7 @@ describe("queueContentVideoClipRenders", () => {
 				queuedBy: "render-all",
 				aspectMode: "source",
 				burnSubtitles: false,
+				clipKind: "standard",
 			},
 		});
 	});
@@ -111,6 +116,48 @@ describe("queueContentVideoClipRenders", () => {
 				}),
 			}),
 		);
+	});
+
+	it("filters render-all by clip kind and forces vertical shorts with detection mode", async () => {
+		const video = ContentVideoMother.create();
+		const short = ContentClipMother.create({
+			clipKind: "short",
+			shortDetectionMode: "people_and_screen",
+			title: "Short",
+		});
+		const clipRepository = ContentClipRepositoryMother.create({
+			listByVideoId: vi.fn(async () => [short]),
+		});
+		const jobRepository = ContentJobRepositoryMother.create();
+
+		await queueContentVideoClipRenders(
+			clipRepository,
+			ContentVideoRepositoryMother.create({
+				findById: vi.fn(async () => video),
+			}),
+			jobRepository,
+			{
+				videoId: video.id,
+				clipKind: "short",
+				aspectMode: "source",
+			},
+		);
+
+		expect(clipRepository.listByVideoId).toHaveBeenCalledWith(
+			video.id,
+			"short",
+		);
+		expect(jobRepository.enqueue).toHaveBeenCalledWith({
+			videoId: video.id,
+			clipId: short.id,
+			type: "render-clip",
+			payload: expect.objectContaining({
+				clipKind: "short",
+				aspectMode: "vertical9x16",
+				focusMode: "auto-speaker",
+				shortDetectionMode: "people_and_screen",
+			}),
+		});
 	});
 
 	it("rejects when the source video is unavailable", async () => {
