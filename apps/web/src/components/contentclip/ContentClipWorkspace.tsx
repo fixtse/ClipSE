@@ -125,9 +125,12 @@ import {
 } from "./useContentClipWorkspaceController";
 import {
 	buildWorkspaceBrowserUrl,
+	type ClipListTab,
+	getClipListTabFromBrowserUrl,
 	getDashboardSelectedVideoId,
 	getDashboardVideos,
 	getManualClipTiming,
+	getSelectedClipIdFromBrowserUrl,
 	getSelectedVideoFromDashboard,
 	getWorkspaceTabFromBrowserUrl,
 	getYoutubeChapterText,
@@ -140,7 +143,6 @@ type GeneratedClipMetadataResult = Pick<
 	"title" | "hook" | "summary" | "startSeconds" | "endSeconds"
 >;
 type IntakeSourceTab = "file" | "url";
-type ClipListTab = ContentClipKind;
 type WhisperModel = ContentAiSettings["whisperModel"];
 type RenderOptionsState = {
 	aspectMode: ContentClipRenderAspectMode;
@@ -176,6 +178,10 @@ export function ContentClipWorkspace({
 		setSelectedChannelId,
 		workspaceTab,
 		setWorkspaceTab,
+		clipListTab,
+		setClipListTab,
+		selectedClipId,
+		setSelectedClipId,
 	} = useContentClipWorkspaceController({ requestedVideoId });
 	const [intakeSourceTab, setIntakeSourceTab] =
 		useState<IntakeSourceTab>("file");
@@ -227,7 +233,6 @@ export function ContentClipWorkspace({
 	const [generateClips, setGenerateClips] = useState(true);
 	const [generateShorts, setGenerateShorts] = useState(true);
 	const [generateChapters, setGenerateChapters] = useState(true);
-	const [clipListTab, setClipListTab] = useState<ClipListTab>("standard");
 	const [renderOptions, setRenderOptions] = useState<RenderOptionsState>({
 		aspectMode: "source",
 		burnSubtitles: false,
@@ -512,9 +517,11 @@ export function ContentClipWorkspace({
 				locationHref: window.location.href,
 				selectedVideoId,
 				workspaceTab,
+				clipListTab,
+				selectedClipId,
 			}),
 		);
-	}, [selectedVideoId, workspaceTab]);
+	}, [clipListTab, selectedClipId, selectedVideoId, workspaceTab]);
 
 	useEffect(() => {
 		if (typeof window === "undefined") {
@@ -526,11 +533,19 @@ export function ContentClipWorkspace({
 			setSelectedVideoId(url.searchParams.get("videoId"));
 			setSelectedVideoChannelId(null);
 			setWorkspaceTab(getWorkspaceTabFromBrowserUrl(window.location.href));
+			setClipListTab(getClipListTabFromBrowserUrl(window.location.href));
+			setSelectedClipId(getSelectedClipIdFromBrowserUrl(window.location.href));
 		};
 
 		window.addEventListener("popstate", handlePopState);
 		return () => window.removeEventListener("popstate", handlePopState);
-	}, [setSelectedVideoChannelId, setSelectedVideoId, setWorkspaceTab]);
+	}, [
+		setClipListTab,
+		setSelectedClipId,
+		setSelectedVideoChannelId,
+		setSelectedVideoId,
+		setWorkspaceTab,
+	]);
 
 	async function refreshDashboard() {
 		await utils.contentClip.dashboard.invalidate();
@@ -1229,6 +1244,21 @@ export function ContentClipWorkspace({
 		(clip) => clip.status !== "queued" && clip.status !== "rendering",
 	).length;
 
+	useEffect(() => {
+		if (
+			!selectedClipId ||
+			!visibleClips.some((clip) => clip.id === selectedClipId)
+		) {
+			return;
+		}
+
+		window.requestAnimationFrame(() => {
+			document
+				.getElementById(`content-clip-${selectedClipId}`)
+				?.scrollIntoView({ behavior: "smooth", block: "start" });
+		});
+	}, [selectedClipId, visibleClips]);
+
 	const modelOptions = aiModelsQuery.data ?? [];
 	const whisperModelOptions = getWhisperModelOptions(t);
 	const selectedWhisperModelOption =
@@ -1252,6 +1282,39 @@ export function ContentClipWorkspace({
 		setSelectedVideoChannelId(targetVideo.channelId);
 		setWorkspaceTab("media");
 		setJobQueueOpen(false);
+	};
+	const getClipListTabForJob = (
+		job: Pick<(typeof selectedVideoJobs)[number], "clipId" | "payload">,
+	): ClipListTab => {
+		if (job.payload.clipKind === "short") {
+			return "short";
+		}
+
+		if (selectedVideo?.shorts.some((clip) => clip.id === job.clipId)) {
+			return "short";
+		}
+
+		return "standard";
+	};
+	const selectJobTarget = (input: {
+		readonly video: Pick<DashboardVideo, "id" | "channelId">;
+		readonly job: Pick<
+			(typeof selectedVideoJobs)[number],
+			"type" | "clipId" | "payload"
+		>;
+	}) => {
+		setSelectedVideoId(input.video.id);
+		setSelectedVideoChannelId(input.video.channelId);
+		setWorkspaceTab("media");
+		setJobQueueOpen(false);
+
+		if (input.job.type === "render-clip" && input.job.clipId) {
+			setClipListTab(getClipListTabForJob(input.job));
+			setSelectedClipId(input.job.clipId);
+			return;
+		}
+
+		setSelectedClipId(null);
 	};
 	const renderJobQueuePanel = () => (
 		<div className="flex max-h-[min(72vh,36rem)] w-full flex-col overflow-hidden rounded-md border border-white/10 bg-slate-950/95 shadow-2xl shadow-black/40 backdrop-blur-xl">
@@ -1290,17 +1353,28 @@ export function ContentClipWorkspace({
 				<div className="space-y-3 p-3">
 					{selectedVideoJobs.length ? (
 						selectedVideoJobs.map((job) => {
-							const jobSubtitle = getJobSubtitle(
-								job,
-								selectedVideo?.clips ?? [],
-							);
+							const jobSubtitle = getJobSubtitle(job, [
+								...(selectedVideo?.clips ?? []),
+								...(selectedVideo?.shorts ?? []),
+							]);
 							const jobMessage = getJobMessage(job, t);
 							const jobTimestamp = formatJobTimestamp(job.createdAt);
 
 							return (
-								<div
-									className="rounded-md border border-white/8 bg-white/4 p-4"
+								<button
+									className="w-full rounded-md border border-white/8 bg-white/4 p-4 text-left transition hover:border-orange-300/30 hover:bg-orange-300/10"
 									key={job.id}
+									onClick={() => {
+										if (!selectedVideo) {
+											return;
+										}
+
+										selectJobTarget({
+											video: selectedVideo.video,
+											job,
+										});
+									}}
+									type="button"
 								>
 									<div className="flex min-w-0 items-start justify-between gap-3">
 										<div className="min-w-0">
@@ -1329,7 +1403,7 @@ export function ContentClipWorkspace({
 											</p>
 										) : null}
 									</div>
-								</div>
+								</button>
 							);
 						})
 					) : activeVideoJobs.length ? (
@@ -1337,11 +1411,7 @@ export function ContentClipWorkspace({
 							<button
 								className="w-full rounded-md border border-white/8 bg-white/4 p-4 text-left transition hover:border-orange-300/30 hover:bg-orange-300/10"
 								key={job.id}
-								onClick={() => {
-									setSelectedVideoId(video.id);
-									setSelectedVideoChannelId(video.channelId);
-									setJobQueueOpen(false);
-								}}
+								onClick={() => selectJobTarget({ video, job })}
 								type="button"
 							>
 								<div className="flex min-w-0 items-start justify-between gap-3">
@@ -2842,11 +2912,12 @@ export function ContentClipWorkspace({
 												</div>
 												<div className="flex flex-wrap items-center justify-end gap-2">
 													<Tabs
-														onValueChange={(value) =>
+														onValueChange={(value) => {
 															setClipListTab(
 																value === "short" ? "short" : "standard",
-															)
-														}
+															);
+															setSelectedClipId(null);
+														}}
 														value={clipListTab}
 													>
 														<TabsList className="grid h-9 grid-cols-2 border border-white/10 bg-slate-900/80">
@@ -2954,39 +3025,40 @@ export function ContentClipWorkspace({
 											</div>
 											{visibleClips.length ? (
 												visibleClips.map((clip) => (
-													<ClipEditorCard
-														clip={clip}
-														currentTime={currentTime}
-														frameRate={selectedVideo.video.frameRate}
-														key={clip.id}
-														maxDurationSeconds={
-															selectedVideo.video.durationSeconds ??
-															clip.endSeconds
-														}
-														mutationPending={isPending}
-														onAiGenerate={async (input) => {
-															return await handleGenerateClipMetadata(input);
-														}}
-														onDelete={async (clipId) => {
-															await handleDeleteClip(clipId);
-														}}
-														onRender={async (clipId) => {
-															await handleRenderClip(clipId);
-														}}
-														onSave={async (input) => {
-															await handleSaveClip(input);
-														}}
-														onShortDetectionModeChange={async (
-															clipId,
-															mode,
-														) => {
-															await handleShortDetectionModeChange(
+													<div id={`content-clip-${clip.id}`} key={clip.id}>
+														<ClipEditorCard
+															clip={clip}
+															currentTime={currentTime}
+															frameRate={selectedVideo.video.frameRate}
+															maxDurationSeconds={
+																selectedVideo.video.durationSeconds ??
+																clip.endSeconds
+															}
+															mutationPending={isPending}
+															onAiGenerate={async (input) => {
+																return await handleGenerateClipMetadata(input);
+															}}
+															onDelete={async (clipId) => {
+																await handleDeleteClip(clipId);
+															}}
+															onRender={async (clipId) => {
+																await handleRenderClip(clipId);
+															}}
+															onSave={async (input) => {
+																await handleSaveClip(input);
+															}}
+															onShortDetectionModeChange={async (
 																clipId,
 																mode,
-															);
-														}}
-														sourceUrl={selectedVideo.sourceUrl}
-													/>
+															) => {
+																await handleShortDetectionModeChange(
+																	clipId,
+																	mode,
+																);
+															}}
+															sourceUrl={selectedVideo.sourceUrl}
+														/>
+													</div>
 												))
 											) : (
 												<Card className="border-white/10 border-dashed bg-white/4">

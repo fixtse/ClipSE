@@ -13,6 +13,7 @@ import type {
 } from "~/modules/content-videos/application/get-content-clip-dashboard";
 
 export type WorkspaceTab = "media" | "intake" | "bumpers";
+export type ClipListTab = "standard" | "short";
 
 export interface BrowserWorkspaceStorage {
 	readonly locationHref: string;
@@ -21,6 +22,10 @@ export interface BrowserWorkspaceStorage {
 
 export function isWorkspaceTab(value: string | null): value is WorkspaceTab {
 	return value === "media" || value === "intake" || value === "bumpers";
+}
+
+export function isClipListTab(value: string | null): value is ClipListTab {
+	return value === "standard" || value === "short";
 }
 
 export function getBrowserWorkspaceStorage(): BrowserWorkspaceStorage | null {
@@ -47,6 +52,17 @@ export function getInitialWorkspaceTab(
 	return tab === "intake" || tab === "bumpers" ? tab : "media";
 }
 
+export function getInitialClipListTab(
+	storage: BrowserWorkspaceStorage | null,
+): ClipListTab {
+	if (!storage) {
+		return "standard";
+	}
+
+	const tab = new URL(storage.locationHref).searchParams.get("clipTab");
+	return isClipListTab(tab) ? tab : "standard";
+}
+
 export function getInitialSelectedVideoId(input: {
 	readonly requestedVideoId?: string | null;
 	readonly storage: BrowserWorkspaceStorage | null;
@@ -60,6 +76,16 @@ export function getInitialSelectedVideoId(input: {
 	}
 
 	return new URL(input.storage.locationHref).searchParams.get("videoId");
+}
+
+export function getInitialSelectedClipId(
+	storage: BrowserWorkspaceStorage | null,
+): string | null {
+	if (!storage) {
+		return null;
+	}
+
+	return new URL(storage.locationHref).searchParams.get("clipId");
 }
 
 export function getInitialSelectedChannelId(
@@ -116,6 +142,8 @@ export function buildWorkspaceBrowserUrl(input: {
 	readonly locationHref: string;
 	readonly selectedVideoId: string | null;
 	readonly workspaceTab: WorkspaceTab;
+	readonly clipListTab: ClipListTab;
+	readonly selectedClipId: string | null;
 }): string {
 	const url = new URL(input.locationHref);
 	if (input.selectedVideoId) {
@@ -130,6 +158,18 @@ export function buildWorkspaceBrowserUrl(input: {
 		url.searchParams.set("tab", input.workspaceTab);
 	}
 
+	if (input.clipListTab === "standard") {
+		url.searchParams.delete("clipTab");
+	} else {
+		url.searchParams.set("clipTab", input.clipListTab);
+	}
+
+	if (input.selectedClipId) {
+		url.searchParams.set("clipId", input.selectedClipId);
+	} else {
+		url.searchParams.delete("clipId");
+	}
+
 	return url.toString();
 }
 
@@ -138,6 +178,19 @@ export function getWorkspaceTabFromBrowserUrl(
 ): WorkspaceTab {
 	const tab = new URL(locationHref).searchParams.get("tab");
 	return isWorkspaceTab(tab) ? tab : "media";
+}
+
+export function getClipListTabFromBrowserUrl(
+	locationHref: string,
+): ClipListTab {
+	const tab = new URL(locationHref).searchParams.get("clipTab");
+	return isClipListTab(tab) ? tab : "standard";
+}
+
+export function getSelectedClipIdFromBrowserUrl(
+	locationHref: string,
+): string | null {
+	return new URL(locationHref).searchParams.get("clipId");
 }
 
 export function getManualClipTiming(input: {

@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import {
+	type ClipListTab,
 	getBrowserWorkspaceStorage,
+	getInitialClipListTab,
 	getInitialSelectedChannelId,
+	getInitialSelectedClipId,
 	getInitialSelectedVideoId,
 	getInitialWorkspaceTab,
 	type WorkspaceTab,
@@ -30,6 +33,12 @@ export function useContentClipWorkspaceController(input: {
 	const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>(() =>
 		getInitialWorkspaceTab(browserStorage),
 	);
+	const [clipListTab, setClipListTab] = useState<ClipListTab>(() =>
+		getInitialClipListTab(browserStorage),
+	);
+	const [selectedClipId, setSelectedClipId] = useState<string | null>(() =>
+		getInitialSelectedClipId(browserStorage),
+	);
 
 	return {
 		selectedVideoId,
@@ -40,5 +49,9 @@ export function useContentClipWorkspaceController(input: {
 		setSelectedChannelId,
 		workspaceTab,
 		setWorkspaceTab,
+		clipListTab,
+		setClipListTab,
+		selectedClipId,
+		setSelectedClipId,
 	};
 }

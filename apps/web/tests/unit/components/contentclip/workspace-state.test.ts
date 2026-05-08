@@ -2,12 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	buildWorkspaceBrowserUrl,
 	getBrowserWorkspaceStorage,
+	getClipListTabFromBrowserUrl,
 	getDashboardSelectedVideoId,
 	getDashboardVideos,
+	getInitialClipListTab,
 	getInitialSelectedChannelId,
+	getInitialSelectedClipId,
 	getInitialSelectedVideoId,
 	getInitialWorkspaceTab,
 	getManualClipTiming,
+	getSelectedClipIdFromBrowserUrl,
 	getSelectedVideoFromDashboard,
 	getWorkspaceTabFromBrowserUrl,
 	getYoutubeChapterText,
@@ -40,22 +44,27 @@ describe("workspace state helpers", () => {
 
 	it("reads initial tab, video, and channel values from browser storage", () => {
 		const storage = {
-			locationHref: "https://contentclip.test/en?tab=bumpers&videoId=video-1",
+			locationHref:
+				"https://contentclip.test/en?tab=bumpers&videoId=video-1&clipTab=short&clipId=clip-1",
 			selectedChannelId: "channel-1",
 		};
 
 		expect(getInitialWorkspaceTab(storage)).toBe("bumpers");
+		expect(getInitialClipListTab(storage)).toBe("short");
 		expect(
 			getInitialSelectedVideoId({
 				requestedVideoId: null,
 				storage,
 			}),
 		).toBe("video-1");
+		expect(getInitialSelectedClipId(storage)).toBe("clip-1");
 		expect(getInitialSelectedChannelId(storage)).toBe("channel-1");
 	});
 
 	it("falls back to media defaults and prefers requested video ids", () => {
 		expect(getInitialWorkspaceTab(null)).toBe("media");
+		expect(getInitialClipListTab(null)).toBe("standard");
+		expect(getInitialSelectedClipId(null)).toBeNull();
 		expect(getInitialSelectedChannelId(null)).toBeNull();
 		expect(
 			getInitialSelectedVideoId({
@@ -73,6 +82,19 @@ describe("workspace state helpers", () => {
 		expect(
 			getWorkspaceTabFromBrowserUrl("https://contentclip.test/en?tab=intake"),
 		).toBe("intake");
+		expect(
+			getClipListTabFromBrowserUrl(
+				"https://contentclip.test/en?clipTab=unknown",
+			),
+		).toBe("standard");
+		expect(
+			getClipListTabFromBrowserUrl("https://contentclip.test/en?clipTab=short"),
+		).toBe("short");
+		expect(
+			getSelectedClipIdFromBrowserUrl(
+				"https://contentclip.test/en?clipId=clip-2",
+			),
+		).toBe("clip-2");
 	});
 
 	it("keeps dashboard video selection scoped to the selected channel", () => {
@@ -149,9 +171,11 @@ describe("workspace state helpers", () => {
 		expect(
 			buildWorkspaceBrowserUrl({
 				locationHref:
-					"https://contentclip.test/en?tab=intake&videoId=old&other=1",
+					"https://contentclip.test/en?tab=intake&videoId=old&clipTab=short&clipId=old-clip&other=1",
 				selectedVideoId: "video-2",
 				workspaceTab: "media",
+				clipListTab: "standard",
+				selectedClipId: null,
 			}),
 		).toBe("https://contentclip.test/en?videoId=video-2&other=1");
 
@@ -160,8 +184,12 @@ describe("workspace state helpers", () => {
 				locationHref: "https://contentclip.test/en?videoId=old",
 				selectedVideoId: null,
 				workspaceTab: "intake",
+				clipListTab: "short",
+				selectedClipId: "clip-1",
 			}),
-		).toBe("https://contentclip.test/en?tab=intake");
+		).toBe(
+			"https://contentclip.test/en?tab=intake&clipTab=short&clipId=clip-1",
+		);
 	});
 
 	it("shows the floating job button for relevant active work", () => {
