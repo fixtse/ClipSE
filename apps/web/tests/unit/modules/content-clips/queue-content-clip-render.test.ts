@@ -112,7 +112,7 @@ describe("queueContentClipRender", () => {
 	it("forces shorts to vertical render jobs with their detection mode", async () => {
 		const clip = ContentClipMother.create({
 			clipKind: "short",
-			shortDetectionMode: "people_and_screen",
+			shortDetectionMode: "screen_only",
 		});
 		const video = ContentVideoMother.create({
 			id: clip.videoId,
@@ -142,7 +142,7 @@ describe("queueContentClipRender", () => {
 				clipKind: "short",
 				aspectMode: "vertical9x16",
 				focusMode: "auto-speaker",
-				shortDetectionMode: "people_and_screen",
+				shortDetectionMode: "screen_only",
 			}),
 		});
 	});

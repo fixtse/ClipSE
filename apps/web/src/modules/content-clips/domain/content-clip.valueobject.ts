@@ -16,6 +16,7 @@ export type ContentClipKind = (typeof CONTENT_CLIP_KINDS)[number];
 export const CONTENT_CLIP_SHORT_DETECTION_MODES = [
 	"people",
 	"people_and_screen",
+	"screen_only",
 ] as const;
 export type ContentClipShortDetectionMode =
 	(typeof CONTENT_CLIP_SHORT_DETECTION_MODES)[number];

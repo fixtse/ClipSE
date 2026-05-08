@@ -11,7 +11,13 @@ export interface FocusDetection {
 	width: number;
 	height: number;
 	score: number;
-	source: "face" | "face-group" | "motion" | "person" | "person-group";
+	source:
+		| "face"
+		| "face-group"
+		| "motion"
+		| "person"
+		| "person-group"
+		| "screen-interest";
 }
 
 export type DetectorBackend = "opencv" | "yolo-cuda";
@@ -390,6 +396,7 @@ export async function detectFocusRegions(input: {
 	endSeconds: number;
 	frameWidth: number;
 	frameHeight: number;
+	detectionMode?: "people" | "screen";
 }): Promise<FocusPlan> {
 	const scriptPath = join(
 		process.cwd(),
@@ -404,6 +411,7 @@ export async function detectFocusRegions(input: {
 				input.inputFilePath,
 				input.startSeconds.toFixed(3),
 				input.endSeconds.toFixed(3),
+				input.detectionMode ?? "people",
 			],
 			{ maxBuffer: 1024 * 1024 * 5 },
 		);

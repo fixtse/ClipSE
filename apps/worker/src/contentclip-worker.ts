@@ -44,8 +44,12 @@ function readRenderBurnSubtitles(value: unknown): boolean {
 
 function readShortDetectionMode(
 	value: unknown,
-): "people" | "people_and_screen" {
-	return value === "people_and_screen" ? "people_and_screen" : "people";
+): "people" | "people_and_screen" | "screen_only" {
+	if (value === "people_and_screen" || value === "screen_only") {
+		return value;
+	}
+
+	return "people";
 }
 
 function scaleProgress(progress: number, base: number, span: number): number {

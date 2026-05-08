@@ -130,11 +130,11 @@ describe("content clip short fields", () => {
 		expect(
 			UpdateContentClipSchema.parse({
 				id: "33333333-3333-4333-8333-333333333333",
-				shortDetectionMode: "people_and_screen",
+				shortDetectionMode: "screen_only",
 			}),
 		).toEqual({
 			id: "33333333-3333-4333-8333-333333333333",
-			shortDetectionMode: "people_and_screen",
+			shortDetectionMode: "screen_only",
 		});
 	});
 });

@@ -8,6 +8,7 @@ SAMPLE_INTERVAL_SECONDS = 0.35
 MAX_SAMPLE_WIDTH = 640
 PERSON_CLASS_ID = 0
 MAX_GROUPS_PER_FRAME = 2
+SCREEN_INTEREST_MAX_BOXES = 3
 
 
 def try_import_cv2():
@@ -184,6 +185,89 @@ def detect_motion(previous_gray, gray, scale):
     return sorted(boxes, key=lambda box: box["score"], reverse=True)[:2]
 
 
+def detect_screen_interest(file_path, start_seconds, end_seconds):
+    cv2 = try_import_cv2()
+    if cv2 is None:
+        return None
+
+    capture = cv2.VideoCapture(file_path)
+    if not capture.isOpened():
+        return None
+
+    detections = []
+    previous_gray = None
+    timestamp = start_seconds
+
+    while timestamp < end_seconds:
+        capture.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1000)
+        ok, frame = capture.read()
+        if not ok:
+            break
+
+        frame_height, frame_width = frame.shape[:2]
+        scale = min(1.0, MAX_SAMPLE_WIDTH / max(1, frame_width))
+        resized = (
+            cv2.resize(
+                frame,
+                (int(frame_width * scale), int(frame_height * scale)),
+                interpolation=cv2.INTER_AREA,
+            )
+            if scale < 1.0
+            else frame
+        )
+        gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+
+        if previous_gray is not None:
+            diff = cv2.absdiff(previous_gray, gray)
+            _, threshold = cv2.threshold(diff, 18, 255, cv2.THRESH_BINARY)
+            threshold = cv2.morphologyEx(
+                threshold,
+                cv2.MORPH_CLOSE,
+                cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5)),
+                iterations=2,
+            )
+            contours, _ = cv2.findContours(
+                threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+            boxes = []
+
+            for contour in contours:
+                area = cv2.contourArea(contour)
+                if area < 18:
+                    continue
+                x, y, width, height = cv2.boundingRect(contour)
+                aspect_ratio = width / max(1, height)
+                is_cursor_like = (
+                    18 <= area <= 2600
+                    and width <= resized.shape[1] * 0.16
+                    and height <= resized.shape[0] * 0.16
+                    and 0.2 <= aspect_ratio <= 5.0
+                )
+                is_screen_motion = area >= 2600
+                if not is_cursor_like and not is_screen_motion:
+                    continue
+
+                rect = scale_rect((x, y, width, height), scale)
+                rect["score"] = min(
+                    1.0,
+                    float(area / 3500) + (0.35 if is_cursor_like else 0.0),
+                )
+                rect["source"] = "screen-interest"
+                boxes.append(rect)
+
+            for rect in sorted(boxes, key=lambda box: box["score"], reverse=True)[
+                :SCREEN_INTEREST_MAX_BOXES
+            ]:
+                rect["timestampSeconds"] = timestamp
+                detections.append(rect)
+
+        previous_gray = gray
+        timestamp += SAMPLE_INTERVAL_SECONDS
+
+    capture.release()
+    return detections
+
+
 def detect_opencv(file_path, start_seconds, end_seconds):
     cv2 = try_import_cv2()
     if cv2 is None:
@@ -251,13 +335,27 @@ def detect_opencv(file_path, start_seconds, end_seconds):
 
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) not in (4, 5):
         print(json.dumps({"detections": [], "detectorBackend": "opencv"}))
         return
 
     file_path = sys.argv[1]
     start_seconds = float(sys.argv[2])
     end_seconds = float(sys.argv[3])
+    detection_mode = sys.argv[4] if len(sys.argv) == 5 else "people"
+
+    if detection_mode == "screen":
+        screen_detections = detect_screen_interest(file_path, start_seconds, end_seconds)
+        print(
+            json.dumps(
+                {
+                    "detections": screen_detections or [],
+                    "detectorBackend": "opencv",
+                }
+            )
+        )
+        return
+
     yolo_detections = detect_yolo_cuda(file_path, start_seconds, end_seconds)
     if yolo_detections is not None and len(yolo_detections) > 0:
         print(

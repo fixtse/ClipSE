@@ -348,7 +348,7 @@ export async function renderClipSegment(input: {
 	introFilePath?: string | null;
 	outroFilePath?: string | null;
 	aspectMode?: "source" | "vertical9x16";
-	shortDetectionMode?: "people" | "people_and_screen";
+	shortDetectionMode?: "people" | "people_and_screen" | "screen_only";
 	subtitleFilePath?: string | null;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
@@ -383,6 +383,8 @@ export async function renderClipSegment(input: {
 			endSeconds: input.endSeconds,
 			frameWidth,
 			frameHeight,
+			detectionMode:
+				input.shortDetectionMode === "screen_only" ? "screen" : "people",
 		});
 
 		await renderVerticalClipSegment({
@@ -702,6 +704,48 @@ function getScreenCropAvoidingFocus(input: {
 	};
 }
 
+function getScreenOnlyCrop(input: {
+	frameWidth: number;
+	frameHeight: number;
+	targetAspectRatio: number;
+	interestRegion?: FocusRegion | null;
+}): { x: number; y: number; width: number; height: number } {
+	const frameAspectRatio = input.frameWidth / input.frameHeight;
+	const maximumCropWidth =
+		frameAspectRatio > input.targetAspectRatio
+			? input.frameHeight * input.targetAspectRatio
+			: input.frameWidth;
+	const minimumCropWidth = maximumCropWidth * 0.72;
+	const interestWidth = input.interestRegion?.width
+		? Math.max(input.interestRegion.width * 2.6, minimumCropWidth)
+		: minimumCropWidth;
+	const interestHeight = input.interestRegion?.height
+		? input.interestRegion.height * input.targetAspectRatio * 2.1
+		: minimumCropWidth;
+	const cropWidth = Math.min(
+		maximumCropWidth,
+		Math.max(minimumCropWidth, interestWidth, interestHeight),
+	);
+	const cropHeight = cropWidth / input.targetAspectRatio;
+	const centerX = input.interestRegion?.centerX ?? input.frameWidth / 2;
+	const centerY = input.interestRegion?.centerY ?? input.frameHeight / 2;
+	const x = Math.max(
+		0,
+		Math.min(input.frameWidth - cropWidth, centerX - cropWidth / 2),
+	);
+	const y = Math.max(
+		0,
+		Math.min(input.frameHeight - cropHeight, centerY - cropHeight / 2),
+	);
+
+	return {
+		x: Math.round(x / 2) * 2,
+		y: Math.round(y / 2) * 2,
+		width: Math.max(2, Math.round(cropWidth / 2) * 2),
+		height: Math.max(2, Math.round(cropHeight / 2) * 2),
+	};
+}
+
 async function renderVerticalClipSegment(input: {
 	inputFilePath: string;
 	outputFilePath: string;
@@ -710,7 +754,7 @@ async function renderVerticalClipSegment(input: {
 	frameWidth: number;
 	frameHeight: number;
 	focusPlan: FocusPlan;
-	shortDetectionMode?: "people" | "people_and_screen";
+	shortDetectionMode?: "people" | "people_and_screen" | "screen_only";
 	subtitleFilePath?: string | null;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
@@ -840,10 +884,72 @@ async function renderVerticalSceneSegment(input: {
 	frameWidth: number;
 	frameHeight: number;
 	regions: readonly FocusRegion[];
-	shortDetectionMode?: "people" | "people_and_screen";
+	shortDetectionMode?: "people" | "people_and_screen" | "screen_only";
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const regions = input.regions.slice(0, 2);
+
+	if (input.shortDetectionMode === "screen_only") {
+		const screenCrop = getScreenOnlyCrop({
+			frameWidth: input.frameWidth,
+			frameHeight: input.frameHeight,
+			interestRegion: regions[0] ?? null,
+			targetAspectRatio: 9 / 16,
+		});
+		const filter = `crop=${screenCrop.width}:${screenCrop.height}:${screenCrop.x}:${screenCrop.y},scale=1080:1920,setsar=1,format=yuv420p`;
+
+		await runFfmpegWithFallback({
+			nvidiaArgs: [
+				"-y",
+				"-ss",
+				input.startSeconds.toFixed(3),
+				"-i",
+				input.inputFilePath,
+				"-t",
+				input.durationSeconds.toFixed(3),
+				"-map",
+				"0:v:0",
+				"-map",
+				"0:a:0?",
+				"-vf",
+				filter,
+				...getNvencOutputArgs(),
+				"-c:a",
+				"aac",
+				"-b:a",
+				"160k",
+				"-movflags",
+				"+faststart",
+				input.outputFilePath,
+			],
+			cpuArgs: [
+				"-y",
+				"-ss",
+				input.startSeconds.toFixed(3),
+				"-i",
+				input.inputFilePath,
+				"-t",
+				input.durationSeconds.toFixed(3),
+				"-map",
+				"0:v:0",
+				"-map",
+				"0:a:0?",
+				"-vf",
+				filter,
+				...getX264OutputArgs(),
+				"-c:a",
+				"aac",
+				"-b:a",
+				"160k",
+				"-movflags",
+				"+faststart",
+				input.outputFilePath,
+			],
+			durationSeconds: input.durationSeconds,
+			onProgress: input.onProgress,
+		});
+		return;
+	}
 
 	if (input.shortDetectionMode === "people_and_screen") {
 		const detectedPeopleRegion = regions[0] ?? null;
