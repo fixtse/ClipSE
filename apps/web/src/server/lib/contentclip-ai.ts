@@ -56,6 +56,7 @@ const ANALYSIS_CHUNK_SECONDS = 30 * 60;
 const ANALYSIS_SMALL_REMAINDER_SECONDS = 15 * 60;
 const ANALYSIS_SINGLE_CHUNK_TOLERANCE_SECONDS =
 	ANALYSIS_CHUNK_SECONDS + ANALYSIS_SMALL_REMAINDER_SECONDS;
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 interface AnalysisChunk {
 	readonly index: number;
@@ -198,21 +199,121 @@ function wrapJsonExtractingModel(
 	});
 }
 
+function extractJsonText(text: string): string {
+	const trimmedText = text.trim();
+	const fencedJson = /```(?:json)?\s*([\s\S]*?)\s*```/i.exec(trimmedText);
+	if (fencedJson?.[1]) {
+		return fencedJson[1].trim();
+	}
+
+	const objectStart = trimmedText.indexOf("{");
+	const arrayStart = trimmedText.indexOf("[");
+	const starts = [objectStart, arrayStart].filter((index) => index >= 0);
+	const start = Math.min(...starts);
+	if (!Number.isFinite(start)) {
+		return trimmedText;
+	}
+
+	const objectEnd = trimmedText.lastIndexOf("}");
+	const arrayEnd = trimmedText.lastIndexOf("]");
+	const end = Math.max(objectEnd, arrayEnd);
+	return end > start ? trimmedText.slice(start, end + 1).trim() : trimmedText;
+}
+
+interface OpenRouterChatCompletionResponse {
+	readonly error?: {
+		readonly message?: string;
+		readonly code?: string | number;
+		readonly metadata?: unknown;
+	};
+	readonly choices?: Array<{
+		readonly message?: {
+			readonly content?: string | Array<{ readonly text?: string }>;
+		};
+	}>;
+}
+
+function getOpenRouterContent(
+	payload: OpenRouterChatCompletionResponse,
+): string | null {
+	const content = payload.choices?.[0]?.message?.content;
+	if (typeof content === "string") {
+		return content;
+	}
+
+	if (Array.isArray(content)) {
+		return content
+			.map((part) => part.text ?? "")
+			.join("")
+			.trim();
+	}
+
+	return null;
+}
+
+async function generateOpenRouterJsonObject<
+	Schema extends z.ZodTypeAny,
+>(input: {
+	readonly aiSettings: ContentAiSettings;
+	readonly schema: Schema;
+	readonly prompt: string;
+}): Promise<z.infer<Schema>> {
+	const response = await fetch(OPENROUTER_API_URL, {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${input.aiSettings.openrouterApiKey}`,
+			"Content-Type": "application/json",
+			"HTTP-Referer": "https://contentclip.local",
+			"X-Title": "ContentClip",
+		},
+		body: JSON.stringify({
+			model: input.aiSettings.openrouterModel,
+			messages: [{ role: "user", content: input.prompt }],
+		}),
+	});
+	const payload = (await response
+		.json()
+		.catch(() => null)) as OpenRouterChatCompletionResponse | null;
+
+	if (!response.ok || payload?.error) {
+		const details =
+			payload?.error?.message ??
+			`${response.status} ${response.statusText}`.trim();
+		throw new Error(`OpenRouter request failed: ${details}`);
+	}
+
+	const text = payload ? getOpenRouterContent(payload) : null;
+	if (!text) {
+		throw new Error("OpenRouter returned an empty response.");
+	}
+
+	const repairedJson = jsonrepair(extractJsonText(text));
+	return input.schema.parse(JSON.parse(repairedJson));
+}
+
 async function generateContentAiObject<Schema extends z.ZodTypeAny>(input: {
 	readonly model: LanguageModel;
-	readonly provider: ContentAiSettings["provider"];
+	readonly aiSettings: ContentAiSettings;
 	readonly schema: Schema;
 	readonly prompt: string;
 	readonly jsonInstructions: string;
 }): Promise<z.infer<Schema>> {
-	const model =
-		typeof input.model === "string"
-			? input.model
-			: wrapJsonExtractingModel(input.model);
 	const prompt = `${input.prompt}
 
 Return only valid JSON. Do not wrap it in markdown. The JSON must match this shape:
 ${input.jsonInstructions}`;
+	if (input.aiSettings.provider === "openrouter") {
+		return generateOpenRouterJsonObject({
+			aiSettings: input.aiSettings,
+			schema: input.schema,
+			prompt,
+		});
+	}
+
+	const model =
+		typeof input.model === "string"
+			? input.model
+			: wrapJsonExtractingModel(input.model);
 
 	try {
 		const { output } = await generateText({
@@ -354,7 +455,7 @@ ${buildTimestampedTranscript(chunk.segments)}`;
 		const object = await withAiRetry(() =>
 			generateContentAiObject({
 				model,
-				provider: aiSettings.provider,
+				aiSettings,
 				schema: clipAnalysisSchema,
 				prompt: buildPrompt(chunk),
 				jsonInstructions: `{
@@ -481,7 +582,7 @@ ${buildTimestampedTranscript(chunk.segments)}`;
 		const object = await withAiRetry(() =>
 			generateContentAiObject({
 				model,
-				provider: aiSettings.provider,
+				aiSettings,
 				schema: shortAnalysisSchema,
 				prompt: buildPrompt(chunk),
 				jsonInstructions: `{
@@ -643,7 +744,7 @@ ${buildTimestampedTranscript(input.transcription.segments)}`;
 	const object = await withAiRetry(() =>
 		generateContentAiObject({
 			model,
-			provider: aiSettings.provider,
+			aiSettings,
 			schema: chapterAnalysisSchema,
 			prompt,
 			jsonInstructions: `{
@@ -723,7 +824,7 @@ ${buildTimestampedTranscript(rangeSegments)}`;
 	const object = await withAiRetry(() =>
 		generateContentAiObject({
 			model,
-			provider: aiSettings.provider,
+			aiSettings,
 			schema: clipMetadataSchema,
 			prompt,
 			jsonInstructions: `{
