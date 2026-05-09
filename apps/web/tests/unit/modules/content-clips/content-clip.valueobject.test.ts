@@ -137,4 +137,16 @@ describe("content clip short fields", () => {
 			shortDetectionMode: "screen_only",
 		});
 	});
+
+	it("accepts product view detection for tabletop shorts", () => {
+		expect(
+			UpdateContentClipSchema.parse({
+				id: "33333333-3333-4333-8333-333333333333",
+				shortDetectionMode: "product_view",
+			}),
+		).toEqual({
+			id: "33333333-3333-4333-8333-333333333333",
+			shortDetectionMode: "product_view",
+		});
+	});
 });

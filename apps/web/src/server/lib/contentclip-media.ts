@@ -348,7 +348,11 @@ export async function renderClipSegment(input: {
 	introFilePath?: string | null;
 	outroFilePath?: string | null;
 	aspectMode?: "source" | "vertical9x16";
-	shortDetectionMode?: "people" | "people_and_screen" | "screen_only";
+	shortDetectionMode?:
+		| "people"
+		| "people_and_screen"
+		| "product_view"
+		| "screen_only";
 	subtitleFilePath?: string | null;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
@@ -386,9 +390,11 @@ export async function renderClipSegment(input: {
 			detectionMode:
 				input.shortDetectionMode === "screen_only"
 					? "screen"
-					: input.shortDetectionMode === "people_and_screen"
-						? "people_strict"
-						: "people",
+					: input.shortDetectionMode === "product_view"
+						? "product"
+						: input.shortDetectionMode === "people_and_screen"
+							? "people_strict"
+							: "people",
 		});
 
 		await renderVerticalClipSegment({
@@ -758,7 +764,11 @@ async function renderVerticalClipSegment(input: {
 	frameWidth: number;
 	frameHeight: number;
 	focusPlan: FocusPlan;
-	shortDetectionMode?: "people" | "people_and_screen" | "screen_only";
+	shortDetectionMode?:
+		| "people"
+		| "people_and_screen"
+		| "product_view"
+		| "screen_only";
 	subtitleFilePath?: string | null;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
@@ -888,12 +898,19 @@ async function renderVerticalSceneSegment(input: {
 	frameWidth: number;
 	frameHeight: number;
 	regions: readonly FocusRegion[];
-	shortDetectionMode?: "people" | "people_and_screen" | "screen_only";
+	shortDetectionMode?:
+		| "people"
+		| "people_and_screen"
+		| "product_view"
+		| "screen_only";
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const regions = input.regions.slice(0, 2);
 
-	if (input.shortDetectionMode === "screen_only") {
+	if (
+		input.shortDetectionMode === "screen_only" ||
+		input.shortDetectionMode === "product_view"
+	) {
 		const screenCrop = getScreenOnlyCrop({
 			frameWidth: input.frameWidth,
 			frameHeight: input.frameHeight,

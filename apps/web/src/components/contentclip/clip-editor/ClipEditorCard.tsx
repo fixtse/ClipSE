@@ -1197,7 +1197,9 @@ export function ClipEditorCard({
 												? "people_and_screen"
 												: value === "screen_only"
 													? "screen_only"
-													: "people";
+													: value === "product_view"
+														? "product_view"
+														: "people";
 										void onShortDetectionModeChange?.(clip.id, mode);
 									}}
 									value={clip.shortDetectionMode}
@@ -1214,6 +1216,9 @@ export function ClipEditorCard({
 										</SelectItem>
 										<SelectItem value="screen_only">
 											{t("workspace.clipEditor.screenOnly")}
+										</SelectItem>
+										<SelectItem value="product_view">
+											{t("workspace.clipEditor.productView")}
 										</SelectItem>
 									</SelectContent>
 								</Select>

@@ -46,8 +46,12 @@ function readRenderBurnSubtitles(value: unknown): boolean {
 
 function readShortDetectionMode(
 	value: unknown,
-): "people" | "people_and_screen" | "screen_only" {
-	if (value === "people_and_screen" || value === "screen_only") {
+): "people" | "people_and_screen" | "screen_only" | "product_view" {
+	if (
+		value === "people_and_screen" ||
+		value === "screen_only" ||
+		value === "product_view"
+	) {
 		return value;
 	}
 

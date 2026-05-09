@@ -17,10 +17,17 @@ export interface FocusDetection {
 		| "motion"
 		| "person"
 		| "person-group"
+		| "product"
+		| "product-group"
 		| "screen-interest";
 }
 
-export type DetectorBackend = "opencv" | "yolo-cpu" | "yolo-cuda";
+export type DetectorBackend =
+	| "opencv"
+	| "rtdetr-cpu"
+	| "rtdetr-cuda"
+	| "yolo-cpu"
+	| "yolo-cuda";
 
 export interface FocusRegion {
 	centerX: number;
@@ -396,7 +403,7 @@ export async function detectFocusRegions(input: {
 	endSeconds: number;
 	frameWidth: number;
 	frameHeight: number;
-	detectionMode?: "people" | "people_strict" | "screen";
+	detectionMode?: "people" | "people_strict" | "product" | "screen";
 }): Promise<FocusPlan> {
 	const scriptPath = join(
 		process.cwd(),
@@ -437,7 +444,9 @@ export async function detectFocusRegions(input: {
 			clipEndSeconds: input.endSeconds,
 			detectorBackend:
 				parsed.detectorBackend === "yolo-cuda" ||
-				parsed.detectorBackend === "yolo-cpu"
+				parsed.detectorBackend === "yolo-cpu" ||
+				parsed.detectorBackend === "rtdetr-cuda" ||
+				parsed.detectorBackend === "rtdetr-cpu"
 					? parsed.detectorBackend
 					: "opencv",
 		});
