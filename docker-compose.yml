@@ -90,6 +90,10 @@ services:
       WHISPER_SERVICE_URL: http://whisper:8000
       CONTENTCLIP_YTDLP_COOKIES_FILE: ${CONTENTCLIP_YTDLP_COOKIES_FILE:-}
       CONTENTCLIP_YTDLP_USER_AGENT: ${CONTENTCLIP_YTDLP_USER_AGENT:-}
+      CONTENTCLIP_CODEX_COMMAND: ${CONTENTCLIP_CODEX_COMMAND:-codex}
+      CONTENTCLIP_CODEX_HOME: ${CONTENTCLIP_CODEX_HOME:-/root/.codex}
+      CONTENTCLIP_CODEX_CWD: /app
+      CONTENTCLIP_CODEX_TIMEOUT_MS: ${CONTENTCLIP_CODEX_TIMEOUT_MS:-300000}
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:
@@ -101,6 +105,8 @@ services:
         condition: service_started
     ports:
       - "3000:3000"
+    volumes:
+      - ${HOST_CODEX_HOME:-${HOME}/.codex}:/root/.codex
 
   worker:
     image: ${CONTENTCLIP_WORKER_IMAGE:-ghcr.io/fixtse/contentclip-worker:latest}
@@ -121,6 +127,10 @@ services:
       WHISPER_SERVICE_URL: http://whisper:8000
       CONTENTCLIP_YTDLP_COOKIES_FILE: ${CONTENTCLIP_YTDLP_COOKIES_FILE:-}
       CONTENTCLIP_YTDLP_USER_AGENT: ${CONTENTCLIP_YTDLP_USER_AGENT:-}
+      CONTENTCLIP_CODEX_COMMAND: ${CONTENTCLIP_CODEX_COMMAND:-codex}
+      CONTENTCLIP_CODEX_HOME: ${CONTENTCLIP_CODEX_HOME:-/root/.codex}
+      CONTENTCLIP_CODEX_CWD: /app
+      CONTENTCLIP_CODEX_TIMEOUT_MS: ${CONTENTCLIP_CODEX_TIMEOUT_MS:-300000}
       CONTENTCLIP_YOLO_MODEL: ${CONTENTCLIP_YOLO_MODEL:-yolo11n.pt}
       YOLO_CONFIG_DIR: /contentclip-yolo
       NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
@@ -136,6 +146,7 @@ services:
         condition: service_started
     volumes:
       - worker_yolo_config:/contentclip-yolo
+      - ${HOST_CODEX_HOME:-${HOME}/.codex}:/root/.codex
     command: pnpm worker:docker
 
 volumes:

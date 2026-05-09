@@ -42,6 +42,7 @@ describe("content AI settings form helpers", () => {
 			openaiModel: "gpt-5.1",
 			geminiModel: "gemini-3-pro",
 			openrouterModel: "openrouter/model",
+			codexModel: "gpt-5.3-codex",
 		};
 
 		expect(getProviderModelValue({ ...input, provider: "openai" })).toBe(
@@ -52,6 +53,9 @@ describe("content AI settings form helpers", () => {
 		);
 		expect(getProviderModelValue({ ...input, provider: "openrouter" })).toBe(
 			"openrouter/model",
+		);
+		expect(getProviderModelValue({ ...input, provider: "codex" })).toBe(
+			"gpt-5.3-codex",
 		);
 	});
 });

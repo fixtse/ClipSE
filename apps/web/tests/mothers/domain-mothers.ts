@@ -268,6 +268,7 @@ export const ContentAiSettingsMother = {
 			geminiModel: "gemini-3-pro",
 			openrouterApiKey: "openrouter-key",
 			openrouterModel: "openrouter/model",
+			codexModel: "gpt-5.3-codex",
 			whisperModel: "medium",
 			createdAt: date(),
 			updatedAt: date(),

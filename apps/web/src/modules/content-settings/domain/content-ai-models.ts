@@ -1,4 +1,9 @@
-export const CONTENT_AI_PROVIDERS = ["openai", "gemini", "openrouter"] as const;
+export const CONTENT_AI_PROVIDERS = [
+	"openai",
+	"gemini",
+	"openrouter",
+	"codex",
+] as const;
 
 export type ContentAiProvider = (typeof CONTENT_AI_PROVIDERS)[number];
 

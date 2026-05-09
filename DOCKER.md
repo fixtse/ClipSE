@@ -75,6 +75,16 @@ Configure the AI provider, analysis model, and Whisper transcription model in th
 
 The compose file supplies internal container URLs for PostgreSQL, Garage, and Whisper.
 
+## Codex CLI Provider
+
+To use the Codex provider, authenticate Codex on the host first:
+
+```bash
+codex login
+```
+
+Docker mounts `${HOST_CODEX_HOME:-${HOME}/.codex}` into the app and worker containers at `/root/.codex`, and the images include the Codex CLI. If your Codex home is elsewhere, set `HOST_CODEX_HOME` in `.env`.
+
 ## GPU Notes
 
 The default Whisper service uses NVIDIA CUDA:

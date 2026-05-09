@@ -1,0 +1,1 @@
+ALTER TABLE "content_ai_settings" ADD COLUMN "codex_model" varchar(180) DEFAULT 'gpt-5.3-codex' NOT NULL;

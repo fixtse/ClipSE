@@ -44,6 +44,14 @@ export const env = createEnv({
 			.min(1)
 			.max(40)
 			.default(16),
+		CONTENTCLIP_CODEX_COMMAND: z.string().default("codex"),
+		CONTENTCLIP_CODEX_HOME: z.string().optional(),
+		CONTENTCLIP_CODEX_CWD: z.string().default("/app"),
+		CONTENTCLIP_CODEX_TIMEOUT_MS: z.coerce
+			.number()
+			.int()
+			.min(1000)
+			.default(300000),
 	},
 
 	/**
@@ -76,6 +84,10 @@ export const env = createEnv({
 			process.env.CONTENTCLIP_MAX_CLIPS_PER_VIDEO,
 		CONTENTCLIP_MAX_SHORTS_PER_VIDEO:
 			process.env.CONTENTCLIP_MAX_SHORTS_PER_VIDEO,
+		CONTENTCLIP_CODEX_COMMAND: process.env.CONTENTCLIP_CODEX_COMMAND,
+		CONTENTCLIP_CODEX_HOME: process.env.CONTENTCLIP_CODEX_HOME,
+		CONTENTCLIP_CODEX_CWD: process.env.CONTENTCLIP_CODEX_CWD,
+		CONTENTCLIP_CODEX_TIMEOUT_MS: process.env.CONTENTCLIP_CODEX_TIMEOUT_MS,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

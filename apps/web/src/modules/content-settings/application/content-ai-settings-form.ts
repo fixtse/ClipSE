@@ -47,12 +47,15 @@ export function getProviderModelValue(input: {
 	openaiModel: string;
 	geminiModel: string;
 	openrouterModel: string;
+	codexModel: string;
 }): string {
 	switch (input.provider) {
 		case "gemini":
 			return input.geminiModel;
 		case "openrouter":
 			return input.openrouterModel;
+		case "codex":
+			return input.codexModel;
 		default:
 			return input.openaiModel;
 	}

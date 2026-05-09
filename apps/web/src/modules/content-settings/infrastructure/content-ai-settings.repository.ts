@@ -43,6 +43,7 @@ export class ContentAiSettingsRepository
 				geminiModel: "gemini-2.5-flash",
 				openrouterApiKey: "",
 				openrouterModel: "",
+				codexModel: "gpt-5.3-codex",
 				whisperModel: "medium",
 				createdAt: new Date(),
 				updatedAt: new Date(),
@@ -72,6 +73,7 @@ export class ContentAiSettingsRepository
 				geminiModel: input.geminiModel.trim(),
 				openrouterApiKey: input.openrouterApiKey?.trim() ?? "",
 				openrouterModel: input.openrouterModel.trim(),
+				codexModel: input.codexModel.trim(),
 				whisperModel: input.whisperModel,
 				updatedAt: new Date(),
 			})
@@ -96,6 +98,7 @@ export class ContentAiSettingsRepository
 			geminiModel: row.geminiModel,
 			openrouterApiKey: row.openrouterApiKey,
 			openrouterModel: row.openrouterModel,
+			codexModel: row.codexModel,
 			whisperModel: normalizeWhisperModel(row.whisperModel),
 			createdAt: row.createdAt,
 			updatedAt: row.updatedAt,

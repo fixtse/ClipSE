@@ -226,6 +226,7 @@ export function ContentClipWorkspace({
 	const [geminiModel, setGeminiModel] = useState("gemini-2.5-flash");
 	const [openrouterApiKey, setOpenrouterApiKey] = useState("");
 	const [openrouterModel, setOpenrouterModel] = useState("");
+	const [codexModel, setCodexModel] = useState("gpt-5.3-codex");
 	const [whisperModel, setWhisperModel] = useState<WhisperModel>("medium");
 	const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
 	const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
@@ -351,6 +352,7 @@ export function ContentClipWorkspace({
 		setGeminiModel(settings.geminiModel);
 		setOpenrouterApiKey(settings.openrouterApiKey);
 		setOpenrouterModel(settings.openrouterModel);
+		setCodexModel(settings.codexModel);
 		setWhisperModel(settings.whisperModel);
 	}, [aiSettingsQuery.data]);
 
@@ -882,6 +884,7 @@ export function ContentClipWorkspace({
 			geminiModel,
 			openrouterApiKey,
 			openrouterModel,
+			codexModel,
 			whisperModel,
 		});
 
@@ -1771,6 +1774,7 @@ export function ContentClipWorkspace({
 												</SelectItem>
 												<SelectItem value="gemini">Gemini</SelectItem>
 												<SelectItem value="openrouter">OpenRouter</SelectItem>
+												<SelectItem value="codex">Codex CLI</SelectItem>
 											</SelectContent>
 										</Select>
 									</div>
@@ -1818,7 +1822,7 @@ export function ContentClipWorkspace({
 												value={geminiModel}
 											/>
 										</div>
-									) : (
+									) : aiProvider === "openrouter" ? (
 										<div className="space-y-3">
 											<Input
 												className="border-white/10 bg-slate-900/75 text-white"
@@ -1834,6 +1838,15 @@ export function ContentClipWorkspace({
 												onChange={setOpenrouterModel}
 												options={modelOptions}
 												value={openrouterModel}
+											/>
+										</div>
+									) : (
+										<div className="space-y-3">
+											<ModelCombobox
+												isLoading={aiModelsQuery.isLoading}
+												onChange={setCodexModel}
+												options={modelOptions}
+												value={codexModel}
 											/>
 										</div>
 									)}

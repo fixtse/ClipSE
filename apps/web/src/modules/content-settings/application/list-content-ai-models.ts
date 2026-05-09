@@ -3,6 +3,7 @@ import type {
 	ContentAiProvider,
 } from "../domain/content-ai-models";
 import type { ContentAiSettingsRepositoryInterface } from "../domain/content-ai-settings.repository.interface";
+import { listCodexModels } from "../infrastructure/codex-cli";
 
 interface OpenAiModelListResponse {
 	readonly data?: Array<{
@@ -63,6 +64,10 @@ export async function listContentAiModels(
 	provider: ContentAiProvider,
 ): Promise<ContentAiModelOption[]> {
 	const settings = await repository.get();
+
+	if (provider === "codex") {
+		return listCodexModels();
+	}
 
 	if (provider === "gemini") {
 		if (!settings.geminiApiKey) {

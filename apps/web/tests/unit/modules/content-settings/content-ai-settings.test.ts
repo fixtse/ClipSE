@@ -19,6 +19,7 @@ describe("content AI settings use cases", () => {
 				openaiModel: "gpt-5.1",
 				geminiModel: "gemini-3-pro",
 				openrouterModel: "",
+				codexModel: "gpt-5.3-codex",
 				whisperModel: "large-v3-turbo",
 			}),
 		).resolves.toMatchObject({
@@ -30,6 +31,7 @@ describe("content AI settings use cases", () => {
 			openaiModel: "gpt-5.1",
 			geminiModel: "gemini-3-pro",
 			openrouterModel: "",
+			codexModel: "gpt-5.3-codex",
 			whisperModel: "large-v3-turbo",
 		});
 	});
@@ -43,6 +45,7 @@ describe("content AI settings use cases", () => {
 				openaiModel: "",
 				geminiModel: "gemini-3-pro",
 				openrouterModel: "",
+				codexModel: "gpt-5.3-codex",
 				whisperModel: "medium",
 			}),
 		).rejects.toThrow();

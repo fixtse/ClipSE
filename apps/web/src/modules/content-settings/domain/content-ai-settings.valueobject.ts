@@ -13,6 +13,7 @@ export const ContentAiSettingsSchema = z.object({
 	geminiModel: z.string().min(1).max(180),
 	openrouterApiKey: z.string(),
 	openrouterModel: z.string().max(180),
+	codexModel: z.string().min(1).max(180),
 	whisperModel: z.enum(WHISPER_MODELS),
 	createdAt: z.date(),
 	updatedAt: z.date(),
@@ -29,6 +30,7 @@ export const UpdateContentAiSettingsSchema = z.object({
 	geminiModel: z.string().min(1).max(180),
 	openrouterApiKey: z.string().optional(),
 	openrouterModel: z.string().max(180),
+	codexModel: z.string().min(1).max(180),
 	whisperModel: z.enum(WHISPER_MODELS).default("medium"),
 });
 

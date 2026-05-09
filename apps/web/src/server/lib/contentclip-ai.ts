@@ -21,6 +21,7 @@ import {
 	normalizeClipCandidate,
 } from "~/modules/content-clips/domain/content-clip.valueobject";
 import type { ContentAiSettings } from "~/modules/content-settings/domain/content-ai-settings.valueobject";
+import { generateCodexText } from "~/modules/content-settings/infrastructure/codex-cli";
 import { contentAiSettingsRepository } from "~/modules/content-settings/infrastructure/content-ai-settings.repository";
 import {
 	type ContentTranscription,
@@ -292,7 +293,7 @@ async function generateOpenRouterJsonObject<
 }
 
 async function generateContentAiObject<Schema extends z.ZodTypeAny>(input: {
-	readonly model: LanguageModel;
+	readonly model: LanguageModel | null;
 	readonly aiSettings: ContentAiSettings;
 	readonly schema: Schema;
 	readonly prompt: string;
@@ -310,10 +311,19 @@ ${input.jsonInstructions}`;
 		});
 	}
 
+	if (input.aiSettings.provider === "codex") {
+		const text = await generateCodexText({
+			model: input.aiSettings.codexModel,
+			prompt,
+		});
+		const repairedJson = jsonrepair(extractJsonText(text));
+		return input.schema.parse(JSON.parse(repairedJson));
+	}
+
 	const model =
 		typeof input.model === "string"
 			? input.model
-			: wrapJsonExtractingModel(input.model);
+			: wrapJsonExtractingModel(input.model as Exclude<LanguageModel, string>);
 
 	try {
 		const { output } = await generateText({
@@ -340,7 +350,14 @@ ${input.jsonInstructions}`;
 
 function createContentAiLanguageModel(
 	aiSettings: ContentAiSettings,
-): LanguageModel {
+): LanguageModel | null {
+	if (aiSettings.provider === "codex") {
+		if (!aiSettings.codexModel) {
+			throw new Error("Select a Codex model in AI Settings.");
+		}
+		return null;
+	}
+
 	if (aiSettings.provider === "gemini") {
 		if (!aiSettings.geminiApiKey) {
 			throw new Error("Add a Gemini API key in AI Settings.");

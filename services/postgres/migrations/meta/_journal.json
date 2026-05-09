@@ -78,6 +78,13 @@
       "when": 1778215112125,
       "tag": "0010_magical_preak",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1778360961859,
+      "tag": "0011_tired_catseye",
+      "breakpoints": true
     }
   ]
 }
