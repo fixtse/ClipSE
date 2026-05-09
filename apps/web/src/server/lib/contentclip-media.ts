@@ -811,8 +811,8 @@ function buildAnimatedCropCoordinateExpression(
 				return expression;
 			}
 			const transitionDurationSeconds = Math.min(
-				0.9,
-				Math.max(0.18, (keyframe.atSeconds - previousKeyframe.atSeconds) * 0.5),
+				3,
+				Math.max(1.4, (keyframe.atSeconds - previousKeyframe.atSeconds) * 0.75),
 			);
 			const transitionStartSeconds = Math.max(
 				previousKeyframe.atSeconds,
@@ -831,6 +831,65 @@ function buildAnimatedCropCoordinateExpression(
 	);
 }
 
+function getCropDistance(
+	left: { x: number; y: number },
+	right: { x: number; y: number },
+): number {
+	return Math.hypot(left.x - right.x, left.y - right.y);
+}
+
+function dampCropTowardAnchor(input: {
+	anchorCrop: { x: number; y: number; width: number; height: number };
+	targetCrop: { x: number; y: number; width: number; height: number };
+	frameWidth: number;
+	frameHeight: number;
+}): { x: number; y: number; width: number; height: number } {
+	const pullRatio = 0.55;
+	const maxShiftX = input.anchorCrop.width * 0.28;
+	const maxShiftY = input.anchorCrop.height * 0.2;
+	const requestedX = (input.targetCrop.x - input.anchorCrop.x) * pullRatio;
+	const requestedY = (input.targetCrop.y - input.anchorCrop.y) * pullRatio;
+	const x = Math.max(
+		0,
+		Math.min(
+			input.frameWidth - input.anchorCrop.width,
+			input.anchorCrop.x +
+				Math.max(-maxShiftX, Math.min(maxShiftX, requestedX)),
+		),
+	);
+	const y = Math.max(
+		0,
+		Math.min(
+			input.frameHeight - input.anchorCrop.height,
+			input.anchorCrop.y +
+				Math.max(-maxShiftY, Math.min(maxShiftY, requestedY)),
+		),
+	);
+
+	return {
+		x: Math.round(x / 2) * 2,
+		y: Math.round(y / 2) * 2,
+		width: input.anchorCrop.width,
+		height: input.anchorCrop.height,
+	};
+}
+
+function compactCropKeyframes(
+	keyframes: readonly { atSeconds: number; x: number; y: number }[],
+): { atSeconds: number; x: number; y: number }[] {
+	const compacted: { atSeconds: number; x: number; y: number }[] = [];
+	for (const keyframe of keyframes) {
+		const previous = compacted.at(-1);
+		if (previous && getCropDistance(previous, keyframe) < 12) {
+			continue;
+		}
+
+		compacted.push(keyframe);
+	}
+
+	return compacted;
+}
+
 function buildAnimatedScreenOnlyCropFilter(input: {
 	frameWidth: number;
 	frameHeight: number;
@@ -845,6 +904,7 @@ function buildAnimatedScreenOnlyCropFilter(input: {
 		interestRegion: input.fallbackRegions[0] ?? null,
 		targetAspectRatio: input.targetAspectRatio,
 	});
+	const minimumFocusWindowSeconds = 4;
 	const focusWindows =
 		input.windows.length > 0
 			? input.windows
@@ -863,14 +923,26 @@ function buildAnimatedScreenOnlyCropFilter(input: {
 			height: baseCrop.height,
 			interestRegion: window.regions[0] ?? input.fallbackRegions[0] ?? null,
 		});
+		const windowDurationSeconds = window.endSeconds - window.startSeconds;
+		const stabilizedCrop =
+			windowDurationSeconds >= minimumFocusWindowSeconds
+				? dampCropTowardAnchor({
+						anchorCrop: baseCrop,
+						targetCrop: crop,
+						frameWidth: input.frameWidth,
+						frameHeight: input.frameHeight,
+					})
+				: baseCrop;
 
 		return {
 			atSeconds: Math.max(0, window.startSeconds - input.clipStartSeconds),
-			x: crop.x,
-			y: crop.y,
+			x: stabilizedCrop.x,
+			y: stabilizedCrop.y,
 		};
 	});
-	const keyframes = crops.length > 0 ? crops : [{ atSeconds: 0, ...baseCrop }];
+	const keyframes = compactCropKeyframes(
+		crops.length > 0 ? crops : [{ atSeconds: 0, ...baseCrop }],
+	);
 	const xExpression = buildAnimatedCropCoordinateExpression(
 		keyframes.map((crop) => ({ atSeconds: crop.atSeconds, value: crop.x })),
 	);
