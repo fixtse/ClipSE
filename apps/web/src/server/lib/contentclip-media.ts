@@ -14,6 +14,7 @@ import {
 	detectFocusRegions,
 	type FocusPlan,
 	type FocusRegion,
+	type FocusWindow,
 } from "~/server/lib/contentclip-focus";
 import type { RenderSubtitleCue } from "~/server/lib/contentclip-subtitles";
 
@@ -756,6 +757,130 @@ function getScreenOnlyCrop(input: {
 	};
 }
 
+function getScreenOnlyCropWithSize(input: {
+	frameWidth: number;
+	frameHeight: number;
+	width: number;
+	height: number;
+	interestRegion?: FocusRegion | null;
+}): { x: number; y: number; width: number; height: number } {
+	const centerX = input.interestRegion?.centerX ?? input.frameWidth / 2;
+	const centerY = input.interestRegion?.centerY ?? input.frameHeight / 2;
+	const x = Math.max(
+		0,
+		Math.min(input.frameWidth - input.width, centerX - input.width / 2),
+	);
+	const y = Math.max(
+		0,
+		Math.min(input.frameHeight - input.height, centerY - input.height / 2),
+	);
+
+	return {
+		x: Math.round(x / 2) * 2,
+		y: Math.round(y / 2) * 2,
+		width: input.width,
+		height: input.height,
+	};
+}
+
+function buildSmoothStepExpression(input: {
+	from: number;
+	to: number;
+	transitionStartSeconds: number;
+	transitionDurationSeconds: number;
+}): string {
+	const duration = Math.max(0.001, input.transitionDurationSeconds);
+	const progress = `(t-${input.transitionStartSeconds.toFixed(3)})/${duration.toFixed(3)}`;
+	const smoothProgress = `(${progress})*(${progress})*(3-2*(${progress}))`;
+
+	return `(${input.from}+(${input.to - input.from})*(${smoothProgress}))`;
+}
+
+function buildAnimatedCropCoordinateExpression(
+	keyframes: readonly { atSeconds: number; value: number }[],
+): string {
+	const [firstKeyframe, ...remainingKeyframes] = keyframes;
+	if (!firstKeyframe || remainingKeyframes.length === 0) {
+		return `${Math.round((firstKeyframe?.value ?? 0) / 2) * 2}`;
+	}
+
+	return remainingKeyframes.reduceRight(
+		(expression, keyframe, index) => {
+			const previousKeyframe = keyframes[index];
+			if (!previousKeyframe) {
+				return expression;
+			}
+			const transitionDurationSeconds = Math.min(
+				0.9,
+				Math.max(0.18, (keyframe.atSeconds - previousKeyframe.atSeconds) * 0.5),
+			);
+			const transitionStartSeconds = Math.max(
+				previousKeyframe.atSeconds,
+				keyframe.atSeconds - transitionDurationSeconds,
+			);
+			const interpolated = buildSmoothStepExpression({
+				from: previousKeyframe.value,
+				to: keyframe.value,
+				transitionStartSeconds,
+				transitionDurationSeconds,
+			});
+
+			return `if(lt(t\\,${keyframe.atSeconds.toFixed(3)})\\,${interpolated}\\,${expression})`;
+		},
+		`${Math.round(remainingKeyframes.at(-1)?.value ?? firstKeyframe.value)}`,
+	);
+}
+
+function buildAnimatedScreenOnlyCropFilter(input: {
+	frameWidth: number;
+	frameHeight: number;
+	targetAspectRatio: number;
+	windows: readonly FocusWindow[];
+	fallbackRegions: readonly FocusRegion[];
+	clipStartSeconds: number;
+}): string {
+	const baseCrop = getScreenOnlyCrop({
+		frameWidth: input.frameWidth,
+		frameHeight: input.frameHeight,
+		interestRegion: input.fallbackRegions[0] ?? null,
+		targetAspectRatio: input.targetAspectRatio,
+	});
+	const focusWindows =
+		input.windows.length > 0
+			? input.windows
+			: [
+					{
+						startSeconds: input.clipStartSeconds,
+						endSeconds: input.clipStartSeconds + 1,
+						regions: input.fallbackRegions,
+					},
+				];
+	const crops = focusWindows.map((window) => {
+		const crop = getScreenOnlyCropWithSize({
+			frameWidth: input.frameWidth,
+			frameHeight: input.frameHeight,
+			width: baseCrop.width,
+			height: baseCrop.height,
+			interestRegion: window.regions[0] ?? input.fallbackRegions[0] ?? null,
+		});
+
+		return {
+			atSeconds: Math.max(0, window.startSeconds - input.clipStartSeconds),
+			x: crop.x,
+			y: crop.y,
+		};
+	});
+	const keyframes = crops.length > 0 ? crops : [{ atSeconds: 0, ...baseCrop }];
+	const xExpression = buildAnimatedCropCoordinateExpression(
+		keyframes.map((crop) => ({ atSeconds: crop.atSeconds, value: crop.x })),
+	);
+	const yExpression = buildAnimatedCropCoordinateExpression(
+		keyframes.map((crop) => ({ atSeconds: crop.atSeconds, value: crop.y })),
+	);
+
+	return `crop=${baseCrop.width}:${baseCrop.height}:${xExpression}:${yExpression},scale=1080:1920,setsar=1,format=yuv420p`;
+}
+
 async function renderVerticalClipSegment(input: {
 	inputFilePath: string;
 	outputFilePath: string;
@@ -779,6 +904,43 @@ async function renderVerticalClipSegment(input: {
 	const hasStackedLayout =
 		input.shortDetectionMode === "people_and_screen" ||
 		windows.some((window) => window.regions.length >= 2);
+
+	if (
+		input.shortDetectionMode === "screen_only" ||
+		input.shortDetectionMode === "product_view"
+	) {
+		const sceneOutputPath = input.subtitleFilePath
+			? join(workspace, "vertical-scene-no-captions.mp4")
+			: input.outputFilePath;
+		await renderVerticalSceneSegment({
+			inputFilePath: input.inputFilePath,
+			outputFilePath: sceneOutputPath,
+			startSeconds: input.startSeconds,
+			durationSeconds: input.durationSeconds,
+			frameWidth: input.frameWidth,
+			frameHeight: input.frameHeight,
+			regions: input.focusPlan.regions,
+			focusWindows: windows,
+			shortDetectionMode: input.shortDetectionMode,
+			onProgress: async (progress) =>
+				input.onProgress?.(input.subtitleFilePath ? progress * 0.75 : progress),
+		});
+
+		if (input.subtitleFilePath) {
+			await renderCaptionOverlayAndComposite({
+				inputFilePath: sceneOutputPath,
+				outputFilePath: input.outputFilePath,
+				subtitleFilePath: input.subtitleFilePath,
+				durationSeconds: input.durationSeconds,
+				width: 1080,
+				height: 1920,
+				captionYRatio: DEFAULT_CAPTION_Y_RATIO,
+				onProgress: async (progress) =>
+					input.onProgress?.(75 + progress * 0.25),
+			});
+		}
+		return;
+	}
 
 	if (windows.length > 1) {
 		const scenePaths = await Promise.all(
@@ -898,6 +1060,7 @@ async function renderVerticalSceneSegment(input: {
 	frameWidth: number;
 	frameHeight: number;
 	regions: readonly FocusRegion[];
+	focusWindows?: readonly FocusWindow[];
 	shortDetectionMode?:
 		| "people"
 		| "people_and_screen"
@@ -917,7 +1080,17 @@ async function renderVerticalSceneSegment(input: {
 			interestRegion: regions[0] ?? null,
 			targetAspectRatio: 9 / 16,
 		});
-		const filter = `crop=${screenCrop.width}:${screenCrop.height}:${screenCrop.x}:${screenCrop.y},scale=1080:1920,setsar=1,format=yuv420p`;
+		const filter =
+			input.focusWindows && input.focusWindows.length > 1
+				? buildAnimatedScreenOnlyCropFilter({
+						frameWidth: input.frameWidth,
+						frameHeight: input.frameHeight,
+						targetAspectRatio: 9 / 16,
+						windows: input.focusWindows,
+						fallbackRegions: regions,
+						clipStartSeconds: input.startSeconds,
+					})
+				: `crop=${screenCrop.width}:${screenCrop.height}:${screenCrop.x}:${screenCrop.y},scale=1080:1920,setsar=1,format=yuv420p`;
 
 		await runFfmpegWithFallback({
 			nvidiaArgs: [
