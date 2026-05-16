@@ -198,6 +198,20 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=sha-
 
+      - name: Resolve worker base image
+        id: worker-base
+        env:
+          NEW_WORKER_BASE_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/clipse-worker-base:latest
+          LEGACY_WORKER_BASE_IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/contentclip-worker-base:latest
+        run: |
+          set -euo pipefail
+
+          if docker manifest inspect "$NEW_WORKER_BASE_IMAGE" >/dev/null 2>&1; then
+            echo "image=${NEW_WORKER_BASE_IMAGE}" >> "$GITHUB_OUTPUT"
+          else
+            echo "image=${LEGACY_WORKER_BASE_IMAGE}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
@@ -207,4 +221,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            CLIPSE_WORKER_BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/clipse-worker-base:latest
+            CLIPSE_WORKER_BASE_IMAGE=${{ steps.worker-base.outputs.image }}
