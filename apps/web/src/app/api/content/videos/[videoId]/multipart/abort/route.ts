@@ -1,5 +1,5 @@
 import { requireRequestSession } from "~/server/http-auth";
-import { abortMultipartVideoUpload } from "~/server/lib/contentclip-storage";
+import { abortMultipartVideoUpload } from "~/server/lib/clipse-storage";
 
 export async function POST(request: Request) {
 	try {

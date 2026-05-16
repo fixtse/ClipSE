@@ -5,11 +5,11 @@ import {
 	buildLocalMediaHeaders,
 	createLocalMediaResponse,
 	findCachedMediaFile,
-} from "~/server/lib/contentclip-local-media";
+} from "~/server/lib/clipse-local-media";
 import {
 	getStorageObjectMetadata,
 	getStorageObjectStreamWithRange,
-} from "~/server/lib/contentclip-storage";
+} from "~/server/lib/clipse-storage";
 
 interface RouteContext {
 	params: Promise<{

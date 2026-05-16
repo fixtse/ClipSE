@@ -1,6 +1,6 @@
 # Docker Guide
 
-## Run ContentClip
+## Run ClipSE
 
 The default compose file pulls prebuilt images from GitHub Container Registry.
 
@@ -22,16 +22,16 @@ The app runs at `http://localhost:3000`.
 
 ## Images
 
-- `ghcr.io/fixtse/contentclip-app`
-- `ghcr.io/fixtse/contentclip-whisper`
-- `ghcr.io/fixtse/contentclip-garage-init`
+- `ghcr.io/fixtse/clipse-app`
+- `ghcr.io/fixtse/clipse-whisper`
+- `ghcr.io/fixtse/clipse-garage-init`
 
 Override images with:
 
 ```bash
-CONTENTCLIP_APP_IMAGE=ghcr.io/example/contentclip-app:sha-...
-CONTENTCLIP_WHISPER_IMAGE=ghcr.io/example/contentclip-whisper:sha-...
-CONTENTCLIP_GARAGE_INIT_IMAGE=ghcr.io/example/contentclip-garage-init:sha-...
+CLIPSE_APP_IMAGE=ghcr.io/example/clipse-app:sha-...
+CLIPSE_WHISPER_IMAGE=ghcr.io/example/clipse-whisper:sha-...
+CLIPSE_GARAGE_INIT_IMAGE=ghcr.io/example/clipse-garage-init:sha-...
 docker compose up -d
 ```
 

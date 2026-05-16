@@ -1,5 +1,5 @@
 {
-	"name": "contentclip",
+	"name": "clipse",
 	"version": "1.0.0",
 	"private": true,
 	"description": "Server-side AI clip production for long-form video.",
@@ -7,12 +7,12 @@
 	"author": "Fixt",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/fixtse/ContentClip.git"
+		"url": "https://github.com/fixtse/ClipSE.git"
 	},
 	"bugs": {
-		"url": "https://github.com/fixtse/ContentClip/issues"
+		"url": "https://github.com/fixtse/ClipSE/issues"
 	},
-	"homepage": "https://github.com/fixtse/ContentClip#readme",
+	"homepage": "https://github.com/fixtse/ClipSE#readme",
 	"type": "module",
 	"scripts": {
 		"build": "next build apps/web",
@@ -33,9 +33,9 @@
 		"test:unit:coverage": "vitest run --config apps/web/vitest.config.ts --coverage",
 		"test:unit:watch": "vitest --config apps/web/vitest.config.ts",
 		"typecheck": "tsc --noEmit",
-		"worker": "tsx --env-file=.env apps/worker/src/contentclip-worker.ts",
-		"worker:docker": "tsx apps/worker/src/contentclip-worker.ts",
-		"worker:dev": "tsx watch --env-file=.env apps/worker/src/contentclip-worker.ts"
+		"worker": "tsx --env-file=.env apps/worker/src/clipse-worker.ts",
+		"worker:docker": "tsx apps/worker/src/clipse-worker.ts",
+		"worker:dev": "tsx watch --env-file=.env apps/worker/src/clipse-worker.ts"
 	},
 	"dependencies": {
 		"@ai-sdk/google": "^3.0.68",

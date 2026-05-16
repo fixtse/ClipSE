@@ -12,7 +12,7 @@ export const messages = {
 			autoDetect: "Auto detect",
 		},
 		metadata: {
-			title: "ContentClip - Server-Side Whisper and FFmpeg Clip Workflow",
+			title: "ClipSE - Server-Side Whisper and FFmpeg Clip Workflow",
 			description:
 				"Upload long-form video, generate server-side transcripts, detect clip candidates with AI, and export reviewed cuts.",
 			keywords: [
@@ -78,7 +78,7 @@ export const messages = {
 				generating: "Generating timeline thumbnails",
 			},
 			header: {
-				title: "ContentClip",
+				title: "ClipSE",
 				subtitle: "Video Clipper with Transcription, Analysis, and Render",
 				sources: "Videos",
 				drafts: "Clips",
@@ -388,7 +388,7 @@ export const messages = {
 			autoDetect: "Detección automática",
 		},
 		metadata: {
-			title: "ContentClip - Flujo de clips con Whisper y FFmpeg",
+			title: "ClipSE - Flujo de clips con Whisper y FFmpeg",
 			description:
 				"Sube videos largos, genera transcripciones en el servidor, detecta clips con IA y exporta cortes revisados.",
 			keywords: [
@@ -455,7 +455,7 @@ export const messages = {
 				generating: "Generando miniaturas de la línea de tiempo",
 			},
 			header: {
-				title: "ContentClip",
+				title: "ClipSE",
 				subtitle: "Clipper de video con transcripción, análisis y render",
 				sources: "Videos",
 				drafts: "Clips",

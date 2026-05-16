@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { createContentClip } from "~/modules/content-clips/application/create-content-clip";
-import { ContentClipMother } from "../../../mothers/domain-mothers";
+import { createClipSE } from "~/modules/content-clips/application/create-content-clip";
+import { ClipSEMother } from "../../../mothers/domain-mothers";
 import {
-	ContentClipRepositoryMother,
+	ClipSERepositoryMother,
 	ContentVideoRepositoryMother,
 } from "../../../mothers/repository-mothers";
 
-describe("createContentClip", () => {
+describe("createClipSE", () => {
 	const input = {
 		videoId: "11111111-1111-4111-8111-111111111111",
 		title: "Manual clip",
@@ -17,14 +17,14 @@ describe("createContentClip", () => {
 	};
 
 	it("creates a clip when the source video exists and timing is valid", async () => {
-		const createdClip = ContentClipMother.create(input);
-		const clipRepository = ContentClipRepositoryMother.create({
+		const createdClip = ClipSEMother.create(input);
+		const clipRepository = ClipSERepositoryMother.create({
 			create: vi.fn(async () => createdClip),
 		});
 		const videoRepository = ContentVideoRepositoryMother.create();
 
 		await expect(
-			createContentClip(clipRepository, videoRepository, input),
+			createClipSE(clipRepository, videoRepository, input),
 		).resolves.toEqual(createdClip);
 		expect(videoRepository.findById).toHaveBeenCalledWith(input.videoId);
 		expect(clipRepository.create).toHaveBeenCalledWith({
@@ -35,23 +35,23 @@ describe("createContentClip", () => {
 	});
 
 	it("rejects when the source video is missing", async () => {
-		const clipRepository = ContentClipRepositoryMother.create();
+		const clipRepository = ClipSERepositoryMother.create();
 		const videoRepository = ContentVideoRepositoryMother.create({
 			findById: vi.fn(async () => null),
 		});
 
 		await expect(
-			createContentClip(clipRepository, videoRepository, input),
+			createClipSE(clipRepository, videoRepository, input),
 		).rejects.toThrow("Video not found");
 		expect(clipRepository.create).not.toHaveBeenCalled();
 	});
 
 	it("rejects invalid timing", async () => {
-		const clipRepository = ContentClipRepositoryMother.create();
+		const clipRepository = ClipSERepositoryMother.create();
 		const videoRepository = ContentVideoRepositoryMother.create();
 
 		await expect(
-			createContentClip(clipRepository, videoRepository, {
+			createClipSE(clipRepository, videoRepository, {
 				...input,
 				startSeconds: 30,
 				endSeconds: 30,
@@ -61,11 +61,11 @@ describe("createContentClip", () => {
 	});
 
 	it("rejects clips that exceed the source duration", async () => {
-		const clipRepository = ContentClipRepositoryMother.create();
+		const clipRepository = ClipSERepositoryMother.create();
 		const videoRepository = ContentVideoRepositoryMother.create();
 
 		await expect(
-			createContentClip(clipRepository, videoRepository, {
+			createClipSE(clipRepository, videoRepository, {
 				...input,
 				endSeconds: 121,
 			}),
@@ -74,11 +74,11 @@ describe("createContentClip", () => {
 	});
 
 	it("rejects invalid input before repository access", async () => {
-		const clipRepository = ContentClipRepositoryMother.create();
+		const clipRepository = ClipSERepositoryMother.create();
 		const videoRepository = ContentVideoRepositoryMother.create();
 
 		await expect(
-			createContentClip(clipRepository, videoRepository, {
+			createClipSE(clipRepository, videoRepository, {
 				...input,
 				videoId: "invalid-id",
 			}),

@@ -28,8 +28,8 @@ apps/web/next-env.d.ts
 # misc
 .DS_Store
 *.pem
-.contentclip-media-cache/
-.contentclip-whisper-cache/
+.clipse-media-cache/
+.clipse-whisper-cache/
 
 # debug
 npm-debug.log*

@@ -1,5 +1,5 @@
 import type { ContentChapterRepositoryInterface } from "~/modules/content-chapters/domain/content-chapter.repository.interface";
-import type { ContentClipRepositoryInterface } from "~/modules/content-clips/domain/content-clip.repository.interface";
+import type { ClipSERepositoryInterface } from "~/modules/content-clips/domain/content-clip.repository.interface";
 import type { ContentJobRepositoryInterface } from "~/modules/content-jobs/domain/content-job.repository.interface";
 import type { ContentTranscriptionRepositoryInterface } from "~/modules/content-transcriptions/domain/content-transcription.repository.interface";
 import type { ContentVideoRepositoryInterface } from "../domain/content-video.repository.interface";
@@ -9,7 +9,7 @@ export async function queueContentVideoAnalysis(
 	videoRepository: ContentVideoRepositoryInterface,
 	transcriptionRepository: ContentTranscriptionRepositoryInterface,
 	jobRepository: ContentJobRepositoryInterface,
-	clipRepository: ContentClipRepositoryInterface,
+	clipRepository: ClipSERepositoryInterface,
 	chapterRepository: ContentChapterRepositoryInterface,
 	input: {
 		videoId: string;

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
-ARG CONTENTCLIP_WORKER_BASE_IMAGE=ghcr.io/fixtse/contentclip-worker-base:latest
-FROM ${CONTENTCLIP_WORKER_BASE_IMAGE}
+ARG CLIPSE_WORKER_BASE_IMAGE=ghcr.io/fixtse/clipse-worker-base:latest
+FROM ${CLIPSE_WORKER_BASE_IMAGE}
 
 WORKDIR /app
 

@@ -1,27 +1,27 @@
 "use server";
 
-import { createContentClip } from "~/modules/content-clips/application/create-content-clip";
-import type { CreateContentClipInput } from "~/modules/content-clips/domain/content-clip.valueobject";
+import { createClipSE } from "~/modules/content-clips/application/create-content-clip";
+import type { CreateClipSEInput } from "~/modules/content-clips/domain/content-clip.valueobject";
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
 import { requireSession } from "~/server/auth";
 
-type CreateContentClipActionResult =
+type CreateClipSEActionResult =
 	| {
 			success: true;
-			data: Awaited<ReturnType<typeof createContentClip>>;
+			data: Awaited<ReturnType<typeof createClipSE>>;
 	  }
 	| {
 			success: false;
 			error: string;
 	  };
 
-export async function createContentClipAction(
-	input: CreateContentClipInput,
-): Promise<CreateContentClipActionResult> {
+export async function createClipSEAction(
+	input: CreateClipSEInput,
+): Promise<CreateClipSEActionResult> {
 	try {
 		await requireSession();
-		const clip = await createContentClip(
+		const clip = await createClipSE(
 			contentClipRepository,
 			contentVideoRepository,
 			input,

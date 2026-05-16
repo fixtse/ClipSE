@@ -1,7 +1,7 @@
 import { Readable } from "node:stream";
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
 import { requireRequestSession } from "~/server/http-auth";
-import { getStorageObjectStream } from "~/server/lib/contentclip-storage";
+import { getStorageObjectStream } from "~/server/lib/clipse-storage";
 
 interface RouteContext {
 	params: Promise<{

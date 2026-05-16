@@ -10,7 +10,7 @@ import {
 	getClipPreviewWindow,
 	hasClipDraftChanges,
 	isClipRendering,
-} from "~/components/contentclip/clip-editor/clip-editor-state";
+} from "~/components/clipse/clip-editor/clip-editor-state";
 import { DashboardClipMother } from "../../../mothers/domain-mothers";
 
 describe("clip editor state helpers", () => {

@@ -12,7 +12,7 @@ import {
 	assertStorageObjectExists,
 	deleteStorageObject,
 	uploadWebFileToStorage,
-} from "~/server/lib/contentclip-storage";
+} from "~/server/lib/clipse-storage";
 
 type UpdateContentChannelBumperActionResult =
 	| {

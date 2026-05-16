@@ -16,7 +16,7 @@ import {
 	getWorkspaceTabFromBrowserUrl,
 	getYoutubeChapterText,
 	shouldShowFloatingJobButton,
-} from "~/components/contentclip/workspace-state";
+} from "~/components/clipse/workspace-state";
 import { SELECTED_CHANNEL_STORAGE_KEY } from "~/modules/content-videos/application/content-clip-dashboard-view";
 import {
 	DashboardChapterMother,
@@ -27,7 +27,7 @@ describe("workspace state helpers", () => {
 	it("reads browser storage when a window is available", () => {
 		vi.stubGlobal("window", {
 			location: {
-				href: "https://contentclip.test/en?tab=intake",
+				href: "https://clipse.test/en?tab=intake",
 			},
 			localStorage: {
 				getItem: vi.fn((key: string) =>
@@ -37,7 +37,7 @@ describe("workspace state helpers", () => {
 		});
 
 		expect(getBrowserWorkspaceStorage()).toEqual({
-			locationHref: "https://contentclip.test/en?tab=intake",
+			locationHref: "https://clipse.test/en?tab=intake",
 			selectedChannelId: "channel-1",
 		});
 	});
@@ -45,7 +45,7 @@ describe("workspace state helpers", () => {
 	it("reads initial tab, video, and channel values from browser storage", () => {
 		const storage = {
 			locationHref:
-				"https://contentclip.test/en?tab=bumpers&videoId=video-1&clipTab=short&clipId=clip-1",
+				"https://clipse.test/en?tab=bumpers&videoId=video-1&clipTab=short&clipId=clip-1",
 			selectedChannelId: "channel-1",
 		};
 
@@ -70,30 +70,25 @@ describe("workspace state helpers", () => {
 			getInitialSelectedVideoId({
 				requestedVideoId: "requested-video",
 				storage: {
-					locationHref:
-						"https://contentclip.test/en?tab=unknown&videoId=url-video",
+					locationHref: "https://clipse.test/en?tab=unknown&videoId=url-video",
 					selectedChannelId: null,
 				},
 			}),
 		).toBe("requested-video");
 		expect(
-			getWorkspaceTabFromBrowserUrl("https://contentclip.test/en?tab=unknown"),
+			getWorkspaceTabFromBrowserUrl("https://clipse.test/en?tab=unknown"),
 		).toBe("media");
 		expect(
-			getWorkspaceTabFromBrowserUrl("https://contentclip.test/en?tab=intake"),
+			getWorkspaceTabFromBrowserUrl("https://clipse.test/en?tab=intake"),
 		).toBe("intake");
 		expect(
-			getClipListTabFromBrowserUrl(
-				"https://contentclip.test/en?clipTab=unknown",
-			),
+			getClipListTabFromBrowserUrl("https://clipse.test/en?clipTab=unknown"),
 		).toBe("standard");
 		expect(
-			getClipListTabFromBrowserUrl("https://contentclip.test/en?clipTab=short"),
+			getClipListTabFromBrowserUrl("https://clipse.test/en?clipTab=short"),
 		).toBe("short");
 		expect(
-			getSelectedClipIdFromBrowserUrl(
-				"https://contentclip.test/en?clipId=clip-2",
-			),
+			getSelectedClipIdFromBrowserUrl("https://clipse.test/en?clipId=clip-2"),
 		).toBe("clip-2");
 	});
 
@@ -171,25 +166,23 @@ describe("workspace state helpers", () => {
 		expect(
 			buildWorkspaceBrowserUrl({
 				locationHref:
-					"https://contentclip.test/en?tab=intake&videoId=old&clipTab=short&clipId=old-clip&other=1",
+					"https://clipse.test/en?tab=intake&videoId=old&clipTab=short&clipId=old-clip&other=1",
 				selectedVideoId: "video-2",
 				workspaceTab: "media",
 				clipListTab: "standard",
 				selectedClipId: null,
 			}),
-		).toBe("https://contentclip.test/en?videoId=video-2&other=1");
+		).toBe("https://clipse.test/en?videoId=video-2&other=1");
 
 		expect(
 			buildWorkspaceBrowserUrl({
-				locationHref: "https://contentclip.test/en?videoId=old",
+				locationHref: "https://clipse.test/en?videoId=old",
 				selectedVideoId: null,
 				workspaceTab: "intake",
 				clipListTab: "short",
 				selectedClipId: "clip-1",
 			}),
-		).toBe(
-			"https://contentclip.test/en?tab=intake&clipTab=short&clipId=clip-1",
-		);
+		).toBe("https://clipse.test/en?tab=intake&clipTab=short&clipId=clip-1");
 	});
 
 	it("shows the floating job button for relevant active work", () => {

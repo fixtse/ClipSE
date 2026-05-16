@@ -1,0 +1,1 @@
+ALTER TABLE "content_video" ALTER COLUMN "size_bytes" SET DATA TYPE bigint;

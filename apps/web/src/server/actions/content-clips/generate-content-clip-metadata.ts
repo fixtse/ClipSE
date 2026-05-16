@@ -4,9 +4,9 @@ import { contentClipRepository } from "~/modules/content-clips/infrastructure/co
 import { contentTranscriptionRepository } from "~/modules/content-transcriptions/infrastructure/content-transcription.repository";
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
 import { requireSession } from "~/server/auth";
-import { generateClipMetadataForTranscriptRange } from "~/server/lib/contentclip-ai";
+import { generateClipMetadataForTranscriptRange } from "~/server/lib/clipse-ai";
 
-type GenerateContentClipMetadataActionResult =
+type GenerateClipSEMetadataActionResult =
 	| {
 			success: true;
 			data: Awaited<ReturnType<typeof contentClipRepository.update>>;
@@ -16,11 +16,11 @@ type GenerateContentClipMetadataActionResult =
 			error: string;
 	  };
 
-export async function generateContentClipMetadataAction(input: {
+export async function generateClipSEMetadataAction(input: {
 	clipId: string;
 	startSeconds: number;
 	endSeconds: number;
-}): Promise<GenerateContentClipMetadataActionResult> {
+}): Promise<GenerateClipSEMetadataActionResult> {
 	try {
 		await requireSession();
 		const clip = await contentClipRepository.findById(input.clipId);

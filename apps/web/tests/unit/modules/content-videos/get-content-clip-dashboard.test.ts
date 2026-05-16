@@ -1,22 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
-import { getContentClipDashboard } from "~/modules/content-videos/application/get-content-clip-dashboard";
+import { getClipSEDashboard } from "~/modules/content-videos/application/get-content-clip-dashboard";
 import {
-	ContentClipMother,
+	ClipSEMother,
 	ContentJobMother,
 	ContentTranscriptionMother,
 	ContentVideoMother,
 	DashboardChapterMother,
 } from "../../../mothers/domain-mothers";
 import {
+	ClipSERepositoryMother,
 	ContentChannelRepositoryMother,
 	ContentChapterRepositoryMother,
-	ContentClipRepositoryMother,
 	ContentJobRepositoryMother,
 	ContentTranscriptionRepositoryMother,
 	ContentVideoRepositoryMother,
 } from "../../../mothers/repository-mothers";
 
-describe("getContentClipDashboard", () => {
+describe("getClipSEDashboard", () => {
 	it("returns an empty dashboard when no channels exist", async () => {
 		const channelRepository = ContentChannelRepositoryMother.create({
 			listAll: vi.fn(async () => []),
@@ -26,11 +26,11 @@ describe("getContentClipDashboard", () => {
 		});
 
 		await expect(
-			getContentClipDashboard(
+			getClipSEDashboard(
 				channelRepository,
 				ContentVideoRepositoryMother.create(),
 				ContentTranscriptionRepositoryMother.create(),
-				ContentClipRepositoryMother.create(),
+				ClipSERepositoryMother.create(),
 				ContentChapterRepositoryMother.create(),
 				jobRepository,
 			),
@@ -64,7 +64,7 @@ describe("getContentClipDashboard", () => {
 			channelId: channel.id,
 			storageKey: "videos/source.mp4",
 		});
-		const readyClip = ContentClipMother.create({
+		const readyClip = ClipSEMother.create({
 			id: "33333333-3333-4333-8333-333333333333",
 			status: "ready",
 			outputStorageKey: "clips/rendered.mp4",
@@ -84,7 +84,7 @@ describe("getContentClipDashboard", () => {
 			result: { message: "Rendering" },
 		});
 
-		const dashboard = await getContentClipDashboard(
+		const dashboard = await getClipSEDashboard(
 			ContentChannelRepositoryMother.create({
 				listAll: vi.fn(async () => [channel]),
 			}),
@@ -97,7 +97,7 @@ describe("getContentClipDashboard", () => {
 					ContentTranscriptionMother.create({ videoId: video.id }),
 				),
 			}),
-			ContentClipRepositoryMother.create({
+			ClipSERepositoryMother.create({
 				listByVideoId: vi.fn(async () => [readyClip]),
 			}),
 			ContentChapterRepositoryMother.create({
@@ -161,7 +161,7 @@ describe("getContentClipDashboard", () => {
 			storageKey: null,
 		});
 
-		const dashboard = await getContentClipDashboard(
+		const dashboard = await getClipSEDashboard(
 			ContentChannelRepositoryMother.create({
 				listAll: vi.fn(async () => [channel]),
 			}),
@@ -170,7 +170,7 @@ describe("getContentClipDashboard", () => {
 				listByChannelId: vi.fn(async () => [video]),
 			}),
 			ContentTranscriptionRepositoryMother.create(),
-			ContentClipRepositoryMother.create({
+			ClipSERepositoryMother.create({
 				listByVideoId: vi.fn(async () => []),
 			}),
 			ContentChapterRepositoryMother.create(),

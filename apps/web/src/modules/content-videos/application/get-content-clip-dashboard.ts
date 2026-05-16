@@ -2,8 +2,8 @@ import type { ContentChannelRepositoryInterface } from "~/modules/content-channe
 import type { ContentChannel } from "~/modules/content-channels/domain/content-channel.valueobject";
 import type { ContentChapterRepositoryInterface } from "~/modules/content-chapters/domain/content-chapter.repository.interface";
 import type { ContentChapter } from "~/modules/content-chapters/domain/content-chapter.valueobject";
-import type { ContentClipRepositoryInterface } from "~/modules/content-clips/domain/content-clip.repository.interface";
-import type { ContentClip } from "~/modules/content-clips/domain/content-clip.valueobject";
+import type { ClipSERepositoryInterface } from "~/modules/content-clips/domain/content-clip.repository.interface";
+import type { ClipSE } from "~/modules/content-clips/domain/content-clip.valueobject";
 import type { ContentJobRepositoryInterface } from "~/modules/content-jobs/domain/content-job.repository.interface";
 import type { ContentJob } from "~/modules/content-jobs/domain/content-job.valueobject";
 import type { ContentTranscriptionRepositoryInterface } from "~/modules/content-transcriptions/domain/content-transcription.repository.interface";
@@ -11,7 +11,7 @@ import type { ContentTranscription } from "~/modules/content-transcriptions/doma
 import type { ContentVideoRepositoryInterface } from "../domain/content-video.repository.interface";
 import type { ContentVideo } from "../domain/content-video.valueobject";
 
-export interface ContentClipDashboardVideo extends ContentVideo {
+export interface ClipSEDashboardVideo extends ContentVideo {
 	activeJob:
 		| (Pick<
 				ContentJob,
@@ -32,7 +32,7 @@ export interface ContentClipDashboardVideo extends ContentVideo {
 	readyShortCount: number;
 }
 
-export interface ContentClipDashboardSelectedVideo {
+export interface ClipSEDashboardSelectedVideo {
 	video: ContentVideo;
 	sourceUrl: string | null;
 	introUrl: string | null;
@@ -40,7 +40,7 @@ export interface ContentClipDashboardSelectedVideo {
 	transcription: ContentTranscription | null;
 	chapters: ContentChapter[];
 	clips: Array<
-		ContentClip & {
+		ClipSE & {
 			sourceUrl: string | null;
 			downloadUrl: string | null;
 			renderJob:
@@ -51,7 +51,7 @@ export interface ContentClipDashboardSelectedVideo {
 		}
 	>;
 	shorts: Array<
-		ContentClip & {
+		ClipSE & {
 			sourceUrl: string | null;
 			downloadUrl: string | null;
 			renderJob:
@@ -64,21 +64,19 @@ export interface ContentClipDashboardSelectedVideo {
 	jobs: ContentJob[];
 }
 
-export interface ContentClipDashboardChannel extends ContentChannel {
+export interface ClipSEDashboardChannel extends ContentChannel {
 	logoUrl: string | null;
 }
 
-export interface ContentClipDashboard {
-	channels: ContentClipDashboardChannel[];
-	selectedChannel: ContentClipDashboardChannel | null;
-	videos: ContentClipDashboardVideo[];
-	selectedVideo: ContentClipDashboardSelectedVideo | null;
+export interface ClipSEDashboard {
+	channels: ClipSEDashboardChannel[];
+	selectedChannel: ClipSEDashboardChannel | null;
+	videos: ClipSEDashboardVideo[];
+	selectedVideo: ClipSEDashboardSelectedVideo | null;
 	jobs: ContentJob[];
 }
 
-function getActiveJob(
-	jobs: ContentJob[],
-): ContentClipDashboardVideo["activeJob"] {
+function getActiveJob(jobs: ContentJob[]): ClipSEDashboardVideo["activeJob"] {
 	const activeJob =
 		jobs.find((job) => job.status === "running") ??
 		jobs.find((job) => job.status === "pending") ??
@@ -103,18 +101,18 @@ function getActiveJob(
 	};
 }
 
-export async function getContentClipDashboard(
+export async function getClipSEDashboard(
 	channelRepository: ContentChannelRepositoryInterface,
 	videoRepository: ContentVideoRepositoryInterface,
 	transcriptionRepository: ContentTranscriptionRepositoryInterface,
-	clipRepository: ContentClipRepositoryInterface,
+	clipRepository: ClipSERepositoryInterface,
 	chapterRepository: ContentChapterRepositoryInterface,
 	jobRepository: ContentJobRepositoryInterface,
 	input?: {
 		selectedChannelId?: string | null;
 		selectedVideoId?: string | null;
 	},
-): Promise<ContentClipDashboard> {
+): Promise<ClipSEDashboard> {
 	const [channels, recentJobs] = await Promise.all([
 		channelRepository.listAll(),
 		jobRepository.listRecent(24),
@@ -144,8 +142,8 @@ export async function getContentClipDashboard(
 
 	const videos = await videoRepository.listByChannelId(selectedChannel.id);
 
-	const clipsByVideo = new Map<string, ContentClip[]>();
-	const shortsByVideo = new Map<string, ContentClip[]>();
+	const clipsByVideo = new Map<string, ClipSE[]>();
+	const shortsByVideo = new Map<string, ClipSE[]>();
 	const jobsByVideo = new Map<string, ContentJob[]>();
 
 	await Promise.all(

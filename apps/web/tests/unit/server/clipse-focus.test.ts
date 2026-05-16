@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFocusPlan } from "~/server/lib/contentclip-focus";
+import { buildFocusPlan } from "~/server/lib/clipse-focus";
 
 describe("buildFocusPlan", () => {
 	it("falls back to the centered crop when no detections are available", () => {

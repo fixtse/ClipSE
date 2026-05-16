@@ -8,7 +8,7 @@ import { listContentAiModels } from "~/modules/content-settings/application/list
 import { CONTENT_AI_PROVIDERS } from "~/modules/content-settings/domain/content-ai-models";
 import { contentAiSettingsRepository } from "~/modules/content-settings/infrastructure/content-ai-settings.repository";
 import { contentTranscriptionRepository } from "~/modules/content-transcriptions/infrastructure/content-transcription.repository";
-import { getContentClipDashboard } from "~/modules/content-videos/application/get-content-clip-dashboard";
+import { getClipSEDashboard } from "~/modules/content-videos/application/get-content-clip-dashboard";
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
@@ -35,7 +35,7 @@ export const contentClipRouter = createTRPCRouter({
 				.optional(),
 		)
 		.query(async ({ input }) => {
-			return getContentClipDashboard(
+			return getClipSEDashboard(
 				contentChannelRepository,
 				contentVideoRepository,
 				contentTranscriptionRepository,

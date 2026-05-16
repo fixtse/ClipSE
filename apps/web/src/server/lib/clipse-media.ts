@@ -15,8 +15,8 @@ import {
 	type FocusPlan,
 	type FocusRegion,
 	type FocusWindow,
-} from "~/server/lib/contentclip-focus";
-import type { RenderSubtitleCue } from "~/server/lib/contentclip-subtitles";
+} from "~/server/lib/clipse-focus";
+import type { RenderSubtitleCue } from "~/server/lib/clipse-subtitles";
 
 const execFileAsync = promisify(execFile);
 
@@ -151,8 +151,8 @@ async function runFfmpeg(
 }
 
 function getYtDlpBaseArgs(): string[] {
-	const cookiesFile = process.env.CONTENTCLIP_YTDLP_COOKIES_FILE?.trim();
-	const userAgent = process.env.CONTENTCLIP_YTDLP_USER_AGENT?.trim();
+	const cookiesFile = process.env.CLIPSE_YTDLP_COOKIES_FILE?.trim();
+	const userAgent = process.env.CLIPSE_YTDLP_USER_AGENT?.trim();
 	const baseArgs = [
 		"--no-playlist",
 		"--newline",

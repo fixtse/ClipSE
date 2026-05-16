@@ -1,6 +1,6 @@
 import type { ContentChapter } from "~/modules/content-chapters/domain/content-chapter.valueobject";
 import type {
-	ContentClip,
+	ClipSE,
 	GeneratedClipCandidate,
 } from "~/modules/content-clips/domain/content-clip.valueobject";
 import type { ContentJob } from "~/modules/content-jobs/domain/content-job.valueobject";
@@ -10,7 +10,7 @@ import type {
 	ClipItem,
 	TranscriptSegment,
 } from "~/modules/content-videos/application/content-clip-dashboard-view";
-import type { ContentClipDashboardVideo } from "~/modules/content-videos/application/get-content-clip-dashboard";
+import type { ClipSEDashboardVideo } from "~/modules/content-videos/application/get-content-clip-dashboard";
 import type { ContentVideo } from "~/modules/content-videos/domain/content-video.valueobject";
 
 const BASE_DATE = "2026-01-01T00:00:00.000Z";
@@ -66,9 +66,9 @@ export const ContentVideoMother = {
 	},
 };
 
-export const ContentClipMother = {
-	create(overrides: Partial<ContentClip> = {}): ContentClip {
-		const clip: ContentClip = {
+export const ClipSEMother = {
+	create(overrides: Partial<ClipSE> = {}): ClipSE {
+		const clip: ClipSE = {
 			id: "33333333-3333-4333-8333-333333333333",
 			videoId: "11111111-1111-4111-8111-111111111111",
 			clipKind: "standard",
@@ -166,9 +166,7 @@ export const ContentJobMother = {
 };
 
 export const DashboardVideoMother = {
-	create(
-		overrides: Partial<ContentClipDashboardVideo> = {},
-	): ContentClipDashboardVideo {
+	create(overrides: Partial<ClipSEDashboardVideo> = {}): ClipSEDashboardVideo {
 		return {
 			...ContentVideoMother.create(overrides),
 			activeJob: overrides.activeJob ?? null,
@@ -183,7 +181,7 @@ export const DashboardVideoMother = {
 export const DashboardClipMother = {
 	create(overrides: Partial<ClipItem> = {}): ClipItem {
 		return {
-			...ContentClipMother.create(overrides),
+			...ClipSEMother.create(overrides),
 			sourceUrl: overrides.sourceUrl ?? null,
 			downloadUrl: overrides.downloadUrl ?? null,
 			renderJob: overrides.renderJob ?? null,

@@ -4,7 +4,7 @@ import { requireRequestSession } from "~/server/http-auth";
 import {
 	getStorageObjectMetadata,
 	getStorageObjectStreamWithRange,
-} from "~/server/lib/contentclip-storage";
+} from "~/server/lib/clipse-storage";
 
 interface RouteContext {
 	params: Promise<{

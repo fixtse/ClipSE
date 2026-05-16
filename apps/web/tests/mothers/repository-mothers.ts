@@ -1,14 +1,14 @@
 import { vi } from "vitest";
 import type { ContentChannelRepositoryInterface } from "~/modules/content-channels/domain/content-channel.repository.interface";
 import type { ContentChapterRepositoryInterface } from "~/modules/content-chapters/domain/content-chapter.repository.interface";
-import type { ContentClipRepositoryInterface } from "~/modules/content-clips/domain/content-clip.repository.interface";
+import type { ClipSERepositoryInterface } from "~/modules/content-clips/domain/content-clip.repository.interface";
 import type { ContentJobRepositoryInterface } from "~/modules/content-jobs/domain/content-job.repository.interface";
 import type { ContentAiSettingsRepositoryInterface } from "~/modules/content-settings/domain/content-ai-settings.repository.interface";
 import type { ContentTranscriptionRepositoryInterface } from "~/modules/content-transcriptions/domain/content-transcription.repository.interface";
 import type { ContentVideoRepositoryInterface } from "~/modules/content-videos/domain/content-video.repository.interface";
 import {
+	ClipSEMother,
 	ContentAiSettingsMother,
-	ContentClipMother,
 	ContentJobMother,
 	ContentTranscriptionMother,
 	ContentVideoMother,
@@ -78,20 +78,20 @@ export const ContentVideoRepositoryMother = {
 	},
 };
 
-export const ContentClipRepositoryMother = {
+export const ClipSERepositoryMother = {
 	create(
-		overrides: Partial<ContentClipRepositoryInterface> = {},
-	): ContentClipRepositoryInterface {
+		overrides: Partial<ClipSERepositoryInterface> = {},
+	): ClipSERepositoryInterface {
 		return {
-			attachRenderedAsset: vi.fn(async () => ContentClipMother.create()),
-			create: vi.fn(async (input) => ContentClipMother.create(input)),
+			attachRenderedAsset: vi.fn(async () => ClipSEMother.create()),
+			create: vi.fn(async (input) => ClipSEMother.create(input)),
 			delete: vi.fn(async () => undefined),
-			findById: vi.fn(async () => ContentClipMother.create()),
+			findById: vi.fn(async () => ClipSEMother.create()),
 			listByVideoId: vi.fn(async () => []),
-			markDownloaded: vi.fn(async () => ContentClipMother.create()),
+			markDownloaded: vi.fn(async () => ClipSEMother.create()),
 			replaceForVideo: vi.fn(async () => []),
-			update: vi.fn(async (input) => ContentClipMother.create(input)),
-			updateStatus: vi.fn(async (input) => ContentClipMother.create(input)),
+			update: vi.fn(async (input) => ClipSEMother.create(input)),
+			updateStatus: vi.fn(async (input) => ClipSEMother.create(input)),
 			...overrides,
 		};
 	},

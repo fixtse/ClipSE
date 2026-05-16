@@ -73,7 +73,7 @@ export const verification = createTable(
 	(t) => [index("verification_identifier_idx").on(t.identifier)],
 );
 
-// ContentClip tables
+// ClipSE tables
 
 export const contentChannels = createTable(
 	"content_channel",
@@ -133,7 +133,7 @@ export const contentVideos = createTable(
 		outroStorageKey: d.text("outro_storage_key"),
 		outroMimeType: d.varchar("outro_mime_type", { length: 120 }),
 		mimeType: d.varchar("mime_type", { length: 120 }).notNull(),
-		sizeBytes: d.integer("size_bytes").notNull(),
+		sizeBytes: d.bigint("size_bytes", { mode: "number" }).notNull(),
 		durationSeconds: d.integer("duration_seconds"),
 		frameRate: d.real("frame_rate"),
 		waveformSamples: d

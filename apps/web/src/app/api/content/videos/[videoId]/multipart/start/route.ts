@@ -5,7 +5,7 @@ import {
 	createMultipartUploadPartUrls,
 	createMultipartVideoUpload,
 	MULTIPART_UPLOAD_PART_SIZE_BYTES,
-} from "~/server/lib/contentclip-storage";
+} from "~/server/lib/clipse-storage";
 
 interface RouteContext {
 	params: Promise<{

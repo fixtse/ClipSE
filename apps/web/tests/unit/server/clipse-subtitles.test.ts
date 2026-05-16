@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
 	buildAssSubtitleFile,
 	buildRenderSubtitleCues,
-} from "~/server/lib/contentclip-subtitles";
+} from "~/server/lib/clipse-subtitles";
 
-describe("contentclip subtitles", () => {
+describe("clipse subtitles", () => {
 	it("clips transcription segments and splits long text into one- or two-word cues", () => {
 		const cues = buildRenderSubtitleCues({
 			clipStartSeconds: 10,

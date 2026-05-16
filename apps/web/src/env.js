@@ -9,49 +9,43 @@ export const env = createEnv({
 	server: {
 		BETTER_AUTH_SECRET: z
 			.string()
-			.default("contentclip-local-development-secret-change-me"),
+			.default("clipse-local-development-secret-change-me"),
 		BETTER_AUTH_BASE_URL: z.string().url().default("http://localhost:3000"),
 		DATABASE_URL: z.string().url(),
 		NODE_ENV: z
 			.enum(["development", "test", "production"])
 			.default("development"),
 		WHISPER_SERVICE_URL: z.string().url().default("http://whisper:8000"),
-		CONTENTCLIP_S3_ENDPOINT: z.string().url().default("http://garage:3900"),
-		CONTENTCLIP_S3_PUBLIC_ENDPOINT: z
+		CLIPSE_S3_ENDPOINT: z.string().url().default("http://garage:3900"),
+		CLIPSE_S3_PUBLIC_ENDPOINT: z
 			.string()
 			.url()
 			.default("http://localhost:3900"),
-		CONTENTCLIP_S3_REGION: z.string().default("garage"),
-		CONTENTCLIP_S3_BUCKET: z.string().default("contentclip"),
-		CONTENTCLIP_S3_ACCESS_KEY_ID: z
-			.string()
-			.default("GK000000000000000000000000"),
-		CONTENTCLIP_S3_SECRET_ACCESS_KEY: z
+		CLIPSE_S3_REGION: z.string().default("garage"),
+		CLIPSE_S3_BUCKET: z.string().default("clipse"),
+		CLIPSE_S3_ACCESS_KEY_ID: z.string().default("GK000000000000000000000000"),
+		CLIPSE_S3_SECRET_ACCESS_KEY: z
 			.string()
 			.default(
 				"0000000000000000000000000000000000000000000000000000000000000000",
 			),
-		CONTENTCLIP_S3_FORCE_PATH_STYLE: z.enum(["true", "false"]).default("true"),
-		CONTENTCLIP_MAX_CLIPS_PER_VIDEO: z.coerce
+		CLIPSE_S3_FORCE_PATH_STYLE: z.enum(["true", "false"]).default("true"),
+		CLIPSE_MAX_CLIPS_PER_VIDEO: z.coerce
 			.number()
 			.int()
 			.min(1)
 			.max(20)
 			.default(8),
-		CONTENTCLIP_MAX_SHORTS_PER_VIDEO: z.coerce
+		CLIPSE_MAX_SHORTS_PER_VIDEO: z.coerce
 			.number()
 			.int()
 			.min(1)
 			.max(40)
 			.default(16),
-		CONTENTCLIP_CODEX_COMMAND: z.string().default("codex"),
-		CONTENTCLIP_CODEX_HOME: z.string().optional(),
-		CONTENTCLIP_CODEX_CWD: z.string().default("/app"),
-		CONTENTCLIP_CODEX_TIMEOUT_MS: z.coerce
-			.number()
-			.int()
-			.min(1000)
-			.default(300000),
+		CLIPSE_CODEX_COMMAND: z.string().default("codex"),
+		CLIPSE_CODEX_HOME: z.string().optional(),
+		CLIPSE_CODEX_CWD: z.string().default("/app"),
+		CLIPSE_CODEX_TIMEOUT_MS: z.coerce.number().int().min(1000).default(300000),
 	},
 
 	/**
@@ -71,23 +65,19 @@ export const env = createEnv({
 		DATABASE_URL: process.env.DATABASE_URL,
 		NODE_ENV: process.env.NODE_ENV,
 		WHISPER_SERVICE_URL: process.env.WHISPER_SERVICE_URL,
-		CONTENTCLIP_S3_ENDPOINT: process.env.CONTENTCLIP_S3_ENDPOINT,
-		CONTENTCLIP_S3_PUBLIC_ENDPOINT: process.env.CONTENTCLIP_S3_PUBLIC_ENDPOINT,
-		CONTENTCLIP_S3_REGION: process.env.CONTENTCLIP_S3_REGION,
-		CONTENTCLIP_S3_BUCKET: process.env.CONTENTCLIP_S3_BUCKET,
-		CONTENTCLIP_S3_ACCESS_KEY_ID: process.env.CONTENTCLIP_S3_ACCESS_KEY_ID,
-		CONTENTCLIP_S3_SECRET_ACCESS_KEY:
-			process.env.CONTENTCLIP_S3_SECRET_ACCESS_KEY,
-		CONTENTCLIP_S3_FORCE_PATH_STYLE:
-			process.env.CONTENTCLIP_S3_FORCE_PATH_STYLE,
-		CONTENTCLIP_MAX_CLIPS_PER_VIDEO:
-			process.env.CONTENTCLIP_MAX_CLIPS_PER_VIDEO,
-		CONTENTCLIP_MAX_SHORTS_PER_VIDEO:
-			process.env.CONTENTCLIP_MAX_SHORTS_PER_VIDEO,
-		CONTENTCLIP_CODEX_COMMAND: process.env.CONTENTCLIP_CODEX_COMMAND,
-		CONTENTCLIP_CODEX_HOME: process.env.CONTENTCLIP_CODEX_HOME,
-		CONTENTCLIP_CODEX_CWD: process.env.CONTENTCLIP_CODEX_CWD,
-		CONTENTCLIP_CODEX_TIMEOUT_MS: process.env.CONTENTCLIP_CODEX_TIMEOUT_MS,
+		CLIPSE_S3_ENDPOINT: process.env.CLIPSE_S3_ENDPOINT,
+		CLIPSE_S3_PUBLIC_ENDPOINT: process.env.CLIPSE_S3_PUBLIC_ENDPOINT,
+		CLIPSE_S3_REGION: process.env.CLIPSE_S3_REGION,
+		CLIPSE_S3_BUCKET: process.env.CLIPSE_S3_BUCKET,
+		CLIPSE_S3_ACCESS_KEY_ID: process.env.CLIPSE_S3_ACCESS_KEY_ID,
+		CLIPSE_S3_SECRET_ACCESS_KEY: process.env.CLIPSE_S3_SECRET_ACCESS_KEY,
+		CLIPSE_S3_FORCE_PATH_STYLE: process.env.CLIPSE_S3_FORCE_PATH_STYLE,
+		CLIPSE_MAX_CLIPS_PER_VIDEO: process.env.CLIPSE_MAX_CLIPS_PER_VIDEO,
+		CLIPSE_MAX_SHORTS_PER_VIDEO: process.env.CLIPSE_MAX_SHORTS_PER_VIDEO,
+		CLIPSE_CODEX_COMMAND: process.env.CLIPSE_CODEX_COMMAND,
+		CLIPSE_CODEX_HOME: process.env.CLIPSE_CODEX_HOME,
+		CLIPSE_CODEX_CWD: process.env.CLIPSE_CODEX_CWD,
+		CLIPSE_CODEX_TIMEOUT_MS: process.env.CLIPSE_CODEX_TIMEOUT_MS,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

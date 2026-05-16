@@ -1,35 +1,32 @@
 "use server";
 
-import { queueContentClipRender } from "~/modules/content-clips/application/queue-content-clip-render";
-import type { QueueContentClipRenderInput } from "~/modules/content-clips/domain/content-clip.valueobject";
+import { queueClipSERender } from "~/modules/content-clips/application/queue-content-clip-render";
+import type { QueueClipSERenderInput } from "~/modules/content-clips/domain/content-clip.valueobject";
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
 import { contentJobRepository } from "~/modules/content-jobs/infrastructure/content-job.repository";
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
 import { requireSession } from "~/server/auth";
 
-type QueueContentClipRenderActionResult =
+type QueueClipSERenderActionResult =
 	| {
 			success: true;
-			data: Awaited<ReturnType<typeof queueContentClipRender>>;
+			data: Awaited<ReturnType<typeof queueClipSERender>>;
 	  }
 	| {
 			success: false;
 			error: string;
 	  };
 
-export async function queueContentClipRenderAction(
+export async function queueClipSERenderAction(
 	input: {
 		clipId: string;
 	} & Partial<
-		Pick<
-			QueueContentClipRenderInput,
-			"aspectMode" | "burnSubtitles" | "focusMode"
-		>
+		Pick<QueueClipSERenderInput, "aspectMode" | "burnSubtitles" | "focusMode">
 	>,
-): Promise<QueueContentClipRenderActionResult> {
+): Promise<QueueClipSERenderActionResult> {
 	try {
 		await requireSession();
-		const clip = await queueContentClipRender(
+		const clip = await queueClipSERender(
 			contentClipRepository,
 			contentVideoRepository,
 			contentJobRepository,

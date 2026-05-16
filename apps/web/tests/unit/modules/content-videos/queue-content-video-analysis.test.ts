@@ -5,8 +5,8 @@ import {
 	ContentVideoMother,
 } from "../../../mothers/domain-mothers";
 import {
+	ClipSERepositoryMother,
 	ContentChapterRepositoryMother,
-	ContentClipRepositoryMother,
 	ContentJobRepositoryMother,
 	ContentTranscriptionRepositoryMother,
 	ContentVideoRepositoryMother,
@@ -26,7 +26,7 @@ describe("queueContentVideoAnalysis", () => {
 		const transcriptionRepository =
 			ContentTranscriptionRepositoryMother.create();
 		const jobRepository = ContentJobRepositoryMother.create();
-		const clipRepository = ContentClipRepositoryMother.create();
+		const clipRepository = ClipSERepositoryMother.create();
 		const chapterRepository = ContentChapterRepositoryMother.create();
 
 		await expect(
@@ -77,7 +77,7 @@ describe("queueContentVideoAnalysis", () => {
 			},
 		);
 		const jobRepository = ContentJobRepositoryMother.create();
-		const clipRepository = ContentClipRepositoryMother.create();
+		const clipRepository = ClipSERepositoryMother.create();
 		const chapterRepository = ContentChapterRepositoryMother.create();
 
 		await queueContentVideoAnalysis(
@@ -113,7 +113,7 @@ describe("queueContentVideoAnalysis", () => {
 
 	it("clears and queues shorts independently from normal clips", async () => {
 		const videoRepository = ContentVideoRepositoryMother.create();
-		const clipRepository = ContentClipRepositoryMother.create();
+		const clipRepository = ClipSERepositoryMother.create();
 		const jobRepository = ContentJobRepositoryMother.create();
 
 		await queueContentVideoAnalysis(
@@ -157,7 +157,7 @@ describe("queueContentVideoAnalysis", () => {
 				ContentVideoRepositoryMother.create(),
 				ContentTranscriptionRepositoryMother.create(),
 				ContentJobRepositoryMother.create(),
-				ContentClipRepositoryMother.create(),
+				ClipSERepositoryMother.create(),
 				ContentChapterRepositoryMother.create(),
 				{
 					videoId,
@@ -180,7 +180,7 @@ describe("queueContentVideoAnalysis", () => {
 				videoRepository,
 				ContentTranscriptionRepositoryMother.create(),
 				jobRepository,
-				ContentClipRepositoryMother.create(),
+				ClipSERepositoryMother.create(),
 				ContentChapterRepositoryMother.create(),
 				{ videoId },
 			),
@@ -201,7 +201,7 @@ describe("queueContentVideoAnalysis", () => {
 				ContentVideoRepositoryMother.create(),
 				transcriptionRepository,
 				jobRepository,
-				ContentClipRepositoryMother.create(),
+				ClipSERepositoryMother.create(),
 				ContentChapterRepositoryMother.create(),
 				{ videoId },
 			),

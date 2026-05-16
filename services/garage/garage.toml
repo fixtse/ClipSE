@@ -19,5 +19,5 @@ index = "index.html"
 
 [admin]
 api_bind_addr = "[::]:3903"
-admin_token = "contentclip-dev-garage-admin-token"
-metrics_token = "contentclip-dev-garage-metrics-token"
+admin_token = "clipse-dev-garage-admin-token"
+metrics_token = "clipse-dev-garage-metrics-token"

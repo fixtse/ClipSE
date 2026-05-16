@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an improvement for ContentClip
+about: Suggest an improvement for ClipSE
 title: "[Feature]: "
 labels: enhancement
 assignees: ""

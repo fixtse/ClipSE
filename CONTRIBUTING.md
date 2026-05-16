@@ -1,6 +1,6 @@
-# Contributing to ContentClip
+# Contributing to ClipSE
 
-ContentClip is a pnpm workspace using Next.js App Router, TypeScript, Drizzle, tRPC, TanStack Query, Better Auth, and Docker Compose.
+ClipSE is a pnpm workspace using Next.js App Router, TypeScript, Drizzle, tRPC, TanStack Query, Better Auth, and Docker Compose.
 
 ## Local Setup
 

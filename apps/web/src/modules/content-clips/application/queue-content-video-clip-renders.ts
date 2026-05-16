@@ -1,20 +1,20 @@
 import type { ContentJobRepositoryInterface } from "~/modules/content-jobs/domain/content-job.repository.interface";
 import type { ContentVideoRepositoryInterface } from "~/modules/content-videos/domain/content-video.repository.interface";
-import type { ContentClipRepositoryInterface } from "../domain/content-clip.repository.interface";
+import type { ClipSERepositoryInterface } from "../domain/content-clip.repository.interface";
 import {
-	parseContentClipRenderOptions,
+	parseClipSERenderOptions,
 	type QueueContentVideoClipRendersInput,
 	QueueContentVideoClipRendersInputSchema,
 } from "../domain/content-clip.valueobject";
 
 export async function queueContentVideoClipRenders(
-	clipRepository: ContentClipRepositoryInterface,
+	clipRepository: ClipSERepositoryInterface,
 	videoRepository: ContentVideoRepositoryInterface,
 	jobRepository: ContentJobRepositoryInterface,
 	input: QueueContentVideoClipRendersInput,
 ): Promise<{ queuedCount: number }> {
 	const validatedInput = QueueContentVideoClipRendersInputSchema.parse(input);
-	const renderOptions = parseContentClipRenderOptions(validatedInput);
+	const renderOptions = parseClipSERenderOptions(validatedInput);
 	const video = await videoRepository.findById(validatedInput.videoId);
 	if (!video?.storageKey) {
 		throw new Error("Source video is not available yet");

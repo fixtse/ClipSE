@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { deleteContentVideo } from "~/modules/content-videos/application/delete-content-video";
 import {
-	ContentClipMother,
+	ClipSEMother,
 	ContentVideoMother,
 } from "../../../mothers/domain-mothers";
 import {
-	ContentClipRepositoryMother,
+	ClipSERepositoryMother,
 	ContentVideoRepositoryMother,
 } from "../../../mothers/repository-mothers";
 
@@ -14,11 +14,11 @@ const mocks = vi.hoisted(() => ({
 	deleteStorageObject: vi.fn(async () => undefined),
 }));
 
-vi.mock("~/server/lib/contentclip-local-media", () => ({
+vi.mock("~/server/lib/clipse-local-media", () => ({
 	deleteCachedMediaFile: mocks.deleteCachedMediaFile,
 }));
 
-vi.mock("~/server/lib/contentclip-storage", () => ({
+vi.mock("~/server/lib/clipse-storage", () => ({
 	deleteStorageObject: mocks.deleteStorageObject,
 }));
 
@@ -27,7 +27,7 @@ describe("deleteContentVideo", () => {
 		const videoRepository = ContentVideoRepositoryMother.create({
 			findById: vi.fn(async () => null),
 		});
-		const clipRepository = ContentClipRepositoryMother.create();
+		const clipRepository = ClipSERepositoryMother.create();
 
 		await expect(
 			deleteContentVideo(videoRepository, clipRepository, {
@@ -44,17 +44,17 @@ describe("deleteContentVideo", () => {
 		const video = ContentVideoMother.create({
 			storageKey: "videos/source.mp4",
 		});
-		const clip = ContentClipMother.create({
+		const clip = ClipSEMother.create({
 			outputStorageKey: "clips/rendered.mp4",
 		});
-		const duplicateClip = ContentClipMother.create({
+		const duplicateClip = ClipSEMother.create({
 			id: "33333333-3333-4333-8333-333333333334",
 			outputStorageKey: "clips/rendered.mp4",
 		});
 		const videoRepository = ContentVideoRepositoryMother.create({
 			findById: vi.fn(async () => video),
 		});
-		const clipRepository = ContentClipRepositoryMother.create({
+		const clipRepository = ClipSERepositoryMother.create({
 			listByVideoId: vi.fn(async () => [clip, duplicateClip]),
 		});
 
@@ -89,7 +89,7 @@ describe("deleteContentVideo", () => {
 		await expect(
 			deleteContentVideo(
 				videoRepository,
-				ContentClipRepositoryMother.create({
+				ClipSERepositoryMother.create({
 					listByVideoId: vi.fn(async () => []),
 				}),
 				{ videoId: video.id },

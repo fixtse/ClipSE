@@ -32,8 +32,8 @@ export function AuthForm({ mode, returnTo, switchHref }: AuthFormProps) {
 	const isSignUp = mode === "sign-up";
 	const title = isSignUp ? "Create local account" : "Sign in";
 	const description = isSignUp
-		? "Set up the local account that protects this ContentClip workspace."
-		: "Use your local account to open the ContentClip workspace.";
+		? "Set up the local account that protects this ClipSE workspace."
+		: "Use your local account to open the ClipSE workspace.";
 	const submitLabel = isSignUp ? "Create account" : "Sign in";
 	const switchLabel = isSignUp
 		? "Already have a local account?"
@@ -91,7 +91,7 @@ export function AuthForm({ mode, returnTo, switchHref }: AuthFormProps) {
 									autoComplete="name"
 									id="name"
 									name="name"
-									placeholder="ContentClip Admin"
+									placeholder="ClipSE Admin"
 								/>
 							</div>
 						) : null}

@@ -84,7 +84,7 @@ import {
 	formatTimecode,
 	roundToFrame,
 } from "~/modules/content-clips/application/clip-timing";
-import type { ContentClipShortDetectionMode } from "~/modules/content-clips/domain/content-clip.valueobject";
+import type { ClipSEShortDetectionMode } from "~/modules/content-clips/domain/content-clip.valueobject";
 import type { ContentAiModelOption } from "~/modules/content-settings/domain/content-ai-models";
 import {
 	type ClipItem,
@@ -134,7 +134,7 @@ interface ClipEditorCardProps {
 	onDelete: (clipId: string) => Promise<void>;
 	onShortDetectionModeChange?: (
 		clipId: string,
-		mode: ContentClipShortDetectionMode,
+		mode: ClipSEShortDetectionMode,
 	) => Promise<void>;
 }
 

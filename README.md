@@ -1,12 +1,12 @@
-# ContentClip
+# ClipSE
 
 Server-side AI clip production for long-form video.
 
-ContentClip lets you upload large source videos to S3-compatible storage, transcribe them with Whisper, score self-contained clip candidates with an OpenAI-compatible model, review and trim segments, and render final exports with FFmpeg.
+ClipSE lets you upload large source videos to S3-compatible storage, transcribe them with Whisper, score self-contained clip candidates with an OpenAI-compatible model, review and trim segments, and render final exports with FFmpeg.
 
 ## License
 
-ContentClip is licensed under AGPL-3.0-only.
+ClipSE is licensed under AGPL-3.0-only.
 
 ## Core Flow
 
@@ -32,7 +32,7 @@ ContentClip is licensed under AGPL-3.0-only.
 
 ## Run With Prebuilt Images
 
-The default Docker Compose file uses GHCR images so users do not need to build ContentClip locally.
+The default Docker Compose file uses GHCR images so users do not need to build ClipSE locally.
 
 ```bash
 cp .env.example .env
@@ -63,9 +63,9 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 
 The published image names are:
 
-- `ghcr.io/fixtse/contentclip-app`
-- `ghcr.io/fixtse/contentclip-whisper`
-- `ghcr.io/fixtse/contentclip-garage-init`
+- `ghcr.io/fixtse/clipse-app`
+- `ghcr.io/fixtse/clipse-whisper`
+- `ghcr.io/fixtse/clipse-garage-init`
 
 The Docker workflow publishes `latest` for `main`, branch tags, semver tags, and `sha-*` tags.
 
@@ -106,7 +106,7 @@ Use `pnpm db:generate` after changing the Drizzle schema in `apps/web/src/server
 - `apps/web/src/modules/content-jobs` - background job queue state
 - `apps/web/src/server/actions` - mutation-oriented server actions
 - `apps/web/src/server/api/routers` - query-oriented tRPC endpoints
-- `apps/worker/src/contentclip-worker.ts` - transcription, analysis, and render worker
+- `apps/worker/src/clipse-worker.ts` - transcription, analysis, and render worker
 - `services/whisper` - Whisper API container
 - `services/postgres/migrations` - Drizzle migrations
 - `services/garage` - Garage object storage config and init image

@@ -23,7 +23,7 @@ export default defineConfig({
 			include: [
 				"src/modules/**/*.ts",
 				"src/components/ui/{badge,button,card,input,progress,skeleton,textarea}.tsx",
-				"src/components/contentclip/**",
+				"src/components/clipse/**",
 			],
 			provider: "v8",
 			reporter: ["text", "html", "lcov", "json-summary"],

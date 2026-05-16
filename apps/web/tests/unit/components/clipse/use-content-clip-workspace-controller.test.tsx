@@ -1,9 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import {
-	useContentClipWorkspaceController,
+	useClipSEWorkspaceController,
 	type WorkspaceTab,
-} from "~/components/contentclip/useContentClipWorkspaceController";
+} from "~/components/clipse/useClipSEWorkspaceController";
 import { SELECTED_CHANNEL_STORAGE_KEY } from "~/modules/content-videos/application/content-clip-dashboard-view";
 
 interface CapturedControllerState {
@@ -19,7 +19,7 @@ function captureControllerState(input: {
 	let capturedState: CapturedControllerState | null = null;
 
 	function Harness() {
-		const controller = useContentClipWorkspaceController(input);
+		const controller = useClipSEWorkspaceController(input);
 		capturedState = {
 			selectedVideoId: controller.selectedVideoId,
 			selectedVideoChannelId: controller.selectedVideoChannelId,
@@ -56,7 +56,7 @@ function stubWindow(input: {
 	});
 }
 
-describe("useContentClipWorkspaceController", () => {
+describe("useClipSEWorkspaceController", () => {
 	it("uses media defaults when rendering without a browser window", () => {
 		const state = captureControllerState({});
 
@@ -70,7 +70,7 @@ describe("useContentClipWorkspaceController", () => {
 
 	it("prefers requested video ids over URL video ids", () => {
 		stubWindow({
-			href: "https://contentclip.test/en?tab=intake&videoId=url-video",
+			href: "https://clipse.test/en?tab=intake&videoId=url-video",
 			selectedChannelId: "channel-id",
 		});
 
@@ -88,7 +88,7 @@ describe("useContentClipWorkspaceController", () => {
 
 	it("falls back to URL video ids and normalizes unsupported tabs", () => {
 		stubWindow({
-			href: "https://contentclip.test/en?tab=unknown&videoId=url-video",
+			href: "https://clipse.test/en?tab=unknown&videoId=url-video",
 		});
 
 		expect(captureControllerState({ requestedVideoId: null })).toMatchObject({
@@ -100,7 +100,7 @@ describe("useContentClipWorkspaceController", () => {
 
 	it("initializes the bumpers workspace tab from the URL", () => {
 		stubWindow({
-			href: "https://contentclip.test/en?tab=bumpers",
+			href: "https://clipse.test/en?tab=bumpers",
 		});
 
 		expect(captureControllerState({}).workspaceTab).toBe("bumpers");

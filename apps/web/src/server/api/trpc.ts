@@ -136,7 +136,7 @@ export const protectedProcedure = t.procedure
  * Optional auth procedure
  *
  * Works for both authenticated and anonymous users.
- * ContentClip currently runs as a public workspace, so this matches publicProcedure.
+ * ClipSE currently runs as a public workspace, so this matches publicProcedure.
  *
  * @see https://trpc.io/docs/procedures
  */

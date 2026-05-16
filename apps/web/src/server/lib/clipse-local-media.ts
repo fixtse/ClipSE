@@ -3,7 +3,7 @@ import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 const mediaCacheRoot =
-	process.env.CONTENTCLIP_MEDIA_CACHE_DIR ?? ".contentclip-media-cache";
+	process.env.CLIPSE_MEDIA_CACHE_DIR ?? ".clipse-media-cache";
 
 function getSafeCachePath(storageKey: string): string {
 	const parts = storageKey

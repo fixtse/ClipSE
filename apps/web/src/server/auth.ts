@@ -10,8 +10,7 @@ import * as schema from "~/server/db/schema";
 
 const isSkippingEnvValidation = !!process.env.SKIP_ENV_VALIDATION;
 const buildTimeAuthBaseUrl = "http://localhost:3000";
-const buildTimeAuthSecret =
-	"contentclip-build-time-secret-not-for-runtime-2026";
+const buildTimeAuthSecret = "clipse-build-time-secret-not-for-runtime-2026";
 
 export const auth = betterAuth({
 	baseURL: isSkippingEnvValidation

@@ -1,17 +1,17 @@
 import type { ContentVideoRepositoryInterface } from "~/modules/content-videos/domain/content-video.repository.interface";
-import type { ContentClipRepositoryInterface } from "../domain/content-clip.repository.interface";
+import type { ClipSERepositoryInterface } from "../domain/content-clip.repository.interface";
 import {
-	type ContentClip,
-	type CreateContentClipInput,
-	CreateContentClipSchema,
+	type ClipSE,
+	type CreateClipSEInput,
+	CreateClipSESchema,
 } from "../domain/content-clip.valueobject";
 
-export async function createContentClip(
-	clipRepository: ContentClipRepositoryInterface,
+export async function createClipSE(
+	clipRepository: ClipSERepositoryInterface,
 	videoRepository: ContentVideoRepositoryInterface,
-	input: CreateContentClipInput,
-): Promise<ContentClip> {
-	const validatedInput = CreateContentClipSchema.parse(input);
+	input: CreateClipSEInput,
+): Promise<ClipSE> {
+	const validatedInput = CreateClipSESchema.parse(input);
 	const video = await videoRepository.findById(validatedInput.videoId);
 	if (!video) {
 		throw new Error("Video not found");

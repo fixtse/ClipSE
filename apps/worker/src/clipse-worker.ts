@@ -12,8 +12,8 @@ import {
 	buildVideoTitle,
 } from "~/modules/content-videos/domain/content-video.valueobject";
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
-import { generateClipAndChapterStrategyFromTranscription } from "~/server/lib/contentclip-ai";
-import { cacheLocalMediaFile } from "~/server/lib/contentclip-local-media";
+import { generateClipAndChapterStrategyFromTranscription } from "~/server/lib/clipse-ai";
+import { cacheLocalMediaFile } from "~/server/lib/clipse-local-media";
 import {
 	createPlaybackProxy,
 	downloadPlaybackProxyWithYtDlp,
@@ -22,17 +22,17 @@ import {
 	extractWhisperAudio,
 	getMediaMetadata,
 	renderClipSegment,
-} from "~/server/lib/contentclip-media";
+} from "~/server/lib/clipse-media";
 import {
 	buildClipFilename,
 	buildClipStorageKey,
 	downloadStorageObjectToFile,
 	uploadLocalFileToStorage,
-} from "~/server/lib/contentclip-storage";
-import { buildRenderSubtitleCues } from "~/server/lib/contentclip-subtitles";
-import { transcribeWithWhisperService } from "~/server/lib/contentclip-whisper";
+} from "~/server/lib/clipse-storage";
+import { buildRenderSubtitleCues } from "~/server/lib/clipse-subtitles";
+import { transcribeWithWhisperService } from "~/server/lib/clipse-whisper";
 
-const runnerId = `contentclip-worker-${randomUUID()}`;
+const runnerId = `clipse-worker-${randomUUID()}`;
 const STALE_RUNNING_JOB_MS = 5 * 60 * 1000;
 const STALE_RUNNING_JOB_SCAN_MS = 30 * 1000;
 
@@ -95,7 +95,7 @@ async function processTranscriptionJob(
 		message: "Downloading source from object storage",
 	});
 
-	const workspace = await mkdtemp(join(tmpdir(), "contentclip-transcribe-"));
+	const workspace = await mkdtemp(join(tmpdir(), "clipse-transcribe-"));
 	const sourcePath = join(workspace, video.originalFilename);
 	const audioPath = join(workspace, "transcription.wav");
 
@@ -194,7 +194,7 @@ async function processDownloadJob(
 		message: "Starting yt-dlp",
 	});
 
-	const workspace = await mkdtemp(join(tmpdir(), "contentclip-download-"));
+	const workspace = await mkdtemp(join(tmpdir(), "clipse-download-"));
 	const downloaded = await downloadVideoWithYtDlp({
 		sourceUrl,
 		outputDirectory: workspace,
@@ -459,7 +459,7 @@ async function processRenderJob(
 		message: "Preparing render workspace",
 	});
 
-	const workspace = await mkdtemp(join(tmpdir(), "contentclip-render-"));
+	const workspace = await mkdtemp(join(tmpdir(), "clipse-render-"));
 	const sourcePath = join(workspace, video.originalFilename);
 	const introPath = introStorageKey ? join(workspace, "intro.mp4") : null;
 	const outroPath = outroStorageKey ? join(workspace, "outro.mp4") : null;

@@ -34,13 +34,13 @@ const clipAnalysisSchema = z.object({
 	clips: z
 		.array(GeneratedClipCandidateSchema)
 		.min(1)
-		.max(env.CONTENTCLIP_MAX_CLIPS_PER_VIDEO),
+		.max(env.CLIPSE_MAX_CLIPS_PER_VIDEO),
 });
 const shortAnalysisSchema = z.object({
 	clips: z
 		.array(GeneratedClipCandidateSchema)
 		.min(1)
-		.max(env.CONTENTCLIP_MAX_SHORTS_PER_VIDEO),
+		.max(env.CLIPSE_MAX_SHORTS_PER_VIDEO),
 });
 const chapterAnalysisSchema = z.object({
 	chapters: z.array(GeneratedChapterSchema).min(1).max(80),
@@ -264,8 +264,8 @@ async function generateOpenRouterJsonObject<
 		headers: {
 			Authorization: `Bearer ${input.aiSettings.openrouterApiKey}`,
 			"Content-Type": "application/json",
-			"HTTP-Referer": "https://contentclip.local",
-			"X-Title": "ContentClip",
+			"HTTP-Referer": "https://clipse.local",
+			"X-Title": "ClipSE",
 		},
 		body: JSON.stringify({
 			model: input.aiSettings.openrouterModel,
@@ -382,8 +382,8 @@ function createContentAiLanguageModel(
 			apiKey: aiSettings.openrouterApiKey,
 			baseURL: "https://openrouter.ai/api/v1",
 			headers: {
-				"HTTP-Referer": "https://contentclip.local",
-				"X-Title": "ContentClip",
+				"HTTP-Referer": "https://clipse.local",
+				"X-Title": "ClipSE",
 			},
 			name: "openrouter",
 		});
@@ -417,7 +417,7 @@ export async function generateClipCandidatesFromTranscription(input: {
 	const buildPrompt = (chunk: AnalysisChunk) => {
 		const chunkDurationSeconds = chunk.endSeconds - chunk.startSeconds;
 		const targetClipCount = Math.min(
-			env.CONTENTCLIP_MAX_CLIPS_PER_VIDEO,
+			env.CLIPSE_MAX_CLIPS_PER_VIDEO,
 			Math.max(3, Math.round(chunkDurationSeconds / 360)),
 		);
 
@@ -523,7 +523,7 @@ ${buildTimestampedTranscript(chunk.segments)}`;
 			selectedCandidates.push(candidate);
 		}
 
-		if (selectedCandidates.length >= env.CONTENTCLIP_MAX_CLIPS_PER_VIDEO) {
+		if (selectedCandidates.length >= env.CLIPSE_MAX_CLIPS_PER_VIDEO) {
 			break;
 		}
 	}
@@ -547,7 +547,7 @@ export async function generateShortCandidatesFromTranscription(input: {
 	const buildPrompt = (chunk: AnalysisChunk) => {
 		const chunkDurationSeconds = chunk.endSeconds - chunk.startSeconds;
 		const targetClipCount = Math.min(
-			env.CONTENTCLIP_MAX_SHORTS_PER_VIDEO,
+			env.CLIPSE_MAX_SHORTS_PER_VIDEO,
 			Math.max(4, Math.round(chunkDurationSeconds / 180)),
 		);
 
@@ -650,7 +650,7 @@ ${buildTimestampedTranscript(chunk.segments)}`;
 			selectedCandidates.push(candidate);
 		}
 
-		if (selectedCandidates.length >= env.CONTENTCLIP_MAX_SHORTS_PER_VIDEO) {
+		if (selectedCandidates.length >= env.CLIPSE_MAX_SHORTS_PER_VIDEO) {
 			break;
 		}
 	}

@@ -17,30 +17,30 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "~/env";
 
 const s3Client = new S3Client({
-	region: env.CONTENTCLIP_S3_REGION,
-	endpoint: env.CONTENTCLIP_S3_ENDPOINT,
-	forcePathStyle: env.CONTENTCLIP_S3_FORCE_PATH_STYLE === "true",
+	region: env.CLIPSE_S3_REGION,
+	endpoint: env.CLIPSE_S3_ENDPOINT,
+	forcePathStyle: env.CLIPSE_S3_FORCE_PATH_STYLE === "true",
 	requestChecksumCalculation: "WHEN_REQUIRED",
 	responseChecksumValidation: "WHEN_REQUIRED",
 	credentials: {
-		accessKeyId: env.CONTENTCLIP_S3_ACCESS_KEY_ID,
-		secretAccessKey: env.CONTENTCLIP_S3_SECRET_ACCESS_KEY,
+		accessKeyId: env.CLIPSE_S3_ACCESS_KEY_ID,
+		secretAccessKey: env.CLIPSE_S3_SECRET_ACCESS_KEY,
 	},
 });
 
 const publicS3Client = new S3Client({
-	region: env.CONTENTCLIP_S3_REGION,
-	endpoint: env.CONTENTCLIP_S3_PUBLIC_ENDPOINT,
-	forcePathStyle: env.CONTENTCLIP_S3_FORCE_PATH_STYLE === "true",
+	region: env.CLIPSE_S3_REGION,
+	endpoint: env.CLIPSE_S3_PUBLIC_ENDPOINT,
+	forcePathStyle: env.CLIPSE_S3_FORCE_PATH_STYLE === "true",
 	requestChecksumCalculation: "WHEN_REQUIRED",
 	responseChecksumValidation: "WHEN_REQUIRED",
 	credentials: {
-		accessKeyId: env.CONTENTCLIP_S3_ACCESS_KEY_ID,
-		secretAccessKey: env.CONTENTCLIP_S3_SECRET_ACCESS_KEY,
+		accessKeyId: env.CLIPSE_S3_ACCESS_KEY_ID,
+		secretAccessKey: env.CLIPSE_S3_SECRET_ACCESS_KEY,
 	},
 });
 
-const bucketName = env.CONTENTCLIP_S3_BUCKET;
+const bucketName = env.CLIPSE_S3_BUCKET;
 export const MULTIPART_UPLOAD_PART_SIZE_BYTES = 24 * 1024 * 1024;
 
 export function buildClipStorageKey(videoId: string, clipId: string): string {

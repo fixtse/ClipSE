@@ -8,8 +8,8 @@ import {
 	type SelectedVideoJob,
 } from "~/modules/content-videos/application/content-clip-dashboard-view";
 import type {
-	ContentClipDashboardSelectedVideo,
-	ContentClipDashboardVideo,
+	ClipSEDashboardSelectedVideo,
+	ClipSEDashboardVideo,
 } from "~/modules/content-videos/application/get-content-clip-dashboard";
 
 export type WorkspaceTab = "media" | "intake" | "bumpers";
@@ -112,8 +112,8 @@ export function getDashboardSelectedVideoId(input: {
 
 export function getSelectedVideoFromDashboard(input: {
 	readonly dataMatchesSelectedChannel: boolean;
-	readonly selectedVideo?: ContentClipDashboardSelectedVideo | null;
-}): ContentClipDashboardSelectedVideo | null {
+	readonly selectedVideo?: ClipSEDashboardSelectedVideo | null;
+}): ClipSEDashboardSelectedVideo | null {
 	return input.dataMatchesSelectedChannel && input.selectedVideo
 		? input.selectedVideo
 		: null;
@@ -121,8 +121,8 @@ export function getSelectedVideoFromDashboard(input: {
 
 export function getDashboardVideos(input: {
 	readonly dataMatchesSelectedChannel: boolean;
-	readonly videos?: ContentClipDashboardVideo[] | null;
-}): ContentClipDashboardVideo[] {
+	readonly videos?: ClipSEDashboardVideo[] | null;
+}): ClipSEDashboardVideo[] {
 	return input.dataMatchesSelectedChannel ? (input.videos ?? []) : [];
 }
 
@@ -215,7 +215,7 @@ export function getManualClipTiming(input: {
 }
 
 export function getYoutubeChapterText(
-	selectedVideo: ContentClipDashboardSelectedVideo | null,
+	selectedVideo: ClipSEDashboardSelectedVideo | null,
 ): string {
 	return selectedVideo
 		? buildYoutubeChapterText(selectedVideo.chapters, formatTimecode)

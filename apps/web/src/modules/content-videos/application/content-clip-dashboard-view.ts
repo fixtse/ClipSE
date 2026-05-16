@@ -1,23 +1,22 @@
 import type {
-	ContentClipDashboard,
-	ContentClipDashboardSelectedVideo,
-	ContentClipDashboardVideo,
+	ClipSEDashboard,
+	ClipSEDashboardSelectedVideo,
+	ClipSEDashboardVideo,
 } from "./get-content-clip-dashboard";
 
 export const LIBRARY_VIDEOS_PER_PAGE = 5;
-export const SELECTED_CHANNEL_STORAGE_KEY = "contentclip:selectedChannelId";
+export const SELECTED_CHANNEL_STORAGE_KEY = "clipse:selectedChannelId";
 
 export type TranslateFn = (
 	key: string,
 	values?: Record<string, string | number>,
 ) => string;
 
-export type DashboardJob = ContentClipDashboard["jobs"][number];
-export type SelectedVideoJob =
-	ContentClipDashboardSelectedVideo["jobs"][number];
-export type ClipItem = ContentClipDashboardSelectedVideo["clips"][number];
+export type DashboardJob = ClipSEDashboard["jobs"][number];
+export type SelectedVideoJob = ClipSEDashboardSelectedVideo["jobs"][number];
+export type ClipItem = ClipSEDashboardSelectedVideo["clips"][number];
 export type TranscriptSegment = NonNullable<
-	ContentClipDashboardSelectedVideo["transcription"]
+	ClipSEDashboardSelectedVideo["transcription"]
 >["segments"][number];
 
 export function formatDuration(
@@ -74,7 +73,7 @@ export function formatJobTimestamp(value: Date): string {
 }
 
 export function getStageLabel(
-	stage: ContentClipDashboardVideo["processingStage"],
+	stage: ClipSEDashboardVideo["processingStage"],
 	translate: TranslateFn,
 ): string {
 	switch (stage) {
@@ -96,7 +95,7 @@ export function getStageLabel(
 }
 
 export function getStageClasses(
-	stage: ContentClipDashboardVideo["processingStage"],
+	stage: ClipSEDashboardVideo["processingStage"],
 ): string {
 	switch (stage) {
 		case "ready":
@@ -209,9 +208,9 @@ export function getClearableJobCount(
 	).length;
 }
 
-export function getActiveVideoJobs(videos: ContentClipDashboardVideo[]): Array<{
-	video: ContentClipDashboardVideo;
-	job: NonNullable<ContentClipDashboardVideo["activeJob"]>;
+export function getActiveVideoJobs(videos: ClipSEDashboardVideo[]): Array<{
+	video: ClipSEDashboardVideo;
+	job: NonNullable<ClipSEDashboardVideo["activeJob"]>;
 }> {
 	return videos.flatMap((video) =>
 		video.activeJob
@@ -226,9 +225,9 @@ export function getActiveVideoJobs(videos: ContentClipDashboardVideo[]): Array<{
 }
 
 export function filterLibraryVideos(
-	videos: ContentClipDashboardVideo[],
+	videos: ClipSEDashboardVideo[],
 	search: string,
-): ContentClipDashboardVideo[] {
+): ClipSEDashboardVideo[] {
 	const normalizedSearch = search.trim().toLowerCase();
 	if (!normalizedSearch) {
 		return videos;
@@ -248,13 +247,13 @@ export function filterLibraryVideos(
 }
 
 export function paginateLibraryVideos(
-	videos: ContentClipDashboardVideo[],
+	videos: ClipSEDashboardVideo[],
 	page: number,
 	perPage = LIBRARY_VIDEOS_PER_PAGE,
 ): {
 	pageCount: number;
 	boundedPage: number;
-	videos: ContentClipDashboardVideo[];
+	videos: ClipSEDashboardVideo[];
 } {
 	const pageCount = Math.max(1, Math.ceil(videos.length / perPage));
 	const boundedPage = Math.min(Math.max(1, page), pageCount);
@@ -281,7 +280,7 @@ export function filterTranscriptSegments(
 }
 
 export function buildYoutubeChapterText(
-	chapters: ContentClipDashboardSelectedVideo["chapters"],
+	chapters: ClipSEDashboardSelectedVideo["chapters"],
 	formatTime: (seconds: number) => string,
 ): string {
 	return chapters
@@ -290,7 +289,7 @@ export function buildYoutubeChapterText(
 }
 
 export function buildLibraryVideoSignature(
-	videos: ContentClipDashboardVideo[],
+	videos: ClipSEDashboardVideo[],
 ): string {
 	return videos
 		.map((video) =>

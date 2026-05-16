@@ -2,7 +2,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { transcribeWithWhisperService } from "~/server/lib/contentclip-whisper";
+import { transcribeWithWhisperService } from "~/server/lib/clipse-whisper";
 
 const { getSettingsMock } = vi.hoisted(() => ({
 	getSettingsMock: vi.fn(),
@@ -51,9 +51,7 @@ describe("transcribeWithWhisperService", () => {
 		});
 		vi.stubGlobal("fetch", fetchMock);
 
-		const workspace = await mkdtemp(
-			join(tmpdir(), "contentclip-whisper-test-"),
-		);
+		const workspace = await mkdtemp(join(tmpdir(), "clipse-whisper-test-"));
 		const audioFilePath = join(workspace, "audio.wav");
 		await writeFile(audioFilePath, Buffer.from("wav"));
 

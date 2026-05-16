@@ -1,25 +1,25 @@
 "use server";
 
-import { deleteContentClip } from "~/modules/content-clips/application/delete-content-clip";
+import { deleteClipSE } from "~/modules/content-clips/application/delete-content-clip";
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
 import { requireSession } from "~/server/auth";
 
-type DeleteContentClipActionResult =
+type DeleteClipSEActionResult =
 	| {
 			success: true;
-			data: Awaited<ReturnType<typeof deleteContentClip>>;
+			data: Awaited<ReturnType<typeof deleteClipSE>>;
 	  }
 	| {
 			success: false;
 			error: string;
 	  };
 
-export async function deleteContentClipAction(input: {
+export async function deleteClipSEAction(input: {
 	clipId: string;
-}): Promise<DeleteContentClipActionResult> {
+}): Promise<DeleteClipSEActionResult> {
 	try {
 		await requireSession();
-		const result = await deleteContentClip(contentClipRepository, input);
+		const result = await deleteClipSE(contentClipRepository, input);
 		return {
 			success: true,
 			data: result,

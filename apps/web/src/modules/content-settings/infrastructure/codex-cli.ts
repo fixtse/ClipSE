@@ -11,7 +11,7 @@ interface CodexAppServerModelListResponse {
 }
 
 function codexEnvironment(): NodeJS.ProcessEnv {
-	const codexHome = process.env.CONTENTCLIP_CODEX_HOME;
+	const codexHome = process.env.CLIPSE_CODEX_HOME;
 	return {
 		...process.env,
 		...(codexHome ? { CODEX_HOME: codexHome } : {}),
@@ -19,15 +19,15 @@ function codexEnvironment(): NodeJS.ProcessEnv {
 }
 
 function codexCommand(): string {
-	return process.env.CONTENTCLIP_CODEX_COMMAND || "codex";
+	return process.env.CLIPSE_CODEX_COMMAND || "codex";
 }
 
 function codexCwd(): string {
-	return process.env.CONTENTCLIP_CODEX_CWD || process.cwd();
+	return process.env.CLIPSE_CODEX_CWD || process.cwd();
 }
 
 function codexTimeoutMs(): number {
-	const value = Number(process.env.CONTENTCLIP_CODEX_TIMEOUT_MS);
+	const value = Number(process.env.CLIPSE_CODEX_TIMEOUT_MS);
 	return Number.isFinite(value) && value > 0 ? value : 300000;
 }
 
@@ -155,8 +155,8 @@ async function requestCodexAppServer<T>(
 				method: "initialize",
 				params: {
 					clientInfo: {
-						name: "contentclip",
-						title: "ContentClip",
+						name: "clipse",
+						title: "ClipSE",
 						version: "0.0.0",
 					},
 					capabilities: {

@@ -2,7 +2,7 @@ import { contentJobRepository } from "~/modules/content-jobs/infrastructure/cont
 import { markContentVideoUploaded } from "~/modules/content-videos/application/mark-content-video-uploaded";
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
 import { requireRequestSession } from "~/server/http-auth";
-import { completeMultipartVideoUpload } from "~/server/lib/contentclip-storage";
+import { completeMultipartVideoUpload } from "~/server/lib/clipse-storage";
 
 interface RouteContext {
 	params: Promise<{

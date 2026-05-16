@@ -1,23 +1,23 @@
 services:
   postgres:
     image: docker.io/pgvector/pgvector:pg17
-    container_name: contentclip-postgres
+    container_name: clipse-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: contentclip
+      POSTGRES_DB: clipse
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d contentclip"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d clipse"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   garage:
     image: docker.io/dxflrs/garage:v2.2.0
-    container_name: contentclip-garage
+    container_name: clipse-garage
     restart: unless-stopped
     command: /garage server
     ports:
@@ -28,7 +28,7 @@ services:
       - garage_data:/var/lib/garage
 
   garage-init:
-    image: ${CONTENTCLIP_GARAGE_INIT_IMAGE:-ghcr.io/fixtse/contentclip-garage-init:latest}
+    image: ${CLIPSE_GARAGE_INIT_IMAGE:-ghcr.io/fixtse/clipse-garage-init:latest}
     depends_on:
       garage:
         condition: service_started
@@ -43,13 +43,13 @@ services:
           /garage layout assign -z local -c 1G "$$node_id";
           /garage layout apply --version 1;
         fi;
-        /garage key info contentclip >/dev/null 2>&1 || /garage key import --yes -n contentclip GK000000000000000000000000 0000000000000000000000000000000000000000000000000000000000000000;
-        /garage bucket info contentclip >/dev/null 2>&1 || /garage bucket create contentclip;
-        /garage bucket allow --read --write --owner contentclip --key contentclip
+        /garage key info clipse >/dev/null 2>&1 || /garage key import --yes -n clipse GK000000000000000000000000 0000000000000000000000000000000000000000000000000000000000000000;
+        /garage bucket info clipse >/dev/null 2>&1 || /garage bucket create clipse;
+        /garage bucket allow --read --write --owner clipse --key clipse
 
   whisper:
-    image: ${CONTENTCLIP_WHISPER_IMAGE:-ghcr.io/fixtse/contentclip-whisper:latest}
-    container_name: contentclip-whisper
+    image: ${CLIPSE_WHISPER_IMAGE:-ghcr.io/fixtse/clipse-whisper:latest}
+    container_name: clipse-whisper
     runtime: nvidia
     restart: unless-stopped
     environment:
@@ -62,38 +62,38 @@ services:
       - "8000:8000"
 
   db-migrate:
-    image: ${CONTENTCLIP_MIGRATE_IMAGE:-ghcr.io/fixtse/contentclip-migrate:latest}
-    container_name: contentclip-db-migrate
+    image: ${CLIPSE_MIGRATE_IMAGE:-ghcr.io/fixtse/clipse-migrate:latest}
+    container_name: clipse-db-migrate
     restart: "no"
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/contentclip
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/clipse
     depends_on:
       postgres:
         condition: service_healthy
     command: drizzle-kit migrate --config services/postgres/drizzle.config.ts
 
   app:
-    image: ${CONTENTCLIP_APP_IMAGE:-ghcr.io/fixtse/contentclip-app:latest}
-    container_name: contentclip-app
+    image: ${CLIPSE_APP_IMAGE:-ghcr.io/fixtse/clipse-app:latest}
+    container_name: clipse-app
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/contentclip
-      CONTENTCLIP_S3_ENDPOINT: http://garage:3900
-      CONTENTCLIP_S3_PUBLIC_ENDPOINT: ${CONTENTCLIP_S3_PUBLIC_ENDPOINT:-http://localhost:3900}
-      CONTENTCLIP_S3_REGION: ${CONTENTCLIP_S3_REGION:-garage}
-      CONTENTCLIP_S3_BUCKET: ${CONTENTCLIP_S3_BUCKET:-contentclip}
-      CONTENTCLIP_S3_ACCESS_KEY_ID: ${CONTENTCLIP_S3_ACCESS_KEY_ID:-GK000000000000000000000000}
-      CONTENTCLIP_S3_SECRET_ACCESS_KEY: ${CONTENTCLIP_S3_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
-      CONTENTCLIP_S3_FORCE_PATH_STYLE: ${CONTENTCLIP_S3_FORCE_PATH_STYLE:-true}
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/clipse
+      CLIPSE_S3_ENDPOINT: http://garage:3900
+      CLIPSE_S3_PUBLIC_ENDPOINT: ${CLIPSE_S3_PUBLIC_ENDPOINT:-http://localhost:3900}
+      CLIPSE_S3_REGION: ${CLIPSE_S3_REGION:-garage}
+      CLIPSE_S3_BUCKET: ${CLIPSE_S3_BUCKET:-clipse}
+      CLIPSE_S3_ACCESS_KEY_ID: ${CLIPSE_S3_ACCESS_KEY_ID:-GK000000000000000000000000}
+      CLIPSE_S3_SECRET_ACCESS_KEY: ${CLIPSE_S3_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      CLIPSE_S3_FORCE_PATH_STYLE: ${CLIPSE_S3_FORCE_PATH_STYLE:-true}
       WHISPER_SERVICE_URL: http://whisper:8000
-      CONTENTCLIP_YTDLP_COOKIES_FILE: ${CONTENTCLIP_YTDLP_COOKIES_FILE:-}
-      CONTENTCLIP_YTDLP_USER_AGENT: ${CONTENTCLIP_YTDLP_USER_AGENT:-}
-      CONTENTCLIP_CODEX_COMMAND: ${CONTENTCLIP_CODEX_COMMAND:-codex}
-      CONTENTCLIP_CODEX_HOME: ${CONTENTCLIP_CODEX_HOME:-/root/.codex}
-      CONTENTCLIP_CODEX_CWD: /app
-      CONTENTCLIP_CODEX_TIMEOUT_MS: ${CONTENTCLIP_CODEX_TIMEOUT_MS:-300000}
+      CLIPSE_YTDLP_COOKIES_FILE: ${CLIPSE_YTDLP_COOKIES_FILE:-}
+      CLIPSE_YTDLP_USER_AGENT: ${CLIPSE_YTDLP_USER_AGENT:-}
+      CLIPSE_CODEX_COMMAND: ${CLIPSE_CODEX_COMMAND:-codex}
+      CLIPSE_CODEX_HOME: ${CLIPSE_CODEX_HOME:-/root/.codex}
+      CLIPSE_CODEX_CWD: /app
+      CLIPSE_CODEX_TIMEOUT_MS: ${CLIPSE_CODEX_TIMEOUT_MS:-300000}
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:
@@ -109,30 +109,30 @@ services:
       - ${HOST_CODEX_HOME:-${HOME}/.codex}:/root/.codex
 
   worker:
-    image: ${CONTENTCLIP_WORKER_IMAGE:-ghcr.io/fixtse/contentclip-worker:latest}
-    container_name: contentclip-worker
+    image: ${CLIPSE_WORKER_IMAGE:-ghcr.io/fixtse/clipse-worker:latest}
+    container_name: clipse-worker
     runtime: nvidia
     restart: unless-stopped
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/contentclip
-      CONTENTCLIP_S3_ENDPOINT: http://garage:3900
-      CONTENTCLIP_S3_PUBLIC_ENDPOINT: ${CONTENTCLIP_S3_PUBLIC_ENDPOINT:-http://localhost:3900}
-      CONTENTCLIP_S3_REGION: ${CONTENTCLIP_S3_REGION:-garage}
-      CONTENTCLIP_S3_BUCKET: ${CONTENTCLIP_S3_BUCKET:-contentclip}
-      CONTENTCLIP_S3_ACCESS_KEY_ID: ${CONTENTCLIP_S3_ACCESS_KEY_ID:-GK000000000000000000000000}
-      CONTENTCLIP_S3_SECRET_ACCESS_KEY: ${CONTENTCLIP_S3_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
-      CONTENTCLIP_S3_FORCE_PATH_STYLE: ${CONTENTCLIP_S3_FORCE_PATH_STYLE:-true}
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/clipse
+      CLIPSE_S3_ENDPOINT: http://garage:3900
+      CLIPSE_S3_PUBLIC_ENDPOINT: ${CLIPSE_S3_PUBLIC_ENDPOINT:-http://localhost:3900}
+      CLIPSE_S3_REGION: ${CLIPSE_S3_REGION:-garage}
+      CLIPSE_S3_BUCKET: ${CLIPSE_S3_BUCKET:-clipse}
+      CLIPSE_S3_ACCESS_KEY_ID: ${CLIPSE_S3_ACCESS_KEY_ID:-GK000000000000000000000000}
+      CLIPSE_S3_SECRET_ACCESS_KEY: ${CLIPSE_S3_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      CLIPSE_S3_FORCE_PATH_STYLE: ${CLIPSE_S3_FORCE_PATH_STYLE:-true}
       WHISPER_SERVICE_URL: http://whisper:8000
-      CONTENTCLIP_YTDLP_COOKIES_FILE: ${CONTENTCLIP_YTDLP_COOKIES_FILE:-}
-      CONTENTCLIP_YTDLP_USER_AGENT: ${CONTENTCLIP_YTDLP_USER_AGENT:-}
-      CONTENTCLIP_CODEX_COMMAND: ${CONTENTCLIP_CODEX_COMMAND:-codex}
-      CONTENTCLIP_CODEX_HOME: ${CONTENTCLIP_CODEX_HOME:-/root/.codex}
-      CONTENTCLIP_CODEX_CWD: /app
-      CONTENTCLIP_CODEX_TIMEOUT_MS: ${CONTENTCLIP_CODEX_TIMEOUT_MS:-300000}
-      CONTENTCLIP_YOLO_MODEL: ${CONTENTCLIP_YOLO_MODEL:-yolo11n.pt}
-      YOLO_CONFIG_DIR: /contentclip-yolo
+      CLIPSE_YTDLP_COOKIES_FILE: ${CLIPSE_YTDLP_COOKIES_FILE:-}
+      CLIPSE_YTDLP_USER_AGENT: ${CLIPSE_YTDLP_USER_AGENT:-}
+      CLIPSE_CODEX_COMMAND: ${CLIPSE_CODEX_COMMAND:-codex}
+      CLIPSE_CODEX_HOME: ${CLIPSE_CODEX_HOME:-/root/.codex}
+      CLIPSE_CODEX_CWD: /app
+      CLIPSE_CODEX_TIMEOUT_MS: ${CLIPSE_CODEX_TIMEOUT_MS:-300000}
+      CLIPSE_YOLO_MODEL: ${CLIPSE_YOLO_MODEL:-yolo11n.pt}
+      YOLO_CONFIG_DIR: /clipse-yolo
       NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
       NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility,video}
       NODE_ENV: production
@@ -145,7 +145,7 @@ services:
       whisper:
         condition: service_started
     volumes:
-      - worker_yolo_config:/contentclip-yolo
+      - worker_yolo_config:/clipse-yolo
       - ${HOST_CODEX_HOME:-${HOME}/.codex}:/root/.codex
     command: pnpm worker:docker
 

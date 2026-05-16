@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-	ContentClipSchema,
-	CreateContentClipSchema,
+	ClipSESchema,
+	CreateClipSESchema,
 	getClipDurationSeconds,
 	normalizeClipCandidate,
-	parseContentClipRenderOptions,
-	UpdateContentClipSchema,
+	parseClipSERenderOptions,
+	UpdateClipSESchema,
 } from "~/modules/content-clips/domain/content-clip.valueobject";
 import {
-	ContentClipMother,
+	ClipSEMother,
 	GeneratedClipCandidateMother,
 } from "../../../mothers/domain-mothers";
 
@@ -63,9 +63,9 @@ describe("normalizeClipCandidate", () => {
 	});
 });
 
-describe("parseContentClipRenderOptions", () => {
+describe("parseClipSERenderOptions", () => {
 	it("uses source render defaults", () => {
-		expect(parseContentClipRenderOptions({})).toEqual({
+		expect(parseClipSERenderOptions({})).toEqual({
 			aspectMode: "source",
 			burnSubtitles: false,
 			focusMode: undefined,
@@ -74,7 +74,7 @@ describe("parseContentClipRenderOptions", () => {
 
 	it("defaults vertical renders to auto speaker focus", () => {
 		expect(
-			parseContentClipRenderOptions({
+			parseClipSERenderOptions({
 				aspectMode: "vertical9x16",
 				burnSubtitles: true,
 			}),
@@ -87,7 +87,7 @@ describe("parseContentClipRenderOptions", () => {
 
 	it("rejects invalid render options", () => {
 		expect(() =>
-			parseContentClipRenderOptions({
+			parseClipSERenderOptions({
 				aspectMode: "square",
 				burnSubtitles: "yes",
 			}),
@@ -98,8 +98,8 @@ describe("parseContentClipRenderOptions", () => {
 describe("content clip short fields", () => {
 	it("accepts clip kind and short detection mode on clip records", () => {
 		expect(
-			ContentClipSchema.parse(
-				ContentClipMother.create({
+			ClipSESchema.parse(
+				ClipSEMother.create({
 					clipKind: "short",
 					shortDetectionMode: "people_and_screen",
 				}),
@@ -112,7 +112,7 @@ describe("content clip short fields", () => {
 
 	it("defaults manual clips to standard people detection", () => {
 		expect(
-			CreateContentClipSchema.parse({
+			CreateClipSESchema.parse({
 				videoId: "11111111-1111-4111-8111-111111111111",
 				title: "Manual clip",
 				hook: "",
@@ -128,7 +128,7 @@ describe("content clip short fields", () => {
 
 	it("accepts detection-only updates for shorts", () => {
 		expect(
-			UpdateContentClipSchema.parse({
+			UpdateClipSESchema.parse({
 				id: "33333333-3333-4333-8333-333333333333",
 				shortDetectionMode: "screen_only",
 			}),
@@ -140,7 +140,7 @@ describe("content clip short fields", () => {
 
 	it("accepts product view detection for tabletop shorts", () => {
 		expect(
-			UpdateContentClipSchema.parse({
+			UpdateClipSESchema.parse({
 				id: "33333333-3333-4333-8333-333333333333",
 				shortDetectionMode: "product_view",
 			}),

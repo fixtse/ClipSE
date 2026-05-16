@@ -13,10 +13,10 @@ yarn-debug.log*
 yarn-error.log*
 .next
 **/.next
-.contentclip-media-cache
-**/.contentclip-media-cache
-.contentclip-whisper-cache
-**/.contentclip-whisper-cache
+.clipse-media-cache
+**/.clipse-media-cache
+.clipse-whisper-cache
+**/.clipse-whisper-cache
 coverage
 *.tsbuildinfo
 .env

@@ -8,10 +8,10 @@ export const CONTENT_CLIP_STATUSES = [
 	"failed",
 ] as const;
 
-export type ContentClipStatus = (typeof CONTENT_CLIP_STATUSES)[number];
+export type ClipSEStatus = (typeof CONTENT_CLIP_STATUSES)[number];
 
 export const CONTENT_CLIP_KINDS = ["standard", "short"] as const;
-export type ContentClipKind = (typeof CONTENT_CLIP_KINDS)[number];
+export type ClipSEKind = (typeof CONTENT_CLIP_KINDS)[number];
 
 export const CONTENT_CLIP_SHORT_DETECTION_MODES = [
 	"people",
@@ -19,10 +19,10 @@ export const CONTENT_CLIP_SHORT_DETECTION_MODES = [
 	"screen_only",
 	"product_view",
 ] as const;
-export type ContentClipShortDetectionMode =
+export type ClipSEShortDetectionMode =
 	(typeof CONTENT_CLIP_SHORT_DETECTION_MODES)[number];
 
-export const ContentClipSchema = z.object({
+export const ClipSESchema = z.object({
 	id: z.string().uuid(),
 	videoId: z.string().uuid(),
 	clipKind: z.enum(CONTENT_CLIP_KINDS),
@@ -46,7 +46,7 @@ export const ContentClipSchema = z.object({
 	updatedAt: z.date(),
 });
 
-export type ContentClip = z.infer<typeof ContentClipSchema>;
+export type ClipSE = z.infer<typeof ClipSESchema>;
 
 export const GeneratedClipCandidateSchema = z.object({
 	title: z.string().min(1).max(255),
@@ -64,7 +64,7 @@ export type GeneratedClipCandidate = z.infer<
 	typeof GeneratedClipCandidateSchema
 >;
 
-export const CreateContentClipSchema = z.object({
+export const CreateClipSESchema = z.object({
 	videoId: z.string().uuid(),
 	clipKind: z.enum(CONTENT_CLIP_KINDS).default("standard"),
 	shortDetectionMode: z
@@ -77,9 +77,9 @@ export const CreateContentClipSchema = z.object({
 	endSeconds: z.number().positive(),
 });
 
-export type CreateContentClipInput = z.input<typeof CreateContentClipSchema>;
+export type CreateClipSEInput = z.input<typeof CreateClipSESchema>;
 
-export const UpdateContentClipSchema = z.object({
+export const UpdateClipSESchema = z.object({
 	id: z.string().uuid(),
 	title: z.string().min(1).max(255).optional(),
 	hook: z.string().max(1000).optional(),
@@ -93,7 +93,7 @@ export const UpdateContentClipSchema = z.object({
 	shortDetectionMode: z.enum(CONTENT_CLIP_SHORT_DETECTION_MODES).optional(),
 });
 
-export type UpdateContentClipInput = z.infer<typeof UpdateContentClipSchema>;
+export type UpdateClipSEInput = z.infer<typeof UpdateClipSESchema>;
 
 export const CONTENT_CLIP_RENDER_ASPECT_MODES = [
 	"source",
@@ -102,19 +102,19 @@ export const CONTENT_CLIP_RENDER_ASPECT_MODES = [
 
 export const CONTENT_CLIP_RENDER_FOCUS_MODES = ["auto-speaker"] as const;
 
-export type ContentClipRenderAspectMode =
+export type ClipSERenderAspectMode =
 	(typeof CONTENT_CLIP_RENDER_ASPECT_MODES)[number];
-export type ContentClipRenderFocusMode =
+export type ClipSERenderFocusMode =
 	(typeof CONTENT_CLIP_RENDER_FOCUS_MODES)[number];
 
-const ContentClipRenderOptionsBaseSchema = z.object({
+const ClipSERenderOptionsBaseSchema = z.object({
 	aspectMode: z.enum(CONTENT_CLIP_RENDER_ASPECT_MODES).default("source"),
 	burnSubtitles: z.boolean().default(false),
 	focusMode: z.enum(CONTENT_CLIP_RENDER_FOCUS_MODES).optional(),
 });
 
-export const ContentClipRenderOptionsSchema =
-	ContentClipRenderOptionsBaseSchema.transform((options) => ({
+export const ClipSERenderOptionsSchema =
+	ClipSERenderOptionsBaseSchema.transform((options) => ({
 		...options,
 		focusMode:
 			options.aspectMode === "vertical9x16"
@@ -122,35 +122,33 @@ export const ContentClipRenderOptionsSchema =
 				: options.focusMode,
 	}));
 
-export type ContentClipRenderOptions = z.infer<
-	typeof ContentClipRenderOptionsSchema
->;
+export type ClipSERenderOptions = z.infer<typeof ClipSERenderOptionsSchema>;
 
-export const QueueContentClipRenderInputSchema = z.object({
+export const QueueClipSERenderInputSchema = z.object({
 	clipId: z.string().uuid(),
-	...ContentClipRenderOptionsBaseSchema.shape,
+	...ClipSERenderOptionsBaseSchema.shape,
 });
 
-export type QueueContentClipRenderInput = z.input<
-	typeof QueueContentClipRenderInputSchema
+export type QueueClipSERenderInput = z.input<
+	typeof QueueClipSERenderInputSchema
 >;
 
 export const QueueContentVideoClipRendersInputSchema = z.object({
 	videoId: z.string().uuid(),
 	clipKind: z.enum(CONTENT_CLIP_KINDS).optional(),
-	...ContentClipRenderOptionsBaseSchema.shape,
+	...ClipSERenderOptionsBaseSchema.shape,
 });
 
 export type QueueContentVideoClipRendersInput = z.input<
 	typeof QueueContentVideoClipRendersInputSchema
 >;
 
-export function parseContentClipRenderOptions(input: {
+export function parseClipSERenderOptions(input: {
 	aspectMode?: unknown;
 	burnSubtitles?: unknown;
 	focusMode?: unknown;
-}): ContentClipRenderOptions {
-	return ContentClipRenderOptionsSchema.parse(input);
+}): ClipSERenderOptions {
+	return ClipSERenderOptionsSchema.parse(input);
 }
 
 export function normalizeClipCandidate(

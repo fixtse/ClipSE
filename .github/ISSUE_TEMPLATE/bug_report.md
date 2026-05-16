@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a reproducible ContentClip problem
+about: Report a reproducible ClipSE problem
 title: "[Bug]: "
 labels: bug
 assignees: ""

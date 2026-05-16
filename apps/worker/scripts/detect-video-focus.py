@@ -72,12 +72,12 @@ def log_warning(message):
 
 
 def resolve_yolo_model_path():
-    return resolve_model_path(os.environ.get("CONTENTCLIP_YOLO_MODEL", "yolo11n.pt"))
+    return resolve_model_path(os.environ.get("CLIPSE_YOLO_MODEL", "yolo11n.pt"))
 
 
 def resolve_rtdetr_model_path():
     return resolve_model_path(
-        os.environ.get("CONTENTCLIP_PRODUCT_RTDETR_MODEL", "rtdetr-l.pt")
+        os.environ.get("CLIPSE_PRODUCT_RTDETR_MODEL", "rtdetr-l.pt")
     )
 
 

@@ -1,7 +1,7 @@
-import type { ContentClipRepositoryInterface } from "../domain/content-clip.repository.interface";
+import type { ClipSERepositoryInterface } from "../domain/content-clip.repository.interface";
 
-export async function deleteContentClip(
-	clipRepository: ContentClipRepositoryInterface,
+export async function deleteClipSE(
+	clipRepository: ClipSERepositoryInterface,
 	input: {
 		clipId: string;
 	},

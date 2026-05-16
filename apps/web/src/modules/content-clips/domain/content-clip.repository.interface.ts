@@ -1,34 +1,31 @@
 import type {
-	ContentClip,
-	ContentClipKind,
-	CreateContentClipInput,
+	ClipSE,
+	ClipSEKind,
+	CreateClipSEInput,
 	GeneratedClipCandidate,
-	UpdateContentClipInput,
+	UpdateClipSEInput,
 } from "./content-clip.valueobject";
 
-export interface ContentClipRepositoryInterface {
-	findById(id: string): Promise<ContentClip | null>;
-	listByVideoId(
-		videoId: string,
-		clipKind?: ContentClipKind,
-	): Promise<ContentClip[]>;
+export interface ClipSERepositoryInterface {
+	findById(id: string): Promise<ClipSE | null>;
+	listByVideoId(videoId: string, clipKind?: ClipSEKind): Promise<ClipSE[]>;
 	replaceForVideo(
 		videoId: string,
 		clips: GeneratedClipCandidate[],
-		clipKind?: ContentClipKind,
-	): Promise<ContentClip[]>;
-	create(input: CreateContentClipInput): Promise<ContentClip>;
-	update(input: UpdateContentClipInput): Promise<ContentClip>;
+		clipKind?: ClipSEKind,
+	): Promise<ClipSE[]>;
+	create(input: CreateClipSEInput): Promise<ClipSE>;
+	update(input: UpdateClipSEInput): Promise<ClipSE>;
 	delete(id: string): Promise<void>;
 	updateStatus(input: {
 		id: string;
-		status: ContentClip["status"];
+		status: ClipSE["status"];
 		latestError?: string | null;
-	}): Promise<ContentClip>;
+	}): Promise<ClipSE>;
 	attachRenderedAsset(input: {
 		id: string;
 		outputStorageKey: string;
 		outputFilename: string;
-	}): Promise<ContentClip>;
-	markDownloaded(id: string): Promise<ContentClip>;
+	}): Promise<ClipSE>;
+	markDownloaded(id: string): Promise<ClipSE>;
 }

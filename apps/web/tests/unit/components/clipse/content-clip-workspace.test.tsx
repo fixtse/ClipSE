@@ -1,9 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { ContentClipWorkspace } from "~/components/contentclip/ContentClipWorkspace";
+import { ClipSEWorkspace } from "~/components/clipse/ClipSEWorkspace";
 import {
+	ClipSEMother,
 	ContentAiSettingsMother,
-	ContentClipMother,
 	ContentJobMother,
 	ContentTranscriptionMother,
 	ContentVideoMother,
@@ -59,19 +59,19 @@ vi.mock(
 	}),
 );
 vi.mock("~/server/actions/content-clips/create-content-clip", () => ({
-	createContentClipAction: vi.fn(),
+	createClipSEAction: vi.fn(),
 }));
 vi.mock("~/server/actions/content-clips/delete-content-clip", () => ({
-	deleteContentClipAction: vi.fn(),
+	deleteClipSEAction: vi.fn(),
 }));
 vi.mock(
 	"~/server/actions/content-clips/generate-content-clip-metadata",
 	() => ({
-		generateContentClipMetadataAction: vi.fn(),
+		generateClipSEMetadataAction: vi.fn(),
 	}),
 );
 vi.mock("~/server/actions/content-clips/queue-content-clip-render", () => ({
-	queueContentClipRenderAction: vi.fn(),
+	queueClipSERenderAction: vi.fn(),
 }));
 vi.mock(
 	"~/server/actions/content-clips/queue-content-video-clip-renders",
@@ -80,7 +80,7 @@ vi.mock(
 	}),
 );
 vi.mock("~/server/actions/content-clips/update-content-clip", () => ({
-	updateContentClipAction: vi.fn(),
+	updateClipSEAction: vi.fn(),
 }));
 vi.mock("~/server/actions/content-jobs/clear-finished-content-jobs", () => ({
 	clearFinishedContentJobsAction: vi.fn(),
@@ -116,11 +116,11 @@ vi.mock(
 	}),
 );
 
-vi.mock("~/components/contentclip/LanguageSwitcher", () => ({
+vi.mock("~/components/clipse/LanguageSwitcher", () => ({
 	LanguageSwitcher: () => <div data-testid="language-switcher" />,
 }));
 
-vi.mock("~/components/contentclip/clip-editor/ClipEditorCard", () => ({
+vi.mock("~/components/clipse/clip-editor/ClipEditorCard", () => ({
 	ClipEditorCard: ({ clip }: { clip: { title: string } }) => (
 		<div data-testid="clip-editor-card">{clip.title}</div>
 	),
@@ -200,7 +200,7 @@ function setDashboardData(input: {
 			: {}),
 		title: "Launch source",
 	});
-	const clip = ContentClipMother.create({
+	const clip = ClipSEMother.create({
 		title: "Launch clip",
 		videoId: video.id,
 	});
@@ -266,13 +266,13 @@ function setDashboardData(input: {
 	mocks.aiSettingsData = ContentAiSettingsMother.create();
 }
 
-describe("ContentClipWorkspace", () => {
+describe("ClipSEWorkspace", () => {
 	it("renders loading placeholders before dashboard data is available", () => {
 		mocks.dashboardData = undefined;
 		mocks.dashboardIsLoading = true;
 		mocks.aiSettingsData = ContentAiSettingsMother.create();
 
-		const markup = renderToStaticMarkup(<ContentClipWorkspace />);
+		const markup = renderToStaticMarkup(<ClipSEWorkspace />);
 
 		expect(markup).toContain("workspace.library.title");
 		expect(markup).toContain("workspace.clipList.noSourceTitle");
@@ -282,7 +282,7 @@ describe("ContentClipWorkspace", () => {
 	it("renders the workspace shell and empty-source state", () => {
 		setDashboardData({ withSelectedVideo: false });
 
-		const markup = renderToStaticMarkup(<ContentClipWorkspace />);
+		const markup = renderToStaticMarkup(<ClipSEWorkspace />);
 
 		expect(markup).toContain("workspace.header.title");
 		expect(markup).toContain("workspace.tabs.media");
@@ -296,7 +296,7 @@ describe("ContentClipWorkspace", () => {
 		setDashboardData({ withSelectedVideo: true });
 
 		const markup = renderToStaticMarkup(
-			<ContentClipWorkspace requestedVideoId="11111111-1111-4111-8111-111111111111" />,
+			<ClipSEWorkspace requestedVideoId="11111111-1111-4111-8111-111111111111" />,
 		);
 
 		expect(markup).toContain("workspace.sourceDetail.originalFile");
@@ -311,7 +311,7 @@ describe("ContentClipWorkspace", () => {
 	it("renders floating job status when active jobs exist", () => {
 		setDashboardData({ withActiveJob: true, withSelectedVideo: true });
 
-		const markup = renderToStaticMarkup(<ContentClipWorkspace />);
+		const markup = renderToStaticMarkup(<ClipSEWorkspace />);
 
 		expect(markup).toContain('aria-label="workspace.queue.title"');
 		expect(markup).toContain("42%");
@@ -323,7 +323,7 @@ describe("ContentClipWorkspace", () => {
 			withSelectedVideo: true,
 		});
 
-		const markup = renderToStaticMarkup(<ContentClipWorkspace />);
+		const markup = renderToStaticMarkup(<ClipSEWorkspace />);
 
 		expect(markup).toContain("workspace.status.failed");
 		expect(markup).toContain("workspace.sourceDetail.aiGenerate");
@@ -336,7 +336,7 @@ describe("ContentClipWorkspace", () => {
 			withSelectedVideo: true,
 		});
 
-		const markup = renderToStaticMarkup(<ContentClipWorkspace />);
+		const markup = renderToStaticMarkup(<ClipSEWorkspace />);
 
 		expect(markup).toContain("workspace.sourceDetail.sourcePlaybackPending");
 		expect(markup).toContain("workspace.transcriptPanel.transcriptPending");

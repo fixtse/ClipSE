@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ContentClipWorkspace } from "~/components/contentclip/ContentClipWorkspace";
+import { ClipSEWorkspace } from "~/components/clipse/ClipSEWorkspace";
 import { type Locale, locales } from "~/i18n/config";
 import { messages } from "~/i18n/messages";
 import { localizePath } from "~/i18n/path";
@@ -42,7 +42,7 @@ export async function generateMetadata({
 			description,
 			type: "website",
 			url: canonicalPath,
-			siteName: "ContentClip",
+			siteName: "ClipSE",
 			locale: requestLocale === "es" ? "es_ES" : "en_US",
 			alternateLocale: locales
 				.filter((supportedLocale) => supportedLocale !== requestLocale)
@@ -102,7 +102,7 @@ export default async function LocaleHomePage({
 
 	return (
 		<HydrateClient>
-			<ContentClipWorkspace requestedVideoId={requestedVideoId} />
+			<ClipSEWorkspace requestedVideoId={requestedVideoId} />
 		</HydrateClient>
 	);
 }

@@ -1,11 +1,11 @@
-import type { ContentClipRepositoryInterface } from "~/modules/content-clips/domain/content-clip.repository.interface";
-import { deleteCachedMediaFile } from "~/server/lib/contentclip-local-media";
-import { deleteStorageObject } from "~/server/lib/contentclip-storage";
+import type { ClipSERepositoryInterface } from "~/modules/content-clips/domain/content-clip.repository.interface";
+import { deleteCachedMediaFile } from "~/server/lib/clipse-local-media";
+import { deleteStorageObject } from "~/server/lib/clipse-storage";
 import type { ContentVideoRepositoryInterface } from "../domain/content-video.repository.interface";
 
 export async function deleteContentVideo(
 	videoRepository: ContentVideoRepositoryInterface,
-	clipRepository: ContentClipRepositoryInterface,
+	clipRepository: ClipSERepositoryInterface,
 	input: {
 		videoId: string;
 	},

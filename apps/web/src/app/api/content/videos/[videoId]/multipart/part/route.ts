@@ -1,6 +1,6 @@
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
 import { requireRequestSession } from "~/server/http-auth";
-import { uploadMultipartVideoPart } from "~/server/lib/contentclip-storage";
+import { uploadMultipartVideoPart } from "~/server/lib/clipse-storage";
 
 interface RouteContext {
 	params: Promise<{

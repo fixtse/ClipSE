@@ -1,21 +1,21 @@
 import type { ContentJobRepositoryInterface } from "~/modules/content-jobs/domain/content-job.repository.interface";
 import type { ContentVideoRepositoryInterface } from "~/modules/content-videos/domain/content-video.repository.interface";
-import type { ContentClipRepositoryInterface } from "../domain/content-clip.repository.interface";
+import type { ClipSERepositoryInterface } from "../domain/content-clip.repository.interface";
 import {
-	type ContentClip,
-	parseContentClipRenderOptions,
-	type QueueContentClipRenderInput,
-	QueueContentClipRenderInputSchema,
+	type ClipSE,
+	parseClipSERenderOptions,
+	type QueueClipSERenderInput,
+	QueueClipSERenderInputSchema,
 } from "../domain/content-clip.valueobject";
 
-export async function queueContentClipRender(
-	clipRepository: ContentClipRepositoryInterface,
+export async function queueClipSERender(
+	clipRepository: ClipSERepositoryInterface,
 	videoRepository: ContentVideoRepositoryInterface,
 	jobRepository: ContentJobRepositoryInterface,
-	input: QueueContentClipRenderInput,
-): Promise<ContentClip> {
-	const validatedInput = QueueContentClipRenderInputSchema.parse(input);
-	const renderOptions = parseContentClipRenderOptions(validatedInput);
+	input: QueueClipSERenderInput,
+): Promise<ClipSE> {
+	const validatedInput = QueueClipSERenderInputSchema.parse(input);
+	const renderOptions = parseClipSERenderOptions(validatedInput);
 	const clip = await clipRepository.findById(validatedInput.clipId);
 	if (!clip) {
 		throw new Error("Clip not found");

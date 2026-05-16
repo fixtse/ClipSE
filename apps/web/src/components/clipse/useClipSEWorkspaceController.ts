@@ -14,7 +14,7 @@ import {
 
 export type { WorkspaceTab } from "./workspace-state";
 
-export function useContentClipWorkspaceController(input: {
+export function useClipSEWorkspaceController(input: {
 	requestedVideoId?: string | null;
 }) {
 	const browserStorage = getBrowserWorkspaceStorage();

@@ -67,10 +67,10 @@ vi.mock("react-player", () => ({
 	default: () => null,
 }));
 
-import { ModelCombobox } from "~/components/contentclip/clip-editor/ClipEditorCard";
-import { LanguageSwitcher } from "~/components/contentclip/LanguageSwitcher";
+import { ModelCombobox } from "~/components/clipse/clip-editor/ClipEditorCard";
+import { LanguageSwitcher } from "~/components/clipse/LanguageSwitcher";
 
-describe("contentclip components", () => {
+describe("clipse components", () => {
 	it("renders the language switcher with the active locale and accessible label", () => {
 		const markup = renderToStaticMarkup(<LanguageSwitcher />);
 

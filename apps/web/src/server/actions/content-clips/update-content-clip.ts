@@ -1,26 +1,26 @@
 "use server";
 
-import { updateContentClip } from "~/modules/content-clips/application/update-content-clip";
-import type { UpdateContentClipInput } from "~/modules/content-clips/domain/content-clip.valueobject";
+import { updateClipSE } from "~/modules/content-clips/application/update-content-clip";
+import type { UpdateClipSEInput } from "~/modules/content-clips/domain/content-clip.valueobject";
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
 import { requireSession } from "~/server/auth";
 
-type UpdateContentClipActionResult =
+type UpdateClipSEActionResult =
 	| {
 			success: true;
-			data: Awaited<ReturnType<typeof updateContentClip>>;
+			data: Awaited<ReturnType<typeof updateClipSE>>;
 	  }
 	| {
 			success: false;
 			error: string;
 	  };
 
-export async function updateContentClipAction(
-	input: UpdateContentClipInput,
-): Promise<UpdateContentClipActionResult> {
+export async function updateClipSEAction(
+	input: UpdateClipSEInput,
+): Promise<UpdateClipSEActionResult> {
 	try {
 		await requireSession();
-		const clip = await updateContentClip(contentClipRepository, input);
+		const clip = await updateClipSE(contentClipRepository, input);
 		return {
 			success: true,
 			data: clip,

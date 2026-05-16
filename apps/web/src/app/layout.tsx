@@ -14,13 +14,13 @@ const defaultMessages = messages[defaultLocale];
 export const metadata: Metadata = {
 	title: {
 		default: defaultMessages.metadata.title,
-		template: "%s | ContentClip",
+		template: "%s | ClipSE",
 	},
 	description: defaultMessages.metadata.description,
 	keywords: [...defaultMessages.metadata.keywords],
 	authors: [{ name: "Fixt" }],
 	creator: "Fixt",
-	publisher: "ContentClip",
+	publisher: "ClipSE",
 	icons: [{ rel: "icon", url: "/favicon.ico" }],
 	metadataBase: new URL(
 		process.env.NEXT_PUBLIC_BASE_URL ??
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 		description: defaultMessages.metadata.description,
 		type: "website",
 		locale: "en_US",
-		siteName: "ContentClip",
+		siteName: "ClipSE",
 		url: "./",
 		images: [
 			{

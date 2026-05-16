@@ -68,20 +68,20 @@ jobs:
           worker_base_required="false"
 
           if [[ "$REF" == refs/tags/v*.*.* || "$EVENT_NAME" == "workflow_dispatch" || -z "$BEFORE_SHA" || "$BEFORE_SHA" == "0000000000000000000000000000000000000000" ]]; then
-            append_image "contentclip-app" "." "apps/web/Dockerfile"
-            append_image "contentclip-worker" "." "apps/worker/Dockerfile"
-            append_image "contentclip-migrate" "." "services/postgres/Dockerfile.migrate"
-            append_image "contentclip-whisper" "./services/whisper" "./services/whisper/Dockerfile"
-            append_image "contentclip-garage-init" "." "services/garage/Dockerfile.init"
+            append_image "clipse-app" "." "apps/web/Dockerfile"
+            append_image "clipse-worker" "." "apps/worker/Dockerfile"
+            append_image "clipse-migrate" "." "services/postgres/Dockerfile.migrate"
+            append_image "clipse-whisper" "./services/whisper" "./services/whisper/Dockerfile"
+            append_image "clipse-garage-init" "." "services/garage/Dockerfile.init"
           else
             git diff --name-only "$BEFORE_SHA" "$SHA" > changed-files.txt
 
             if changed_any '^(\.dockerignore|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig\.json|apps/web/)'; then
-              append_image "contentclip-app" "." "apps/web/Dockerfile"
+              append_image "clipse-app" "." "apps/web/Dockerfile"
             fi
 
             if changed_any '^(\.dockerignore|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|tsconfig\.json|apps/worker/|apps/web/src/)'; then
-              append_image "contentclip-worker" "." "apps/worker/Dockerfile"
+              append_image "clipse-worker" "." "apps/worker/Dockerfile"
             fi
 
             if changed_any '^(apps/worker/Dockerfile\.base)$'; then
@@ -89,15 +89,15 @@ jobs:
             fi
 
             if changed_any '^(\.dockerignore|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|services/postgres/|apps/web/src/server/db/schema\.ts)'; then
-              append_image "contentclip-migrate" "." "services/postgres/Dockerfile.migrate"
+              append_image "clipse-migrate" "." "services/postgres/Dockerfile.migrate"
             fi
 
             if changed_any '^(services/whisper/)'; then
-              append_image "contentclip-whisper" "./services/whisper" "./services/whisper/Dockerfile"
+              append_image "clipse-whisper" "./services/whisper" "./services/whisper/Dockerfile"
             fi
 
             if changed_any '^(services/garage/)'; then
-              append_image "contentclip-garage-init" "." "services/garage/Dockerfile.init"
+              append_image "clipse-garage-init" "." "services/garage/Dockerfile.init"
             fi
           fi
 
@@ -144,7 +144,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/contentclip-worker-base
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/clipse-worker-base
           tags: |
             type=raw,value=sha-${{ inputs.sha }}
             type=raw,value=latest,enable={{is_default_branch}}
@@ -207,4 +207,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            CONTENTCLIP_WORKER_BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/contentclip-worker-base:latest
+            CLIPSE_WORKER_BASE_IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/clipse-worker-base:latest

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { ClipEditorCard } from "~/components/contentclip/clip-editor/ClipEditorCard";
+import { ClipEditorCard } from "~/components/clipse/clip-editor/ClipEditorCard";
 import { DashboardClipMother } from "../../../mothers/domain-mothers";
 
 vi.mock("~/i18n/provider", () => ({

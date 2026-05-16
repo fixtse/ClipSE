@@ -17,4 +17,4 @@ Include:
 
 ## Secrets
 
-ContentClip requires local secrets for Better Auth, AI providers, and object storage. Never commit `.env` files or production credentials. If a secret is accidentally exposed, rotate it before publishing the repository.
+ClipSE requires local secrets for Better Auth, AI providers, and object storage. Never commit `.env` files or production credentials. If a secret is accidentally exposed, rotate it before publishing the repository.

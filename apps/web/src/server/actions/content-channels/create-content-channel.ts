@@ -7,7 +7,7 @@ import { requireSession } from "~/server/auth";
 import {
 	deleteStorageObject,
 	uploadWebFileToStorage,
-} from "~/server/lib/contentclip-storage";
+} from "~/server/lib/clipse-storage";
 
 type CreateContentChannelActionResult =
 	| {

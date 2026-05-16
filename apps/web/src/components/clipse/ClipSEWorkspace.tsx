@@ -35,9 +35,9 @@ import { cn } from "~/lib/utils";
 import type { ContentChannelBumperPosition } from "~/modules/content-channels/domain/content-channel.valueobject";
 import { formatTimecode } from "~/modules/content-clips/application/clip-timing";
 import type {
-	ContentClipKind,
-	ContentClipRenderAspectMode,
-	ContentClipShortDetectionMode,
+	ClipSEKind,
+	ClipSERenderAspectMode,
+	ClipSEShortDetectionMode,
 } from "~/modules/content-clips/domain/content-clip.valueobject";
 import {
 	getAudioLanguageOptions,
@@ -65,19 +65,19 @@ import {
 	paginateLibraryVideos,
 	SELECTED_CHANNEL_STORAGE_KEY,
 } from "~/modules/content-videos/application/content-clip-dashboard-view";
-import type { ContentClipDashboardVideo } from "~/modules/content-videos/application/get-content-clip-dashboard";
+import type { ClipSEDashboardVideo } from "~/modules/content-videos/application/get-content-clip-dashboard";
 import { uploadContentVideoFile } from "~/modules/content-videos/application/upload-content-video-file";
 import { createContentChannelAction } from "~/server/actions/content-channels/create-content-channel";
 import {
 	deleteContentChannelBumperAction,
 	updateContentChannelBumperAction,
 } from "~/server/actions/content-channels/update-content-channel-bumper";
-import { createContentClipAction } from "~/server/actions/content-clips/create-content-clip";
-import { deleteContentClipAction } from "~/server/actions/content-clips/delete-content-clip";
-import { generateContentClipMetadataAction } from "~/server/actions/content-clips/generate-content-clip-metadata";
-import { queueContentClipRenderAction } from "~/server/actions/content-clips/queue-content-clip-render";
+import { createClipSEAction } from "~/server/actions/content-clips/create-content-clip";
+import { deleteClipSEAction } from "~/server/actions/content-clips/delete-content-clip";
+import { generateClipSEMetadataAction } from "~/server/actions/content-clips/generate-content-clip-metadata";
+import { queueClipSERenderAction } from "~/server/actions/content-clips/queue-content-clip-render";
 import { queueContentVideoClipRendersAction } from "~/server/actions/content-clips/queue-content-video-clip-renders";
-import { updateContentClipAction } from "~/server/actions/content-clips/update-content-clip";
+import { updateClipSEAction } from "~/server/actions/content-clips/update-content-clip";
 import { clearFinishedContentJobsAction } from "~/server/actions/content-jobs/clear-finished-content-jobs";
 import { updateContentAiSettingsAction } from "~/server/actions/content-settings/update-content-ai-settings";
 import { createContentVideoDraftAction } from "~/server/actions/content-videos/create-content-video-draft";
@@ -120,9 +120,9 @@ import { Textarea } from "../ui/textarea";
 import { ClipEditorCard, ModelCombobox } from "./clip-editor/ClipEditorCard";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import {
-	useContentClipWorkspaceController,
+	useClipSEWorkspaceController,
 	type WorkspaceTab,
-} from "./useContentClipWorkspaceController";
+} from "./useClipSEWorkspaceController";
 import {
 	buildWorkspaceBrowserUrl,
 	type ClipListTab,
@@ -137,7 +137,7 @@ import {
 	shouldShowFloatingJobButton as shouldDisplayFloatingJobButton,
 } from "./workspace-state";
 
-type DashboardVideo = ContentClipDashboardVideo;
+type DashboardVideo = ClipSEDashboardVideo;
 type GeneratedClipMetadataResult = Pick<
 	ClipItem,
 	"title" | "hook" | "summary" | "startSeconds" | "endSeconds"
@@ -145,7 +145,7 @@ type GeneratedClipMetadataResult = Pick<
 type IntakeSourceTab = "file" | "url";
 type WhisperModel = ContentAiSettings["whisperModel"];
 type RenderOptionsState = {
-	aspectMode: ContentClipRenderAspectMode;
+	aspectMode: ClipSERenderAspectMode;
 	burnSubtitles: boolean;
 };
 const BUMPER_POSITIONS = ["intro", "outro"] as const;
@@ -158,13 +158,11 @@ type UploadMessageKey =
 	| "workspace.intake.progress.creatingDownloadJob"
 	| "workspace.intake.progress.queuedForDownload";
 
-interface ContentClipWorkspaceProps {
+interface ClipSEWorkspaceProps {
 	requestedVideoId?: string | null;
 }
 
-export function ContentClipWorkspace({
-	requestedVideoId,
-}: ContentClipWorkspaceProps) {
+export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 	const t = useTranslations();
 	const pathname = usePathname();
 	const router = useRouter();
@@ -182,7 +180,7 @@ export function ContentClipWorkspace({
 		setClipListTab,
 		selectedClipId,
 		setSelectedClipId,
-	} = useContentClipWorkspaceController({ requestedVideoId });
+	} = useClipSEWorkspaceController({ requestedVideoId });
 	const [intakeSourceTab, setIntakeSourceTab] =
 		useState<IntakeSourceTab>("file");
 	const [uploadFileValue, setUploadFileValue] = useState<File | null>(null);
@@ -1076,7 +1074,7 @@ export function ContentClipWorkspace({
 		startSeconds: number;
 		endSeconds: number;
 	}) {
-		const result = await updateContentClipAction(input);
+		const result = await updateClipSEAction(input);
 		if (!result.success) {
 			toast.error(result.error);
 			return;
@@ -1088,9 +1086,9 @@ export function ContentClipWorkspace({
 
 	async function handleShortDetectionModeChange(
 		clipId: string,
-		shortDetectionMode: ContentClipShortDetectionMode,
+		shortDetectionMode: ClipSEShortDetectionMode,
 	) {
-		const result = await updateContentClipAction({
+		const result = await updateClipSEAction({
 			id: clipId,
 			shortDetectionMode,
 		});
@@ -1109,7 +1107,7 @@ export function ContentClipWorkspace({
 		startSeconds: number;
 		endSeconds: number;
 	}): Promise<GeneratedClipMetadataResult | undefined> {
-		const result = await generateContentClipMetadataAction(input);
+		const result = await generateClipSEMetadataAction(input);
 		if (!result.success) {
 			toast.error(result.error);
 			return;
@@ -1121,7 +1119,7 @@ export function ContentClipWorkspace({
 	}
 
 	async function handleRenderClip(clipId: string) {
-		const result = await queueContentClipRenderAction({
+		const result = await queueClipSERenderAction({
 			clipId,
 			...renderOptions,
 			focusMode:
@@ -1139,10 +1137,7 @@ export function ContentClipWorkspace({
 		await refreshDashboard();
 	}
 
-	async function handleRenderAllClips(
-		videoId: string,
-		clipKind: ContentClipKind,
-	) {
+	async function handleRenderAllClips(videoId: string, clipKind: ClipSEKind) {
 		const result = await queueContentVideoClipRendersAction({
 			videoId,
 			clipKind,
@@ -1195,7 +1190,7 @@ export function ContentClipWorkspace({
 			frameRate: selectedVideo.video.frameRate,
 		});
 
-		const result = await createContentClipAction({
+		const result = await createClipSEAction({
 			videoId: selectedVideo.video.id,
 			clipKind: clipListTab,
 			title: t("workspace.toasts.manualClipTitle", {
@@ -1217,7 +1212,7 @@ export function ContentClipWorkspace({
 	}
 
 	async function handleDeleteClip(clipId: string) {
-		const result = await deleteContentClipAction({
+		const result = await deleteClipSEAction({
 			clipId,
 		});
 

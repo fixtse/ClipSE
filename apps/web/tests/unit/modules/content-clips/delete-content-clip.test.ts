@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import { deleteContentClip } from "~/modules/content-clips/application/delete-content-clip";
-import { ContentClipMother } from "../../../mothers/domain-mothers";
-import { ContentClipRepositoryMother } from "../../../mothers/repository-mothers";
+import { deleteClipSE } from "~/modules/content-clips/application/delete-content-clip";
+import { ClipSEMother } from "../../../mothers/domain-mothers";
+import { ClipSERepositoryMother } from "../../../mothers/repository-mothers";
 
-describe("deleteContentClip", () => {
+describe("deleteClipSE", () => {
 	it("returns the requested id when the clip is already gone", async () => {
-		const clipRepository = ContentClipRepositoryMother.create({
+		const clipRepository = ClipSERepositoryMother.create({
 			findById: vi.fn(async () => null),
 		});
 
 		await expect(
-			deleteContentClip(clipRepository, {
+			deleteClipSE(clipRepository, {
 				clipId: "33333333-3333-4333-8333-333333333333",
 			}),
 		).resolves.toEqual({ id: "33333333-3333-4333-8333-333333333333" });
@@ -18,26 +18,24 @@ describe("deleteContentClip", () => {
 	});
 
 	it("deletes non-running clips", async () => {
-		const clip = ContentClipMother.create({ status: "ready" });
-		const clipRepository = ContentClipRepositoryMother.create({
+		const clip = ClipSEMother.create({ status: "ready" });
+		const clipRepository = ClipSERepositoryMother.create({
 			findById: vi.fn(async () => clip),
 		});
 
 		await expect(
-			deleteContentClip(clipRepository, { clipId: clip.id }),
+			deleteClipSE(clipRepository, { clipId: clip.id }),
 		).resolves.toEqual({ id: clip.id });
 		expect(clipRepository.delete).toHaveBeenCalledWith(clip.id);
 	});
 
 	it("rejects queued or rendering clips", async () => {
-		const clipRepository = ContentClipRepositoryMother.create({
-			findById: vi.fn(async () =>
-				ContentClipMother.create({ status: "rendering" }),
-			),
+		const clipRepository = ClipSERepositoryMother.create({
+			findById: vi.fn(async () => ClipSEMother.create({ status: "rendering" })),
 		});
 
 		await expect(
-			deleteContentClip(clipRepository, {
+			deleteClipSE(clipRepository, {
 				clipId: "33333333-3333-4333-8333-333333333333",
 			}),
 		).rejects.toThrow("Queued or rendering clips cannot be deleted.");

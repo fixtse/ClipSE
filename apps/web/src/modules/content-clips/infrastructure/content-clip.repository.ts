@@ -1,17 +1,17 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { contentClips } from "~/server/db/schema";
-import type { ContentClipRepositoryInterface } from "../domain/content-clip.repository.interface";
+import type { ClipSERepositoryInterface } from "../domain/content-clip.repository.interface";
 import type {
-	ContentClip,
-	ContentClipKind,
-	CreateContentClipInput,
+	ClipSE,
+	ClipSEKind,
+	CreateClipSEInput,
 	GeneratedClipCandidate,
-	UpdateContentClipInput,
+	UpdateClipSEInput,
 } from "../domain/content-clip.valueobject";
 
-export class ContentClipRepository implements ContentClipRepositoryInterface {
-	async findById(id: string): Promise<ContentClip | null> {
+export class ClipSERepository implements ClipSERepositoryInterface {
+	async findById(id: string): Promise<ClipSE | null> {
 		const [clip] = await db
 			.select()
 			.from(contentClips)
@@ -22,8 +22,8 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 
 	async listByVideoId(
 		videoId: string,
-		clipKind?: ContentClipKind,
-	): Promise<ContentClip[]> {
+		clipKind?: ClipSEKind,
+	): Promise<ClipSE[]> {
 		const clips = await db
 			.select()
 			.from(contentClips)
@@ -43,8 +43,8 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 	async replaceForVideo(
 		videoId: string,
 		clips: GeneratedClipCandidate[],
-		clipKind: ContentClipKind = "standard",
-	): Promise<ContentClip[]> {
+		clipKind: ClipSEKind = "standard",
+	): Promise<ClipSE[]> {
 		await db
 			.delete(contentClips)
 			.where(
@@ -82,7 +82,7 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 		return this.listByVideoId(videoId, clipKind);
 	}
 
-	async create(input: CreateContentClipInput): Promise<ContentClip> {
+	async create(input: CreateClipSEInput): Promise<ClipSE> {
 		const clipKind = input.clipKind ?? "standard";
 		const shortDetectionMode = input.shortDetectionMode ?? "people";
 		const existingClips = await this.listByVideoId(input.videoId, clipKind);
@@ -118,7 +118,7 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 		return this.map(clip);
 	}
 
-	async update(input: UpdateContentClipInput): Promise<ContentClip> {
+	async update(input: UpdateClipSEInput): Promise<ClipSE> {
 		const shouldResetRenderedAsset =
 			input.startSeconds !== undefined ||
 			input.endSeconds !== undefined ||
@@ -169,9 +169,9 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 
 	async updateStatus(input: {
 		id: string;
-		status: ContentClip["status"];
+		status: ClipSE["status"];
 		latestError?: string | null;
-	}): Promise<ContentClip> {
+	}): Promise<ClipSE> {
 		const [updated] = await db
 			.update(contentClips)
 			.set({
@@ -198,7 +198,7 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 		id: string;
 		outputStorageKey: string;
 		outputFilename: string;
-	}): Promise<ContentClip> {
+	}): Promise<ClipSE> {
 		const [updated] = await db
 			.update(contentClips)
 			.set({
@@ -219,7 +219,7 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 		return this.map(updated);
 	}
 
-	async markDownloaded(id: string): Promise<ContentClip> {
+	async markDownloaded(id: string): Promise<ClipSE> {
 		const [updated] = await db
 			.update(contentClips)
 			.set({
@@ -236,13 +236,13 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 		return this.map(updated);
 	}
 
-	private map(row: typeof contentClips.$inferSelect): ContentClip {
+	private map(row: typeof contentClips.$inferSelect): ClipSE {
 		return {
 			id: row.id,
 			videoId: row.videoId,
-			clipKind: row.clipKind as ContentClip["clipKind"],
+			clipKind: row.clipKind as ClipSE["clipKind"],
 			shortDetectionMode:
-				row.shortDetectionMode as ContentClip["shortDetectionMode"],
+				row.shortDetectionMode as ClipSE["shortDetectionMode"],
 			orderIndex: row.orderIndex,
 			title: row.title,
 			hook: row.hook,
@@ -252,7 +252,7 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 			startSeconds: row.startSeconds,
 			endSeconds: row.endSeconds,
 			score: row.score,
-			status: row.status as ContentClip["status"],
+			status: row.status as ClipSE["status"],
 			tags: row.tags as string[],
 			outputStorageKey: row.outputStorageKey ?? null,
 			outputFilename: row.outputFilename ?? null,
@@ -264,4 +264,4 @@ export class ContentClipRepository implements ContentClipRepositoryInterface {
 	}
 }
 
-export const contentClipRepository = new ContentClipRepository();
+export const contentClipRepository = new ClipSERepository();

@@ -6,7 +6,7 @@ dev: worker-base-dev
 	docker compose -f docker-compose.dev.yml up --build
 
 worker-base-dev:
-	docker build -f apps/worker/Dockerfile.base.dev -t contentclip-worker-base:dev .
+	docker build -f apps/worker/Dockerfile.base.dev -t clipse-worker-base:dev .
 
 dev-down:
 	docker compose -f docker-compose.dev.yml down

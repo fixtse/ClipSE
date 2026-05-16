@@ -6,7 +6,7 @@ import { defaultLocale } from "~/i18n/config";
 import { messages } from "~/i18n/messages";
 import { resolvePreferredLocale } from "~/i18n/path";
 
-export const alt = process.env.NEXT_PUBLIC_SITE_NAME ?? "ContentClip";
+export const alt = process.env.NEXT_PUBLIC_SITE_NAME ?? "ClipSE";
 
 export const size = {
 	width: 1200,
@@ -16,7 +16,7 @@ export const size = {
 export const contentType = "image/png";
 
 export default async function Image() {
-	const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "ContentClip";
+	const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "ClipSE";
 	const locale = resolvePreferredLocale(
 		(await headers()).get("accept-language") ?? "",
 	);

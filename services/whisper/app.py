@@ -10,8 +10,8 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from faster_whisper import WhisperModel
 
 
-app = FastAPI(title="ContentClip Whisper Service")
-logger = logging.getLogger("contentclip.whisper")
+app = FastAPI(title="ClipSE Whisper Service")
+logger = logging.getLogger("clipse.whisper")
 
 DEFAULT_MODEL_NAME = os.environ.get("WHISPER_MODEL", "medium")
 MODEL_DEVICE = os.environ.get("WHISPER_DEVICE", "cuda")
