@@ -43,6 +43,32 @@ const publicS3Client = new S3Client({
 const bucketName = env.CLIPSE_S3_BUCKET;
 export const MULTIPART_UPLOAD_PART_SIZE_BYTES = 24 * 1024 * 1024;
 
+export function isStorageObjectMissingError(error: unknown): boolean {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	const metadata = (
+		error as Error & {
+			readonly $metadata?: { readonly httpStatusCode?: number };
+			readonly Code?: string;
+			readonly code?: string;
+			readonly name?: string;
+		}
+	).$metadata;
+	const errorCode =
+		(error as Error & { readonly Code?: string; readonly code?: string })
+			.Code ??
+		(error as Error & { readonly code?: string }).code ??
+		error.name;
+
+	return (
+		metadata?.httpStatusCode === 404 ||
+		errorCode === "NoSuchKey" ||
+		errorCode === "NotFound"
+	);
+}
+
 export function buildClipStorageKey(videoId: string, clipId: string): string {
 	return `clips/${videoId}/${clipId}.mp4`;
 }

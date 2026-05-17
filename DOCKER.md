@@ -85,6 +85,18 @@ codex login
 
 Docker mounts `${HOST_CODEX_HOME:-${HOME}/.codex}` into the app and worker containers at `/root/.codex`, and the images include the Codex CLI. If your Codex home is elsewhere, set `HOST_CODEX_HOME` in `.env`.
 
+When running Compose from Windows PowerShell, use the Windows path:
+
+```bash
+HOST_CODEX_HOME="C:/Users/<you>/.codex"
+```
+
+When running Compose from a real WSL distro, use the WSL path to your Windows Codex home:
+
+```bash
+HOST_CODEX_HOME="/mnt/c/Users/<you>/.codex"
+```
+
 ## GPU Notes
 
 The default Whisper service uses NVIDIA CUDA:

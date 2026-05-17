@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ContentChannelBumperPosition } from "~/modules/content-channels/domain/content-channel.valueobject";
 import { contentChannelRepository } from "~/modules/content-channels/infrastructure/content-channel.repository";
 import { contentChapterRepository } from "~/modules/content-chapters/infrastructure/content-chapter.repository";
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
@@ -27,6 +28,7 @@ import {
 	buildClipFilename,
 	buildClipStorageKey,
 	downloadStorageObjectToFile,
+	isStorageObjectMissingError,
 	uploadLocalFileToStorage,
 } from "~/server/lib/clipse-storage";
 import { buildRenderSubtitleCues } from "~/server/lib/clipse-subtitles";
@@ -60,6 +62,86 @@ function readShortDetectionMode(
 
 function scaleProgress(progress: number, base: number, span: number): number {
 	return base + Math.floor((Math.max(0, Math.min(100, progress)) / 100) * span);
+}
+
+function formatStorageDownloadError(input: {
+	assetLabel: string;
+	key: string;
+	error: unknown;
+}): Error {
+	if (isStorageObjectMissingError(input.error)) {
+		return new Error(
+			`${input.assetLabel} is missing from object storage. Expected key: ${input.key}. Re-upload the file or remove the stale reference.`,
+		);
+	}
+
+	const reason =
+		input.error instanceof Error
+			? input.error.message
+			: "Unknown storage error";
+
+	return new Error(
+		`Failed to download ${input.assetLabel} from object storage at key ${input.key}: ${reason}`,
+	);
+}
+
+async function downloadRequiredRenderAsset(input: {
+	key: string;
+	filePath: string;
+	assetLabel: string;
+}): Promise<void> {
+	try {
+		await downloadStorageObjectToFile({
+			key: input.key,
+			filePath: input.filePath,
+		});
+	} catch (error) {
+		throw formatStorageDownloadError({
+			assetLabel: input.assetLabel,
+			key: input.key,
+			error,
+		});
+	}
+}
+
+async function downloadOptionalChannelBumper(input: {
+	channelId: string;
+	position: ContentChannelBumperPosition;
+	key: string;
+	filePath: string;
+	label: string;
+	jobId: string;
+}): Promise<boolean> {
+	try {
+		await downloadStorageObjectToFile({
+			key: input.key,
+			filePath: input.filePath,
+		});
+		return true;
+	} catch (error) {
+		if (!isStorageObjectMissingError(error)) {
+			throw formatStorageDownloadError({
+				assetLabel: input.label,
+				key: input.key,
+				error,
+			});
+		}
+
+		const message = `${input.label} was skipped because the configured object no longer exists: ${input.key}`;
+		console.warn(`[worker] ${message}`);
+		await contentChannelRepository.updateBumper({
+			id: input.channelId,
+			position: input.position,
+			storageKey: null,
+			mimeType: null,
+		});
+		await contentJobRepository.updateProgress({
+			id: input.jobId,
+			progress: 7,
+			message,
+		});
+		return false;
+	}
 }
 
 async function sleep(milliseconds: number): Promise<void> {
@@ -439,14 +521,34 @@ async function processRenderJob(
 	const shortDetectionMode = readShortDetectionMode(
 		job?.payload.shortDetectionMode,
 	);
-	const introStorageKey =
-		aspectMode === "vertical9x16"
-			? (channel?.verticalIntroStorageKey ?? channel?.introStorageKey)
-			: channel?.introStorageKey;
-	const outroStorageKey =
-		aspectMode === "vertical9x16"
-			? (channel?.verticalOutroStorageKey ?? channel?.outroStorageKey)
-			: channel?.outroStorageKey;
+	const introBumper =
+		aspectMode === "vertical9x16" && channel?.verticalIntroStorageKey
+			? {
+					key: channel.verticalIntroStorageKey,
+					position: "verticalIntro" as const,
+					label: "Vertical start video",
+				}
+			: channel?.introStorageKey
+				? {
+						key: channel.introStorageKey,
+						position: "intro" as const,
+						label: "Start video",
+					}
+				: null;
+	const outroBumper =
+		aspectMode === "vertical9x16" && channel?.verticalOutroStorageKey
+			? {
+					key: channel.verticalOutroStorageKey,
+					position: "verticalOutro" as const,
+					label: "Vertical end video",
+				}
+			: channel?.outroStorageKey
+				? {
+						key: channel.outroStorageKey,
+						position: "outro" as const,
+						label: "End video",
+					}
+				: null;
 
 	await contentClipRepository.updateStatus({
 		id: clipId,
@@ -461,33 +563,51 @@ async function processRenderJob(
 
 	const workspace = await mkdtemp(join(tmpdir(), "clipse-render-"));
 	const sourcePath = join(workspace, video.originalFilename);
-	const introPath = introStorageKey ? join(workspace, "intro.mp4") : null;
-	const outroPath = outroStorageKey ? join(workspace, "outro.mp4") : null;
+	let introPath = introBumper ? join(workspace, "intro.mp4") : null;
+	let outroPath = outroBumper ? join(workspace, "outro.mp4") : null;
 	const outputPath = join(workspace, `${clip.id}.mp4`);
 	const subtitlePath = burnSubtitles
 		? join(workspace, `${clip.id}.json`)
 		: null;
 
-	await downloadStorageObjectToFile({
+	await downloadRequiredRenderAsset({
 		key: video.storageKey,
 		filePath: sourcePath,
+		assetLabel: "source video",
 	});
 	await contentJobRepository.updateProgress({
 		id: jobId,
 		progress: 5,
 		message: "Downloaded source for render",
 	});
-	if (introStorageKey && introPath) {
-		await downloadStorageObjectToFile({
-			key: introStorageKey,
+	let skippedOptionalBumper = false;
+	if (channel && introBumper && introPath) {
+		const downloaded = await downloadOptionalChannelBumper({
+			channelId: channel.id,
+			position: introBumper.position,
+			key: introBumper.key,
 			filePath: introPath,
+			label: introBumper.label,
+			jobId,
 		});
+		if (!downloaded) {
+			introPath = null;
+			skippedOptionalBumper = true;
+		}
 	}
-	if (outroStorageKey && outroPath) {
-		await downloadStorageObjectToFile({
-			key: outroStorageKey,
+	if (channel && outroBumper && outroPath) {
+		const downloaded = await downloadOptionalChannelBumper({
+			channelId: channel.id,
+			position: outroBumper.position,
+			key: outroBumper.key,
 			filePath: outroPath,
+			label: outroBumper.label,
+			jobId,
 		});
+		if (!downloaded) {
+			outroPath = null;
+			skippedOptionalBumper = true;
+		}
 	}
 
 	if (burnSubtitles && subtitlePath) {
@@ -515,8 +635,12 @@ async function processRenderJob(
 		});
 	}
 
-	const renderProgressBase = burnSubtitles ? 12 : 5;
-	const renderProgressSpan = burnSubtitles ? 80 : 87;
+	const renderProgressBase = burnSubtitles ? 12 : skippedOptionalBumper ? 7 : 5;
+	const renderProgressSpan = burnSubtitles
+		? 80
+		: skippedOptionalBumper
+			? 85
+			: 87;
 	await contentJobRepository.updateProgress({
 		id: jobId,
 		progress: renderProgressBase,
