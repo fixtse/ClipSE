@@ -23,6 +23,8 @@ The app runs at `http://localhost:3000`.
 ## Images
 
 - `ghcr.io/fixtse/clipse-app`
+- `ghcr.io/fixtse/clipse-worker`
+- `ghcr.io/fixtse/clipse-migrate`
 - `ghcr.io/fixtse/clipse-whisper`
 - `ghcr.io/fixtse/clipse-garage-init`
 
@@ -30,6 +32,8 @@ Override images with:
 
 ```bash
 CLIPSE_APP_IMAGE=ghcr.io/example/clipse-app:sha-...
+CLIPSE_WORKER_IMAGE=ghcr.io/example/clipse-worker:sha-...
+CLIPSE_MIGRATE_IMAGE=ghcr.io/example/clipse-migrate:sha-...
 CLIPSE_WHISPER_IMAGE=ghcr.io/example/clipse-whisper:sha-...
 CLIPSE_GARAGE_INIT_IMAGE=ghcr.io/example/clipse-garage-init:sha-...
 docker compose up -d
@@ -51,6 +55,78 @@ docker compose logs -f app
 docker compose logs -f worker
 docker compose logs -f whisper
 ```
+
+## Startup Checks
+
+Compose starts the app and worker only after:
+
+- PostgreSQL passes `pg_isready`
+- database migrations finish successfully
+- Garage bucket/key initialization exits successfully
+- Whisper answers `GET /health`
+
+If `app` or `worker` is missing from `docker compose ps`, inspect the dependency that did not finish:
+
+```bash
+docker compose ps -a
+docker compose logs db-migrate
+docker compose logs garage-init
+docker compose logs whisper
+```
+
+## Troubleshooting
+
+### Whisper is unhealthy or does not start
+
+The default Whisper service requires NVIDIA Docker support. Check the service logs and GPU runtime:
+
+```bash
+docker compose logs whisper
+docker run --rm --gpus all nvidia/cuda:12.6.0-base-ubuntu24.04 nvidia-smi
+```
+
+Typical causes are missing NVIDIA drivers, missing NVIDIA Container Toolkit, or running Docker from an environment without GPU access.
+
+### Garage initialization fails
+
+`garage-init` now logs each setup step. Inspect its output:
+
+```bash
+docker compose logs garage-init
+```
+
+If the volume contains a broken local layout, reset only Garage data:
+
+```bash
+docker compose down
+docker volume rm clipse_garage_data
+docker compose up -d
+```
+
+### Migrations fail
+
+The app and worker wait for `db-migrate` to complete. Check migration logs first:
+
+```bash
+docker compose logs db-migrate
+```
+
+When schema changes are intentional, generate migration files before rebuilding images:
+
+```bash
+PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm db:generate
+docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
+```
+
+### Port conflicts
+
+The default published ports are:
+
+- `3000` for the web app
+- `8000` for Whisper
+- `3900` and `3903` for Garage
+
+If one is already in use, stop the conflicting process or change the port mapping in `docker-compose.yml`.
 
 ## Stop
 

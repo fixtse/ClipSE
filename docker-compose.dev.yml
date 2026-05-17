@@ -41,15 +41,34 @@ services:
       - garage_dev_data:/var/lib/garage
     command:
       - |
-        until /garage status >/garage-status 2>/dev/null; do /bin/busybox sleep 1; done;
+        set -eu;
+        echo "[garage-init] Waiting for Garage admin API...";
+        attempts=0;
+        until /garage status >/garage-status 2>/dev/null; do
+          attempts=$$((attempts + 1));
+          if [ "$$attempts" -ge 60 ]; then
+            echo "[garage-init] Garage did not become ready after 60 seconds.";
+            exit 1;
+          fi;
+          /bin/busybox sleep 1;
+        done;
+        echo "[garage-init] Garage is reachable.";
         if /bin/busybox grep -q "NO ROLE ASSIGNED" /garage-status; then
           node_id="$$(/bin/busybox awk '/^[0-9a-f]{16}/ { print $$1; exit }' /garage-status)";
+          if [ -z "$$node_id" ]; then
+            echo "[garage-init] Could not find a Garage node id in /garage status output.";
+            /bin/busybox cat /garage-status;
+            exit 1;
+          fi;
+          echo "[garage-init] Assigning local Garage node $$node_id.";
           /garage layout assign -z local -c 1G "$$node_id";
           /garage layout apply --version 1;
         fi;
+        echo "[garage-init] Ensuring local key and bucket exist.";
         /garage key info clipse >/dev/null 2>&1 || /garage key import --yes -n clipse GK000000000000000000000000 0000000000000000000000000000000000000000000000000000000000000000;
         /garage bucket info clipse >/dev/null 2>&1 || /garage bucket create clipse;
-        /garage bucket allow --read --write --owner clipse --key clipse
+        /garage bucket allow --read --write --owner clipse --key clipse;
+        echo "[garage-init] Garage bucket initialization complete."
 
   whisper:
     build:
@@ -69,6 +88,16 @@ services:
       - "8000:8000"
     volumes:
       - ${WHISPER_CACHE_DIR:-./.clipse-whisper-cache}:/models
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).read()\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
 
   db-migrate:
     build:
@@ -112,7 +141,7 @@ services:
       garage-init:
         condition: service_completed_successfully
       whisper:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "3000:3000"
     volumes:
@@ -157,7 +186,7 @@ services:
       garage-init:
         condition: service_completed_successfully
       whisper:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - .:/app
       - worker_node_modules:/app/node_modules
