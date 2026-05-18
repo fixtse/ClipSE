@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import {
@@ -58,6 +59,18 @@ const ANALYSIS_SMALL_REMAINDER_SECONDS = 15 * 60;
 const ANALYSIS_SINGLE_CHUNK_TOLERANCE_SECONDS =
 	ANALYSIS_CHUNK_SECONDS + ANALYSIS_SMALL_REMAINDER_SECONDS;
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const AI_SYSTEM_INSTRUCTIONS = `You are ClipSE's AI analysis engine for long-form video repurposing.
+
+Use only the supplied video context and transcript. Preserve the transcript language unless the task explicitly says otherwise.
+Prefer precise timestamps, self-contained ideas, and concise editorial metadata.
+Return only valid JSON. Do not wrap it in markdown.`;
+
+interface ContentAiPromptParts {
+	readonly cacheKey: string;
+	readonly context: string;
+	readonly task: string;
+	readonly jsonInstructions: string;
+}
 
 interface AnalysisChunk {
 	readonly index: number;
@@ -149,6 +162,130 @@ function buildTimestampedTranscript(
 		.join("\n");
 }
 
+function buildVideoTranscriptContext(input: {
+	readonly video: ContentVideo;
+	readonly analysisPrompt: string;
+	readonly transcriptLabel: string;
+	readonly transcript: string;
+	readonly range?: string;
+}): string {
+	return `VIDEO TITLE:
+${input.video.title}
+
+OPTIONAL TOPIC GUIDANCE:
+${input.analysisPrompt || "No extra topic guidance supplied."}
+${input.range ? `\nTIME RANGE:\n${input.range}\n` : ""}
+${input.transcriptLabel}:
+${input.transcript}`;
+}
+
+function buildPromptCacheKey(context: string): string {
+	return `clipse-${createHash("sha256").update(context).digest("hex").slice(0, 32)}`;
+}
+
+function buildJsonTaskPrompt(input: ContentAiPromptParts): string {
+	return `${input.task}
+
+Return only valid JSON. Do not wrap it in markdown. The JSON must match this shape:
+${input.jsonInstructions}`;
+}
+
+function shouldUseOpenRouterExplicitCacheControl(model: string): boolean {
+	const normalizedModel = model.toLowerCase();
+	return (
+		normalizedModel.includes("anthropic/") ||
+		normalizedModel.includes("claude") ||
+		normalizedModel.includes("qwen/") ||
+		normalizedModel.includes("qwen-") ||
+		normalizedModel.includes("deepseek/deepseek-v3.2")
+	);
+}
+
+function buildOpenRouterMessages(input: {
+	readonly model: string;
+	readonly promptParts: ContentAiPromptParts;
+}): Array<{
+	readonly role: "system" | "user";
+	readonly content:
+		| string
+		| Array<{
+				readonly type: "text";
+				readonly text: string;
+				readonly cache_control?: { readonly type: "ephemeral" };
+		  }>;
+}> {
+	const contextBlock = {
+		type: "text" as const,
+		text: input.promptParts.context,
+		...(shouldUseOpenRouterExplicitCacheControl(input.model)
+			? { cache_control: { type: "ephemeral" as const } }
+			: {}),
+	};
+
+	return [
+		{ role: "system", content: AI_SYSTEM_INSTRUCTIONS },
+		{
+			role: "user",
+			content: [
+				contextBlock,
+				{
+					type: "text",
+					text: `\n\n${buildJsonTaskPrompt(input.promptParts)}`,
+				},
+			],
+		},
+	];
+}
+
+function logAiUsage(input: {
+	readonly provider: ContentAiSettings["provider"];
+	readonly model: string;
+	readonly cacheKey: string;
+	readonly usage?: {
+		readonly inputTokens?: number;
+		readonly inputTokenDetails?: {
+			readonly noCacheTokens?: number;
+			readonly cacheReadTokens?: number;
+			readonly cacheWriteTokens?: number;
+		};
+		readonly outputTokens?: number;
+		readonly outputTokenDetails?: {
+			readonly reasoningTokens?: number;
+		};
+	};
+	readonly rawUsage?: {
+		readonly prompt_tokens?: number;
+		readonly completion_tokens?: number;
+		readonly total_tokens?: number;
+		readonly prompt_tokens_details?: {
+			readonly cached_tokens?: number;
+			readonly cache_write_tokens?: number;
+		};
+		readonly cost?: number;
+	};
+}): void {
+	const inputTokens = input.usage?.inputTokens;
+	const inputTokenDetails = input.usage?.inputTokenDetails;
+	const outputTokens = input.usage?.outputTokens;
+	const rawPromptDetails = input.rawUsage?.prompt_tokens_details;
+	console.info("AI usage:", {
+		provider: input.provider,
+		model: input.model,
+		cacheKey: input.cacheKey,
+		inputTokens: inputTokens ?? input.rawUsage?.prompt_tokens,
+		outputTokens: outputTokens ?? input.rawUsage?.completion_tokens,
+		cacheReadTokens:
+			inputTokenDetails?.cacheReadTokens ??
+			rawPromptDetails?.cached_tokens ??
+			undefined,
+		cacheWriteTokens:
+			inputTokenDetails?.cacheWriteTokens ??
+			rawPromptDetails?.cache_write_tokens ??
+			undefined,
+		cost: input.rawUsage?.cost,
+	});
+}
+
 function normalizeShortClipCandidate(
 	input: GeneratedClipCandidate,
 	videoDurationSeconds: number | null,
@@ -227,6 +364,16 @@ interface OpenRouterChatCompletionResponse {
 		readonly code?: string | number;
 		readonly metadata?: unknown;
 	};
+	readonly usage?: {
+		readonly prompt_tokens?: number;
+		readonly completion_tokens?: number;
+		readonly total_tokens?: number;
+		readonly prompt_tokens_details?: {
+			readonly cached_tokens?: number;
+			readonly cache_write_tokens?: number;
+		};
+		readonly cost?: number;
+	};
 	readonly choices?: Array<{
 		readonly message?: {
 			readonly content?: string | Array<{ readonly text?: string }>;
@@ -257,7 +404,7 @@ async function generateOpenRouterJsonObject<
 >(input: {
 	readonly aiSettings: ContentAiSettings;
 	readonly schema: Schema;
-	readonly prompt: string;
+	readonly promptParts: ContentAiPromptParts;
 }): Promise<z.infer<Schema>> {
 	const response = await fetch(OPENROUTER_API_URL, {
 		method: "POST",
@@ -269,7 +416,10 @@ async function generateOpenRouterJsonObject<
 		},
 		body: JSON.stringify({
 			model: input.aiSettings.openrouterModel,
-			messages: [{ role: "user", content: input.prompt }],
+			messages: buildOpenRouterMessages({
+				model: input.aiSettings.openrouterModel,
+				promptParts: input.promptParts,
+			}),
 		}),
 	});
 	const payload = (await response
@@ -288,6 +438,18 @@ async function generateOpenRouterJsonObject<
 		throw new Error("OpenRouter returned an empty response.");
 	}
 
+	if (!payload) {
+		throw new Error("OpenRouter returned an empty response.");
+	}
+
+	const responsePayload = payload;
+	logAiUsage({
+		provider: input.aiSettings.provider,
+		model: input.aiSettings.openrouterModel,
+		cacheKey: input.promptParts.cacheKey,
+		rawUsage: responsePayload.usage,
+	});
+
 	const repairedJson = jsonrepair(extractJsonText(text));
 	return input.schema.parse(JSON.parse(repairedJson));
 }
@@ -296,25 +458,25 @@ async function generateContentAiObject<Schema extends z.ZodTypeAny>(input: {
 	readonly model: LanguageModel | null;
 	readonly aiSettings: ContentAiSettings;
 	readonly schema: Schema;
-	readonly prompt: string;
-	readonly jsonInstructions: string;
+	readonly promptParts: ContentAiPromptParts;
+	readonly maxOutputTokens?: number;
 }): Promise<z.infer<Schema>> {
-	const prompt = `${input.prompt}
-
-Return only valid JSON. Do not wrap it in markdown. The JSON must match this shape:
-${input.jsonInstructions}`;
 	if (input.aiSettings.provider === "openrouter") {
 		return generateOpenRouterJsonObject({
 			aiSettings: input.aiSettings,
 			schema: input.schema,
-			prompt,
+			promptParts: input.promptParts,
 		});
 	}
 
 	if (input.aiSettings.provider === "codex") {
 		const text = await generateCodexText({
 			model: input.aiSettings.codexModel,
-			prompt,
+			prompt: `${AI_SYSTEM_INSTRUCTIONS}
+
+${input.promptParts.context}
+
+${buildJsonTaskPrompt(input.promptParts)}`,
 		});
 		const repairedJson = jsonrepair(extractJsonText(text));
 		return input.schema.parse(JSON.parse(repairedJson));
@@ -326,14 +488,36 @@ ${input.jsonInstructions}`;
 			: wrapJsonExtractingModel(input.model as Exclude<LanguageModel, string>);
 
 	try {
-		const { output } = await generateText({
+		const result = await generateText({
 			model,
 			output: Output.object({
 				schema: input.schema,
 			}),
-			prompt,
+			system: AI_SYSTEM_INSTRUCTIONS,
+			messages: [
+				{ role: "user", content: input.promptParts.context },
+				{ role: "user", content: buildJsonTaskPrompt(input.promptParts) },
+			],
+			maxOutputTokens: input.maxOutputTokens,
+			providerOptions:
+				input.aiSettings.provider === "openai"
+					? {
+							openai: {
+								promptCacheKey: input.promptParts.cacheKey,
+							},
+						}
+					: undefined,
 		});
-		return input.schema.parse(output);
+		logAiUsage({
+			provider: input.aiSettings.provider,
+			model:
+				input.aiSettings.provider === "gemini"
+					? input.aiSettings.geminiModel
+					: input.aiSettings.openaiModel,
+			cacheKey: input.promptParts.cacheKey,
+			usage: result.usage,
+		});
+		return input.schema.parse(result.output);
 	} catch (error) {
 		if (!NoObjectGeneratedError.isInstance(error) || !error.text) {
 			throw error;
@@ -421,7 +605,18 @@ export async function generateClipCandidatesFromTranscription(input: {
 			Math.max(3, Math.round(chunkDurationSeconds / 360)),
 		);
 
-		return `You are a clip strategist building self-contained short-form clips from a long-form source video.
+		const context = buildVideoTranscriptContext({
+			video: input.video,
+			analysisPrompt: input.video.analysisPrompt,
+			transcriptLabel: "TRANSCRIPT",
+			transcript: buildTimestampedTranscript(chunk.segments),
+			range: `${formatContentTimestamp(chunk.startSeconds)} - ${formatContentTimestamp(chunk.endSeconds)}`,
+		});
+
+		return {
+			cacheKey: buildPromptCacheKey(context),
+			context,
+			task: `You are a clip strategist building self-contained short-form clips from a long-form source video.
 
 Find the strongest sections for a clip channel. A strong clip is a complete viewer-value unit: the question/setup is clear, the payoff is understandable, and the ending lands without requiring the surrounding video.
 
@@ -447,17 +642,22 @@ Clip boundaries:
 - Each clip should usually be 35-150 seconds. Up to 210 seconds is acceptable for a dense answer that cannot be split cleanly.
 
 Return about ${targetClipCount} candidates from this batch, with higher scores only for clips that are self-contained, specific, and likely to perform.
-Only use timestamps inside this analysis batch:
-${formatContentTimestamp(chunk.startSeconds)} - ${formatContentTimestamp(chunk.endSeconds)}
-
-VIDEO TITLE:
-${input.video.title}
-
-OPTIONAL TOPIC GUIDANCE:
-${input.video.analysisPrompt || "No extra topic guidance supplied."}
-
-TRANSCRIPT:
-${buildTimestampedTranscript(chunk.segments)}`;
+Only use timestamps inside this analysis batch.`,
+			jsonInstructions: `{
+  "clips": [
+    {
+      "title": "string",
+      "hook": "string",
+      "summary": "string",
+      "rationale": "string",
+      "startSeconds": number,
+      "endSeconds": number,
+      "score": number,
+      "tags": ["string"]
+    }
+  ]
+}`,
+		};
 	};
 
 	const model = createContentAiLanguageModel(aiSettings);
@@ -474,21 +674,8 @@ ${buildTimestampedTranscript(chunk.segments)}`;
 				model,
 				aiSettings,
 				schema: clipAnalysisSchema,
-				prompt: buildPrompt(chunk),
-				jsonInstructions: `{
-  "clips": [
-    {
-      "title": "string",
-      "hook": "string",
-      "summary": "string",
-      "rationale": "string",
-      "startSeconds": number,
-      "endSeconds": number,
-      "score": number,
-      "tags": ["string"]
-    }
-  ]
-}`,
+				promptParts: buildPrompt(chunk),
+				maxOutputTokens: 4096,
 			}),
 		);
 
@@ -551,7 +738,18 @@ export async function generateShortCandidatesFromTranscription(input: {
 			Math.max(4, Math.round(chunkDurationSeconds / 180)),
 		);
 
-		return `You are a short-form producer finding Shorts/Reels/TikTok cuts from a long-form source video.
+		const context = buildVideoTranscriptContext({
+			video: input.video,
+			analysisPrompt: input.video.analysisPrompt,
+			transcriptLabel: "TRANSCRIPT",
+			transcript: buildTimestampedTranscript(chunk.segments),
+			range: `${formatContentTimestamp(chunk.startSeconds)} - ${formatContentTimestamp(chunk.endSeconds)}`,
+		});
+
+		return {
+			cacheKey: buildPromptCacheKey(context),
+			context,
+			task: `You are a short-form producer finding Shorts/Reels/TikTok cuts from a long-form source video.
 
 Find clips that can stop a feed scroll quickly and deliver a complete payoff without extra context.
 
@@ -574,17 +772,22 @@ Short boundaries:
 - Keep every candidate tightly focused on one short-form idea.
 
 Return about ${targetClipCount} candidates from this batch, with higher scores only for shorts likely to perform in Shorts/Reels/TikTok.
-Only use timestamps inside this analysis batch:
-${formatContentTimestamp(chunk.startSeconds)} - ${formatContentTimestamp(chunk.endSeconds)}
-
-VIDEO TITLE:
-${input.video.title}
-
-OPTIONAL TOPIC GUIDANCE:
-${input.video.analysisPrompt || "No extra topic guidance supplied."}
-
-TRANSCRIPT:
-${buildTimestampedTranscript(chunk.segments)}`;
+Only use timestamps inside this analysis batch.`,
+			jsonInstructions: `{
+  "clips": [
+    {
+      "title": "string",
+      "hook": "string",
+      "summary": "string",
+      "rationale": "string",
+      "startSeconds": number,
+      "endSeconds": number,
+      "score": number,
+      "tags": ["string"]
+    }
+  ]
+}`,
+		};
 	};
 
 	const model = createContentAiLanguageModel(aiSettings);
@@ -601,21 +804,8 @@ ${buildTimestampedTranscript(chunk.segments)}`;
 				model,
 				aiSettings,
 				schema: shortAnalysisSchema,
-				prompt: buildPrompt(chunk),
-				jsonInstructions: `{
-  "clips": [
-    {
-      "title": "string",
-      "hook": "string",
-      "summary": "string",
-      "rationale": "string",
-      "startSeconds": number,
-      "endSeconds": number,
-      "score": number,
-      "tags": ["string"]
-    }
-  ]
-}`,
+				promptParts: buildPrompt(chunk),
+				maxOutputTokens: 4096,
 			}),
 		);
 
@@ -723,7 +913,16 @@ export async function generateClipAndChapterStrategyFromTranscription(input: {
 		Math.max(8, Math.round(transcriptDurationSeconds / 150)),
 	);
 
-	const prompt = `Create detailed YouTube chapters from the timestamped transcript.
+	const chapterContext = buildVideoTranscriptContext({
+		video: input.video,
+		analysisPrompt: input.video.analysisPrompt,
+		transcriptLabel: "TRANSCRIPT",
+		transcript: buildTimestampedTranscript(input.transcription.segments),
+	});
+	const promptParts = {
+		cacheKey: buildPromptCacheKey(chapterContext),
+		context: chapterContext,
+		task: `Create detailed YouTube chapters from the timestamped transcript.
 
 Use this process:
 1. Treat this as a viewer navigation aid, not a high-level summary. Capture question boundaries, named subtopics, demonstrations, examples, recommendations, audience questions, calls to action, and closing announcements.
@@ -741,30 +940,14 @@ Output requirements:
 - Use the same language as the transcript.
 - Each chapter summary should explain the specific subject covered in that segment.
 
-VIDEO TITLE:
-${input.video.title}
-
-OPTIONAL TOPIC GUIDANCE:
-${input.video.analysisPrompt || "No extra topic guidance supplied."}
-
 GENERATED CLIP ANCHORS:
 ${clips
 	.map(
 		(clip, index) =>
 			`${index}: [${formatContentTimestamp(clip.startSeconds)} - ${formatContentTimestamp(clip.endSeconds)}] ${clip.title} | ${clip.summary}`,
 	)
-	.join("\n")}
-
-TRANSCRIPT:
-${buildTimestampedTranscript(input.transcription.segments)}`;
-
-	const object = await withAiRetry(() =>
-		generateContentAiObject({
-			model,
-			aiSettings,
-			schema: chapterAnalysisSchema,
-			prompt,
-			jsonInstructions: `{
+	.join("\n")}`,
+		jsonInstructions: `{
   "chapters": [
     {
       "title": "string",
@@ -774,6 +957,15 @@ ${buildTimestampedTranscript(input.transcription.segments)}`;
     }
   ]
 }`,
+	};
+
+	const object = await withAiRetry(() =>
+		generateContentAiObject({
+			model,
+			aiSettings,
+			schema: chapterAnalysisSchema,
+			promptParts,
+			maxOutputTokens: 8192,
 		}),
 	);
 	await input.onProgress?.(100);
@@ -816,7 +1008,17 @@ export async function generateClipMetadataForTranscriptRange(input: {
 		throw new Error("No transcript text found for this clip range.");
 	}
 
-	const prompt = `Analyze this selected clip range and fill editor metadata for a short-form video clip.
+	const metadataContext = buildVideoTranscriptContext({
+		video: input.video,
+		analysisPrompt: input.video.analysisPrompt,
+		transcriptLabel: "TRANSCRIPT RANGE",
+		transcript: buildTimestampedTranscript(rangeSegments),
+		range: `${formatContentTimestamp(input.startSeconds)} - ${formatContentTimestamp(input.endSeconds)}`,
+	});
+	const promptParts = {
+		cacheKey: buildPromptCacheKey(metadataContext),
+		context: metadataContext,
+		task: `Analyze this selected clip range and fill editor metadata for a short-form video clip.
 
 Keep the timing fixed. Do not suggest new timestamps.
 Write only:
@@ -824,33 +1026,23 @@ Write only:
 - hook: one sentence that explains why this clip is worth watching
 - rationale: short reason this range is a useful clip
 - score: 0-100 based on standalone clip quality
-- tags: concise topical tags
-
-VIDEO TITLE:
-${input.video.title}
-
-OPTIONAL TOPIC GUIDANCE:
-${input.video.analysisPrompt || "No extra topic guidance supplied."}
-
-SELECTED RANGE:
-${formatContentTimestamp(input.startSeconds)} - ${formatContentTimestamp(input.endSeconds)}
-
-TRANSCRIPT RANGE:
-${buildTimestampedTranscript(rangeSegments)}`;
-
-	const object = await withAiRetry(() =>
-		generateContentAiObject({
-			model,
-			aiSettings,
-			schema: clipMetadataSchema,
-			prompt,
-			jsonInstructions: `{
+- tags: concise topical tags`,
+		jsonInstructions: `{
   "title": "string",
   "hook": "string",
   "rationale": "string",
   "score": number,
   "tags": ["string"]
 }`,
+	};
+
+	const object = await withAiRetry(() =>
+		generateContentAiObject({
+			model,
+			aiSettings,
+			schema: clipMetadataSchema,
+			promptParts,
+			maxOutputTokens: 2048,
 		}),
 	);
 
