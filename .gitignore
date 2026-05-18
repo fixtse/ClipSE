@@ -28,6 +28,8 @@ apps/web/next-env.d.ts
 # misc
 .DS_Store
 *.pem
+__pycache__/
+*.py[cod]
 .clipse-media-cache/
 .clipse-whisper-cache/
 
