@@ -40,6 +40,36 @@ ClipSE is licensed under AGPL-3.0-only.
 
 The default Docker Compose file uses GHCR images so users do not need to build ClipSE locally.
 
+## Quick Start
+
+Run ClipSE with Docker Compose without cloning the repository:
+
+```bash
+mkdir clipse && cd clipse
+curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/docker-compose.yml
+curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/.env.example
+cp .env.example .env
+docker compose up -d
+```
+
+Open `http://localhost:3000`, create a local account, then configure the AI provider and transcription model in the app settings.
+
+To stop ClipSE:
+
+```bash
+docker compose down
+```
+
+To remove persistent database and object-storage data:
+
+```bash
+docker compose down -v
+```
+
+## Full Repository Setup
+
+The same prebuilt images work from a local checkout:
+
 ```bash
 cp .env.example .env
 docker compose up -d
