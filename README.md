@@ -4,7 +4,7 @@
 [![Docker Images](https://github.com/fixtse/ClipSE/actions/workflows/docker.yml/badge.svg)](https://github.com/fixtse/ClipSE/actions/workflows/docker.yml)
 [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178c6.svg)](https://www.typescriptlang.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-10.x-f69220.svg)](https://pnpm.io/)
+[![pnpm](https://img.shields.io/badge/pnpm-11.1.2-f69220.svg)](https://pnpm.io/)
 
 Turn long videos into short, reviewable clips with a self-hosted workflow.
 
