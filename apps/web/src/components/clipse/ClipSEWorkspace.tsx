@@ -1357,8 +1357,7 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 		whisperProvider === "hailo"
 			? t("workspace.settings.whisperBackendDevices", {
 					devices:
-						whisperBackendHealth?.providers.hailo.devices.join(", ") ||
-						"none",
+						whisperBackendHealth?.providers.hailo.devices.join(", ") || "none",
 				})
 			: fasterWhisperBackendDetails;
 	const audioLanguageOptions = getAudioLanguageOptions(t);
@@ -1964,10 +1963,7 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 												const nextProvider = value as WhisperProvider;
 												setWhisperProvider(nextProvider);
 												setWhisperModel((currentModel) =>
-													isWhisperModelForProvider(
-														nextProvider,
-														currentModel,
-													)
+													isWhisperModelForProvider(nextProvider, currentModel)
 														? currentModel
 														: getDefaultWhisperModel(nextProvider),
 												);
