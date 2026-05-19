@@ -4,8 +4,6 @@ packages:
 
 allowBuilds:
   esbuild: true
-  browser-runtime: true
-  protobufjs: true
   sharp: true
 
 minimumReleaseAge: 7200
