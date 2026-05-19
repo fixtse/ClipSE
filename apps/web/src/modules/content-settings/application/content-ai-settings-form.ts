@@ -5,9 +5,11 @@ import type {
 import {
 	type ContentAiSettings,
 	WHISPER_MODELS,
+	WHISPER_PROVIDERS,
 } from "../domain/content-ai-settings.valueobject";
 
 export type WhisperModel = ContentAiSettings["whisperModel"];
+export type WhisperProvider = ContentAiSettings["whisperProvider"];
 
 export function getAudioLanguageOptions(
 	translate: (key: string) => string,
@@ -38,6 +40,22 @@ export function getWhisperModelOptions(
 		label: translate(`workspace.settings.whisperModels.${model}.label`),
 		description: translate(
 			`workspace.settings.whisperModels.${model}.description`,
+		),
+	}));
+}
+
+export function getWhisperProviderOptions(
+	translate: (key: string) => string,
+): ReadonlyArray<{
+	value: WhisperProvider;
+	label: string;
+	description: string;
+}> {
+	return WHISPER_PROVIDERS.map((provider) => ({
+		value: provider,
+		label: translate(`workspace.settings.whisperProviders.${provider}.label`),
+		description: translate(
+			`workspace.settings.whisperProviders.${provider}.description`,
 		),
 	}));
 }

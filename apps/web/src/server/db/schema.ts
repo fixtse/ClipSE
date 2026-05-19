@@ -185,6 +185,10 @@ export const contentAiSettings = createTable("content_ai_settings", (d) => ({
 		.varchar("codex_model", { length: 180 })
 		.notNull()
 		.default("gpt-5.3-codex"),
+	whisperProvider: d
+		.varchar("whisper_provider", { length: 40 })
+		.notNull()
+		.default("faster-whisper"),
 	whisperModel: d
 		.varchar("whisper_model", { length: 40 })
 		.notNull()

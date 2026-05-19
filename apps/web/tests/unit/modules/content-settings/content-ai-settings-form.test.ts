@@ -3,6 +3,7 @@ import {
 	getAudioLanguageOptions,
 	getProviderModelValue,
 	getWhisperModelOptions,
+	getWhisperProviderOptions,
 } from "~/modules/content-settings/application/content-ai-settings-form";
 
 describe("content AI settings form helpers", () => {
@@ -33,6 +34,43 @@ describe("content AI settings form helpers", () => {
 					"translated:workspace.settings.whisperModels.large-v3-turbo.label",
 				description:
 					"translated:workspace.settings.whisperModels.large-v3-turbo.description",
+			},
+			{
+				value: "whisper-tiny",
+				label: "translated:workspace.settings.whisperModels.whisper-tiny.label",
+				description:
+					"translated:workspace.settings.whisperModels.whisper-tiny.description",
+			},
+			{
+				value: "whisper-base",
+				label: "translated:workspace.settings.whisperModels.whisper-base.label",
+				description:
+					"translated:workspace.settings.whisperModels.whisper-base.description",
+			},
+			{
+				value: "whisper-small",
+				label:
+					"translated:workspace.settings.whisperModels.whisper-small.label",
+				description:
+					"translated:workspace.settings.whisperModels.whisper-small.description",
+			},
+		]);
+	});
+
+	it("builds whisper provider options from the supported provider list", () => {
+		expect(getWhisperProviderOptions(translate)).toEqual([
+			{
+				value: "faster-whisper",
+				label:
+					"translated:workspace.settings.whisperProviders.faster-whisper.label",
+				description:
+					"translated:workspace.settings.whisperProviders.faster-whisper.description",
+			},
+			{
+				value: "hailo",
+				label: "translated:workspace.settings.whisperProviders.hailo.label",
+				description:
+					"translated:workspace.settings.whisperProviders.hailo.description",
 			},
 		]);
 	});

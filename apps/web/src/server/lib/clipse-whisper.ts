@@ -14,8 +14,24 @@ import {
 const whisperResponseSchema = z.object({
 	text: z.string(),
 	language: z.string(),
-	duration: z.number().optional(),
+	duration: z.number().nullish(),
 	segments: z.array(ContentTranscriptionSegmentSchema),
+	provider: z.string().optional(),
+	elapsedSeconds: z.number().optional(),
+});
+const whisperBenchmarkResponseSchema = z.object({
+	results: z.array(
+		z.object({
+			provider: z.string(),
+			ok: z.boolean(),
+			elapsedSeconds: z.number(),
+			textLength: z.number().optional(),
+			segmentCount: z.number().optional(),
+			language: z.string().optional(),
+			duration: z.number().nullable().optional(),
+			error: z.string().optional(),
+		}),
+	),
 });
 
 const DEFAULT_WHISPER_CHUNK_SECONDS = 20 * 60;
@@ -27,7 +43,40 @@ export interface WhisperTranscriptionResult {
 	model: ContentAiSettings["whisperModel"];
 	segments: ContentTranscriptionSegment[];
 	durationSeconds?: number;
+	provider?: string;
+	elapsedSeconds?: number;
 }
+
+export type WhisperBenchmarkResult = z.infer<
+	typeof whisperBenchmarkResponseSchema
+>["results"][number];
+const whisperBackendHealthSchema = z.object({
+	status: z.string(),
+	defaultProvider: z.string(),
+	defaultModel: z.string(),
+	device: z.string(),
+	computeType: z.string(),
+	loaded: z.boolean(),
+	busy: z.boolean(),
+	providers: z.object({
+		"faster-whisper": z.object({
+			available: z.boolean(),
+			default: z.boolean().optional(),
+		}),
+		hailo: z.object({
+			available: z.boolean(),
+			devices: z.array(z.string()).default([]),
+			hailortcli: z.string().nullable().optional(),
+			pythonPackageAvailable: z.boolean().default(false),
+			pythonPackageError: z.string().nullable().optional(),
+			transcribeCommandConfigured: z.boolean().default(false),
+			model: z.string().optional(),
+			hefPathConfigured: z.boolean().default(false),
+		}),
+	}),
+});
+
+export type WhisperBackendHealth = z.infer<typeof whisperBackendHealthSchema>;
 
 export async function transcribeWithWhisperService(input: {
 	audioFilePath: string;
@@ -35,6 +84,7 @@ export async function transcribeWithWhisperService(input: {
 }): Promise<WhisperTranscriptionResult> {
 	const aiSettings = await contentAiSettingsRepository.get();
 	const model = aiSettings.whisperModel;
+	const provider = aiSettings.whisperProvider;
 	const chunkDurationSeconds = getWhisperChunkSeconds(
 		aiSettings.whisperChunkMinutes,
 	);
@@ -74,6 +124,7 @@ export async function transcribeWithWhisperService(input: {
 				const result = await transcribeAudioFile({
 					audioFilePath: chunk.filePath,
 					model,
+					provider,
 					languageHint: input.languageHint,
 					unloadAfter: isLastChunk,
 				});
@@ -102,6 +153,7 @@ export async function transcribeWithWhisperService(input: {
 async function transcribeAudioFile(input: {
 	audioFilePath: string;
 	model: ContentAiSettings["whisperModel"];
+	provider: ContentAiSettings["whisperProvider"];
 	languageHint?: string | null;
 	unloadAfter: boolean;
 }): Promise<z.infer<typeof whisperResponseSchema>> {
@@ -117,6 +169,7 @@ async function transcribeAudioFile(input: {
 	);
 	formData.set("model", input.model);
 	formData.set("unload_after", input.unloadAfter ? "true" : "false");
+	formData.set("provider", input.provider);
 
 	if (input.languageHint && input.languageHint !== "auto") {
 		formData.set("language", input.languageHint);
@@ -139,6 +192,65 @@ async function transcribeAudioFile(input: {
 	}
 
 	return whisperResponseSchema.parse(await response.json());
+}
+
+export async function benchmarkWhisperProviders(input: {
+	audioFilePath: string;
+	languageHint?: string | null;
+	providers?: readonly string[];
+}): Promise<WhisperBenchmarkResult[]> {
+	const aiSettings = await contentAiSettingsRepository.get();
+	const formData = new FormData();
+	const fileBuffer = await readFile(input.audioFilePath);
+	const fileName = basename(input.audioFilePath);
+	const providers = input.providers ?? ["faster-whisper", "hailo"];
+	const searchParams = new URLSearchParams();
+
+	for (const provider of providers) {
+		searchParams.append("providers", provider);
+	}
+
+	formData.set(
+		"file",
+		new File([fileBuffer], fileName, {
+			type: "audio/wav",
+		}),
+	);
+	formData.set("model", aiSettings.whisperModel);
+
+	if (input.languageHint && input.languageHint !== "auto") {
+		formData.set("language", input.languageHint);
+	}
+
+	const response = await fetch(
+		`${env.WHISPER_SERVICE_URL}/benchmark?${searchParams.toString()}`,
+		{
+			method: "POST",
+			body: formData,
+		},
+	);
+
+	if (!response.ok) {
+		const errorBody = await response.text();
+		const errorDetail = parseWhisperErrorDetail(errorBody) ?? errorBody;
+		throw new Error(
+			`Whisper benchmark failed with ${response.status}: ${errorDetail}`,
+		);
+	}
+
+	return whisperBenchmarkResponseSchema.parse(await response.json()).results;
+}
+
+export async function getWhisperBackendHealth(): Promise<WhisperBackendHealth> {
+	const response = await fetch(`${env.WHISPER_SERVICE_URL}/health`, {
+		cache: "no-store",
+	});
+
+	if (!response.ok) {
+		throw new Error(`Whisper health check failed with ${response.status}`);
+	}
+
+	return whisperBackendHealthSchema.parse(await response.json());
 }
 
 async function splitAudioIntoChunks(input: {
@@ -312,6 +424,13 @@ function mergeChunkTranscriptions(input: {
 			resolvedDurationSeconds > 0
 				? roundTimestamp(resolvedDurationSeconds)
 				: undefined,
+		provider: input.transcriptions[0]?.result.provider,
+		elapsedSeconds: roundTimestamp(
+			input.transcriptions.reduce(
+				(total, chunk) => total + (chunk.result.elapsedSeconds ?? 0),
+				0,
+			),
+		),
 	};
 }
 

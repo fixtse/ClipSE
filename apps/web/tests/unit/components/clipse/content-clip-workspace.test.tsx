@@ -145,6 +145,19 @@ vi.mock("~/trpc/react", () => ({
 				}),
 				invalidate: vi.fn(),
 			},
+			whisperBackend: {
+				useQuery: () => ({
+					data: {
+						providers: {
+							hailo: {
+								available: false,
+								devices: [],
+							},
+						},
+					},
+					error: null,
+				}),
+			},
 			dashboard: {
 				useQuery: () => ({
 					data: mocks.dashboardData,

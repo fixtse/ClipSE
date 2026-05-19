@@ -1,0 +1,39 @@
+FROM python:3.11-slim
+
+ARG HAILO_APPS_REF=main
+ARG INSTALL_LOCAL_HAILORT=false
+
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    git \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY hailo-packages/ /tmp/hailo-packages/
+RUN set -eux; \
+    if [ "${INSTALL_LOCAL_HAILORT}" = "true" ] && ls /tmp/hailo-packages/hailort_*.deb >/dev/null 2>&1; then \
+        apt-get update; \
+        apt-get install -y /tmp/hailo-packages/hailort_*.deb; \
+        rm -rf /var/lib/apt/lists/*; \
+    fi; \
+    if [ "${INSTALL_LOCAL_HAILORT}" = "true" ] && ls /tmp/hailo-packages/hailort-*.whl >/dev/null 2>&1; then \
+        pip install --no-cache-dir /tmp/hailo-packages/hailort-*.whl; \
+    fi
+
+RUN git clone --depth 1 --branch "${HAILO_APPS_REF}" https://github.com/hailo-ai/hailo-apps.git /opt/hailo-apps
+
+ENV PYTHONPATH="/opt/hailo-apps:${PYTHONPATH}" \
+    HAILO_TRANSCRIBE_COMMAND="python /app/hailo_whisper_runner.py --audio {audio} --model {model} --language {language} {hef_arg}" \
+    WHISPER_PROVIDER="hailo"
+
+COPY app.py hailo_whisper_runner.py ./
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

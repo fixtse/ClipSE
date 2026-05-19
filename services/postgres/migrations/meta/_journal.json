@@ -99,6 +99,13 @@
       "when": 1779152931971,
       "tag": "0013_strong_kitty_pryde",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1779154973097,
+      "tag": "0014_outstanding_boomer",
+      "breakpoints": true
     }
   ]
 }

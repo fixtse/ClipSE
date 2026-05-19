@@ -87,6 +87,71 @@ docker run --rm --gpus all nvidia/cuda:12.6.0-base-ubuntu24.04 nvidia-smi
 
 Typical causes are missing NVIDIA drivers, missing NVIDIA Container Toolkit, or running Docker from an environment without GPU access.
 
+### Hailo-10H Whisper provider
+
+Hailo support is opt-in because the host must expose HailoRT and the accelerator device to the Whisper container.
+
+License notes:
+
+- HailoRT's public repository states that `libhailort`, `pyhailort`, and `hailortcli` are MIT licensed, while `hailonet` is LGPL 2.1.
+- The public PCIe driver repository is GPLv2.
+- The Hailo-10H firmware license is separate and allows binary redistribution only under its stated product/use restrictions.
+- The ASUS support package `UGen300_M2_5.3.0_driver_Linux_amd64.zip` should be treated as a vendor package that users download from ASUS support, not something ClipSE redistributes.
+
+The public `clipse-whisper-hailo` image is built in CI and contains ClipSE's runner plus Hailo Apps integration. It does not redistribute the ASUS driver zip or Hailo-10H firmware. If your Hailo/ASUS license permits private redistribution inside your own registry, put these files in `services/whisper/hailo-packages/` and build with `INSTALL_LOCAL_HAILORT=true`:
+
+- `hailort_<version>_<arch>.deb`
+- `hailort-<version>-cp311-cp311-linux_<arch>.whl`
+
+The PCIe driver package is always installed on the host, not inside the container.
+
+Pure Linux host setup:
+
+```bash
+# Install the HailoRT driver/runtime package supplied by Hailo or the module vendor.
+./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
+sudo reboot
+
+ls -l /dev/hailo*
+hailortcli scan
+
+WHISPER_PROVIDER=hailo \
+HAILO_DEVICE=/dev/hailo0 \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
+```
+
+WSL setup:
+
+```bash
+# Run Docker from the WSL distro where the device is visible.
+ls -l /dev/hailo*
+hailortcli scan
+
+WHISPER_PROVIDER=hailo \
+HAILO_DEVICE=/dev/hailo0 \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
+```
+
+If `/dev/hailo0` is not visible inside WSL, Docker cannot pass the accelerator through. Install the vendor Windows/WSL driver stack or run ClipSE on pure Linux.
+
+ClipSE's Hailo image runs `services/whisper/hailo_whisper_runner.py` automatically. It converts incoming audio to mono 16 kHz little-endian float32 and calls PyHailoRT `Speech2Text.generate_all_segments`. Set `HAILO_HOST_LIB_DIR`, `HAILO_HOST_PYTHON_DIR`, and `HAILO_HOST_BIN_DIR` if your host HailoRT install uses different paths. For ASUS' amd64 zip, the kernel driver is compiled on the host by the script above; the container still needs HailoRT/PyHailoRT available through host mounts or a private image. Set `HAILO_WHISPER_HEF_PATH` only when you want to use a local HEF file instead of Hailo Apps resource resolution.
+
+Private image build with licensed packages:
+
+```bash
+INSTALL_LOCAL_HAILORT=true \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+```
+
+Health and benchmark checks:
+
+```bash
+curl http://localhost:8000/health
+curl -F file=@sample.wav "http://localhost:8000/benchmark?providers=faster-whisper&providers=hailo"
+```
+
+After the service is healthy, open ClipSE AI Settings and select `Hailo-10H` as the transcription backend. The settings dialog shows the same backend detection state from `/health`.
+
 ### Garage initialization fails
 
 `garage-init` now logs each setup step. Inspect its output:

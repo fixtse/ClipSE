@@ -1,0 +1,23 @@
+services:
+  whisper:
+    image: ${CLIPSE_WHISPER_HAILO_IMAGE:-ghcr.io/fixtse/clipse-whisper-hailo:latest}
+    runtime: runc
+    build:
+      context: ./services/whisper
+      dockerfile: Dockerfile.hailo
+      args:
+        HAILO_APPS_REF: ${HAILO_APPS_REF:-main}
+        INSTALL_LOCAL_HAILORT: ${INSTALL_LOCAL_HAILORT:-false}
+    environment:
+      WHISPER_PROVIDER: ${WHISPER_PROVIDER:-hailo}
+      HAILO_WHISPER_MODEL: ${HAILO_WHISPER_MODEL:-whisper-base}
+      HAILO_WHISPER_HEF_PATH: ${HAILO_WHISPER_HEF_PATH:-}
+      HAILO_COMMAND_TIMEOUT_SECONDS: ${HAILO_COMMAND_TIMEOUT_SECONDS:-900}
+      LD_LIBRARY_PATH: /usr/lib/hailo:/usr/local/lib:${LD_LIBRARY_PATH:-}
+      PYTHONPATH: /opt/hailo/hailo_platform:/usr/lib/python3/dist-packages:${PYTHONPATH:-}
+    devices:
+      - ${HAILO_DEVICE:-/dev/hailo0}:${HAILO_DEVICE:-/dev/hailo0}
+    volumes:
+      - ${HAILO_HOST_LIB_DIR:-/usr/lib/hailo}:/usr/lib/hailo:ro
+      - ${HAILO_HOST_BIN_DIR:-/usr/bin}:/host/usr/bin:ro
+      - ${HAILO_HOST_PYTHON_DIR:-/opt/hailo/hailo_platform}:/opt/hailo/hailo_platform:ro

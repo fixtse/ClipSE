@@ -42,6 +42,7 @@ import type {
 import {
 	getAudioLanguageOptions,
 	getWhisperModelOptions,
+	getWhisperProviderOptions,
 } from "~/modules/content-settings/application/content-ai-settings-form";
 import type { ContentAiProvider } from "~/modules/content-settings/domain/content-ai-models";
 import type { ContentAiSettings } from "~/modules/content-settings/domain/content-ai-settings.valueobject";
@@ -144,6 +145,7 @@ type GeneratedClipMetadataResult = Pick<
 >;
 type IntakeSourceTab = "file" | "url";
 type WhisperModel = ContentAiSettings["whisperModel"];
+type WhisperProvider = ContentAiSettings["whisperProvider"];
 type RenderOptionsState = {
 	aspectMode: ClipSERenderAspectMode;
 	burnSubtitles: boolean;
@@ -225,6 +227,8 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 	const [openrouterApiKey, setOpenrouterApiKey] = useState("");
 	const [openrouterModel, setOpenrouterModel] = useState("");
 	const [codexModel, setCodexModel] = useState("gpt-5.3-codex");
+	const [whisperProvider, setWhisperProvider] =
+		useState<WhisperProvider>("faster-whisper");
 	const [whisperModel, setWhisperModel] = useState<WhisperModel>("medium");
 	const [whisperChunkingEnabled, setWhisperChunkingEnabled] = useState(false);
 	const [whisperChunkMinutes, setWhisperChunkMinutes] = useState(20);
@@ -284,6 +288,14 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 			provider: aiProvider,
 		},
 		{
+			retry: false,
+		},
+	);
+	const whisperBackendQuery = api.contentClip.whisperBackend.useQuery(
+		undefined,
+		{
+			enabled: aiSettingsOpen,
+			refetchInterval: aiSettingsOpen ? 5000 : false,
 			retry: false,
 		},
 	);
@@ -353,6 +365,7 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 		setOpenrouterApiKey(settings.openrouterApiKey);
 		setOpenrouterModel(settings.openrouterModel);
 		setCodexModel(settings.codexModel);
+		setWhisperProvider(settings.whisperProvider);
 		setWhisperModel(settings.whisperModel);
 		setWhisperChunkingEnabled(settings.whisperChunkingEnabled);
 		setWhisperChunkMinutes(settings.whisperChunkMinutes);
@@ -891,6 +904,7 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 			openrouterApiKey,
 			openrouterModel,
 			codexModel,
+			whisperProvider,
 			whisperModel,
 			whisperChunkingEnabled,
 			whisperChunkMinutes: boundedWhisperChunkMinutes,
@@ -1269,6 +1283,10 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 
 	const modelOptions = aiModelsQuery.data ?? [];
 	const whisperModelOptions = getWhisperModelOptions(t);
+	const whisperProviderOptions = getWhisperProviderOptions(t);
+	const selectedWhisperProviderOption =
+		whisperProviderOptions.find((option) => option.value === whisperProvider) ??
+		whisperProviderOptions[0];
 	const selectedWhisperModelOption =
 		whisperModelOptions.find((option) => option.value === whisperModel) ??
 		whisperModelOptions[0];
@@ -1867,6 +1885,56 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 											</p>
 											<p className="text-slate-400 text-sm">
 												{t("workspace.settings.whisperDescription")}
+											</p>
+										</div>
+										<Tabs
+											className="w-full"
+											onValueChange={(value) =>
+												setWhisperProvider(value as WhisperProvider)
+											}
+											value={whisperProvider}
+										>
+											<TabsList className="grid w-full grid-cols-2 border border-white/10 bg-slate-900/75">
+												{whisperProviderOptions.map((option) => (
+													<TabsTrigger key={option.value} value={option.value}>
+														{option.label}
+													</TabsTrigger>
+												))}
+											</TabsList>
+											<p className="mt-2 min-h-5 text-slate-400 text-xs">
+												{selectedWhisperProviderOption?.description}
+											</p>
+										</Tabs>
+										<div className="rounded-md border border-white/10 bg-slate-950/50 p-3 text-xs">
+											<div className="flex items-center justify-between gap-3">
+												<span className="font-medium text-slate-300">
+													{t("workspace.settings.whisperBackendStatus")}
+												</span>
+												<Badge
+													className={cn(
+														"border-white/10",
+														whisperBackendQuery.data?.providers.hailo.available
+															? "bg-emerald-400/10 text-emerald-100"
+															: "bg-slate-800 text-slate-300",
+													)}
+													variant="outline"
+												>
+													{whisperBackendQuery.data?.providers.hailo.available
+														? t("workspace.settings.whisperBackendHailoReady")
+														: t(
+																"workspace.settings.whisperBackendHailoUnavailable",
+															)}
+												</Badge>
+											</div>
+											<p className="mt-2 text-slate-400">
+												{whisperBackendQuery.error
+													? whisperBackendQuery.error.message
+													: t("workspace.settings.whisperBackendDevices", {
+															devices:
+																whisperBackendQuery.data?.providers.hailo.devices.join(
+																	", ",
+																) || "none",
+														})}
 											</p>
 										</div>
 										<Tabs

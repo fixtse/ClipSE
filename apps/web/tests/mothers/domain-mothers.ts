@@ -267,6 +267,7 @@ export const ContentAiSettingsMother = {
 			openrouterApiKey: "openrouter-key",
 			openrouterModel: "openrouter/model",
 			codexModel: "gpt-5.3-codex",
+			whisperProvider: "faster-whisper",
 			whisperModel: "medium",
 			whisperChunkingEnabled: false,
 			whisperChunkMinutes: 20,

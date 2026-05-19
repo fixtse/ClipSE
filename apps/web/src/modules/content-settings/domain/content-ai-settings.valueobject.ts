@@ -1,7 +1,14 @@
 import { z } from "zod";
 import { CONTENT_AI_PROVIDERS } from "./content-ai-models";
 
-export const WHISPER_MODELS = ["medium", "large-v3-turbo"] as const;
+export const WHISPER_MODELS = [
+	"medium",
+	"large-v3-turbo",
+	"whisper-tiny",
+	"whisper-base",
+	"whisper-small",
+] as const;
+export const WHISPER_PROVIDERS = ["faster-whisper", "hailo"] as const;
 
 export const ContentAiSettingsSchema = z.object({
 	id: z.number().int().positive(),
@@ -14,6 +21,7 @@ export const ContentAiSettingsSchema = z.object({
 	openrouterApiKey: z.string(),
 	openrouterModel: z.string().max(180),
 	codexModel: z.string().min(1).max(180),
+	whisperProvider: z.enum(WHISPER_PROVIDERS),
 	whisperModel: z.enum(WHISPER_MODELS),
 	whisperChunkingEnabled: z.boolean(),
 	whisperChunkMinutes: z.number().int().min(1).max(120),
@@ -33,6 +41,7 @@ export const UpdateContentAiSettingsSchema = z.object({
 	openrouterApiKey: z.string().optional(),
 	openrouterModel: z.string().max(180),
 	codexModel: z.string().min(1).max(180),
+	whisperProvider: z.enum(WHISPER_PROVIDERS).default("faster-whisper"),
 	whisperModel: z.enum(WHISPER_MODELS).default("medium"),
 	whisperChunkingEnabled: z.boolean().default(false),
 	whisperChunkMinutes: z.number().int().min(1).max(120).default(20),

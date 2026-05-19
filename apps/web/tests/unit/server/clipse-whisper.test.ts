@@ -36,6 +36,7 @@ describe("transcribeWithWhisperService", () => {
 	it("sends and returns the Whisper model selected in settings", async () => {
 		getSettingsMock.mockResolvedValueOnce({
 			whisperModel: "large-v3-turbo",
+			whisperProvider: "faster-whisper",
 			whisperChunkingEnabled: false,
 			whisperChunkMinutes: 20,
 		});
@@ -63,6 +64,7 @@ describe("transcribeWithWhisperService", () => {
 		const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
 			const body = init?.body as FormData;
 			expect(body.get("model")).toBe("large-v3-turbo");
+			expect(body.get("provider")).toBe("faster-whisper");
 			expect(body.get("unload_after")).toBe("true");
 
 			return new Response(
@@ -108,6 +110,7 @@ describe("transcribeWithWhisperService", () => {
 		vi.stubEnv("CLIPSE_WHISPER_CHUNK_OVERLAP_SECONDS", "5");
 		getSettingsMock.mockResolvedValueOnce({
 			whisperModel: "medium",
+			whisperProvider: "faster-whisper",
 			whisperChunkingEnabled: true,
 			whisperChunkMinutes: 1,
 		});

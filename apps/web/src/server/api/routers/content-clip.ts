@@ -11,6 +11,7 @@ import { contentTranscriptionRepository } from "~/modules/content-transcriptions
 import { getClipSEDashboard } from "~/modules/content-videos/application/get-content-clip-dashboard";
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { getWhisperBackendHealth } from "~/server/lib/clipse-whisper";
 
 export const contentClipRouter = createTRPCRouter({
 	aiSettings: protectedProcedure.query(async () => {
@@ -25,6 +26,9 @@ export const contentClipRouter = createTRPCRouter({
 		.query(async ({ input }) => {
 			return listContentAiModels(contentAiSettingsRepository, input.provider);
 		}),
+	whisperBackend: protectedProcedure.query(async () => {
+		return getWhisperBackendHealth();
+	}),
 	dashboard: protectedProcedure
 		.input(
 			z

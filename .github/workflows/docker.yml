@@ -72,6 +72,7 @@ jobs:
             append_image "clipse-worker" "." "apps/worker/Dockerfile"
             append_image "clipse-migrate" "." "services/postgres/Dockerfile.migrate"
             append_image "clipse-whisper" "./services/whisper" "./services/whisper/Dockerfile"
+            append_image "clipse-whisper-hailo" "./services/whisper" "./services/whisper/Dockerfile.hailo"
             append_image "clipse-garage-init" "." "services/garage/Dockerfile.init"
           elif ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null || ! git cat-file -e "${SHA}^{commit}" 2>/dev/null; then
             echo "Unable to resolve one of the comparison commits; building all images." > changed-files.txt
@@ -79,6 +80,7 @@ jobs:
             append_image "clipse-worker" "." "apps/worker/Dockerfile"
             append_image "clipse-migrate" "." "services/postgres/Dockerfile.migrate"
             append_image "clipse-whisper" "./services/whisper" "./services/whisper/Dockerfile"
+            append_image "clipse-whisper-hailo" "./services/whisper" "./services/whisper/Dockerfile.hailo"
             append_image "clipse-garage-init" "." "services/garage/Dockerfile.init"
           else
             git diff --name-only "$BEFORE_SHA" "$SHA" > changed-files.txt
@@ -101,6 +103,7 @@ jobs:
 
             if changed_any '^(services/whisper/)'; then
               append_image "clipse-whisper" "./services/whisper" "./services/whisper/Dockerfile"
+              append_image "clipse-whisper-hailo" "./services/whisper" "./services/whisper/Dockerfile.hailo"
             fi
 
             if changed_any '^(services/garage/)'; then

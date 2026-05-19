@@ -111,10 +111,26 @@ export const messages = {
 				whisperTitle: "Transcription model",
 				whisperDescription:
 					"Choose the Whisper model used for server-side transcription.",
+				whisperBackendStatus: "Backend detection",
+				whisperBackendHailoReady: "Hailo ready",
+				whisperBackendHailoUnavailable: "Hailo unavailable",
+				whisperBackendDevices: "Detected Hailo devices: {devices}",
 				whisperChunkingTitle: "Chunk long transcriptions",
 				whisperChunkingDescription:
 					"Process long audio in overlapping 20-minute chunks. Leave off for maximum wording consistency.",
 				whisperChunkMinutes: "Chunk length in minutes",
+				whisperProviders: {
+					"faster-whisper": {
+						label: "GPU / CPU",
+						description:
+							"Use the existing faster-whisper backend with CUDA or CPU.",
+					},
+					hailo: {
+						label: "Hailo-10H",
+						description:
+							"Use the UGen300 M2 / Hailo-10H Speech2Text backend when the device is available.",
+					},
+				},
 				whisperModels: {
 					medium: {
 						label: "Medium",
@@ -125,6 +141,20 @@ export const messages = {
 						label: "Large v3 turbo",
 						description:
 							"Faster large-v3 variant with stronger transcription quality.",
+					},
+					"whisper-tiny": {
+						label: "Hailo Tiny",
+						description: "Smallest Hailo Whisper model for quick local tests.",
+					},
+					"whisper-base": {
+						label: "Hailo Base",
+						description:
+							"Recommended starting point for UGen300 M2 transcription.",
+					},
+					"whisper-small": {
+						label: "Hailo Small",
+						description:
+							"Larger Hailo Whisper model when accuracy matters more than speed.",
 					},
 				},
 				save: "Save AI Settings",
@@ -492,10 +522,25 @@ export const messages = {
 				whisperTitle: "Modelo de transcripcion",
 				whisperDescription:
 					"Elige el modelo Whisper usado para transcribir en el servidor.",
+				whisperBackendStatus: "Deteccion del backend",
+				whisperBackendHailoReady: "Hailo listo",
+				whisperBackendHailoUnavailable: "Hailo no disponible",
+				whisperBackendDevices: "Dispositivos Hailo detectados: {devices}",
 				whisperChunkingTitle: "Dividir transcripciones largas",
 				whisperChunkingDescription:
 					"Procesa audios largos en fragmentos superpuestos de 20 minutos. Dejalo apagado para maxima consistencia de texto.",
 				whisperChunkMinutes: "Duracion del fragmento en minutos",
+				whisperProviders: {
+					"faster-whisper": {
+						label: "GPU / CPU",
+						description: "Usa el backend actual faster-whisper con CUDA o CPU.",
+					},
+					hailo: {
+						label: "Hailo-10H",
+						description:
+							"Usa el backend Speech2Text de UGen300 M2 / Hailo-10H cuando el dispositivo este disponible.",
+					},
+				},
 				whisperModels: {
 					medium: {
 						label: "Medium",
@@ -506,6 +551,21 @@ export const messages = {
 						label: "Large v3 turbo",
 						description:
 							"Variante large-v3 mas rapida con mejor calidad de transcripcion.",
+					},
+					"whisper-tiny": {
+						label: "Hailo Tiny",
+						description:
+							"Modelo Hailo Whisper mas pequeno para pruebas locales rapidas.",
+					},
+					"whisper-base": {
+						label: "Hailo Base",
+						description:
+							"Punto de partida recomendado para transcripcion con UGen300 M2.",
+					},
+					"whisper-small": {
+						label: "Hailo Small",
+						description:
+							"Modelo Hailo Whisper mas grande cuando importa mas la precision que la velocidad.",
 					},
 				},
 				save: "Guardar ajustes de IA",

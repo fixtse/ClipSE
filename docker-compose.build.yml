@@ -9,6 +9,12 @@ services:
       context: ./services/whisper
       dockerfile: Dockerfile
 
+  whisper-hailo:
+    image: ${CLIPSE_WHISPER_HAILO_IMAGE:-ghcr.io/fixtse/clipse-whisper-hailo:latest}
+    build:
+      context: ./services/whisper
+      dockerfile: Dockerfile.hailo
+
   app:
     build:
       context: .

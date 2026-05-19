@@ -1,0 +1,1 @@
+ALTER TABLE "content_ai_settings" ADD COLUMN "whisper_provider" varchar(40) DEFAULT 'faster-whisper' NOT NULL;

@@ -6,7 +6,10 @@ import type {
 	ContentAiSettings,
 	UpdateContentAiSettingsInput,
 } from "../domain/content-ai-settings.valueobject";
-import { WHISPER_MODELS } from "../domain/content-ai-settings.valueobject";
+import {
+	WHISPER_MODELS,
+	WHISPER_PROVIDERS,
+} from "../domain/content-ai-settings.valueobject";
 
 const SETTINGS_ID = 1;
 const DEFAULT_WHISPER_CHUNK_MINUTES = 20;
@@ -17,6 +20,16 @@ function normalizeWhisperModel(
 	return WHISPER_MODELS.includes(model as ContentAiSettings["whisperModel"])
 		? (model as ContentAiSettings["whisperModel"])
 		: "medium";
+}
+
+function normalizeWhisperProvider(
+	provider: string,
+): ContentAiSettings["whisperProvider"] {
+	return WHISPER_PROVIDERS.includes(
+		provider as ContentAiSettings["whisperProvider"],
+	)
+		? (provider as ContentAiSettings["whisperProvider"])
+		: "faster-whisper";
 }
 
 export class ContentAiSettingsRepository
@@ -45,6 +58,7 @@ export class ContentAiSettingsRepository
 				openrouterApiKey: "",
 				openrouterModel: "",
 				codexModel: "gpt-5.3-codex",
+				whisperProvider: "faster-whisper",
 				whisperModel: "medium",
 				whisperChunkingEnabled: false,
 				whisperChunkMinutes: DEFAULT_WHISPER_CHUNK_MINUTES,
@@ -77,6 +91,7 @@ export class ContentAiSettingsRepository
 				openrouterApiKey: input.openrouterApiKey?.trim() ?? "",
 				openrouterModel: input.openrouterModel.trim(),
 				codexModel: input.codexModel.trim(),
+				whisperProvider: input.whisperProvider,
 				whisperModel: input.whisperModel,
 				whisperChunkingEnabled: input.whisperChunkingEnabled,
 				whisperChunkMinutes: input.whisperChunkMinutes,
@@ -104,6 +119,7 @@ export class ContentAiSettingsRepository
 			openrouterApiKey: row.openrouterApiKey,
 			openrouterModel: row.openrouterModel,
 			codexModel: row.codexModel,
+			whisperProvider: normalizeWhisperProvider(row.whisperProvider),
 			whisperModel: normalizeWhisperModel(row.whisperModel),
 			whisperChunkingEnabled: row.whisperChunkingEnabled,
 			whisperChunkMinutes:

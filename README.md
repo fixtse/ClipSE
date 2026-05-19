@@ -142,6 +142,14 @@ Use `pnpm db:generate` after changing the Drizzle schema in `apps/web/src/server
 - Default device: `cuda` with `float16`.
 - The model is loaded only for an active transcription request and released after the request finishes.
 - Docker host prerequisites still apply: NVIDIA drivers plus Docker GPU support.
+- Hailo-10H is available as an optional Whisper provider through `docker-compose.hailo.yml`.
+  Install the host PCIe driver from the ASUS amd64 zip and make HailoRT/PyHailoRT available to the container, then run:
+
+```bash
+./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
+WHISPER_PROVIDER=hailo docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
+curl http://localhost:8000/health
+```
 
 ## Architecture
 
