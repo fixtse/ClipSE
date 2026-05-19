@@ -24,11 +24,25 @@ MODEL_DEVICE = os.environ.get("WHISPER_DEVICE", "cuda")
 MODEL_COMPUTE_TYPE = os.environ.get("WHISPER_COMPUTE_TYPE", "float16")
 HAILO_WHISPER_MODEL = os.environ.get("HAILO_WHISPER_MODEL", "whisper-base")
 HAILO_WHISPER_HEF_PATH = os.environ.get("HAILO_WHISPER_HEF_PATH", "")
+HAILO_VLM_MODEL = os.environ.get("HAILO_VLM_MODEL", "qwen2-vl-2b")
+HAILO_VLM_HEF_PATH = os.environ.get("HAILO_VLM_HEF_PATH", "")
 HAILO_TRANSCRIBE_COMMAND = os.environ.get(
     "HAILO_TRANSCRIBE_COMMAND",
     "python /app/hailo_whisper_runner.py --audio {audio} --model {model} --language {language} {hef_arg}",
 )
+HAILO_VLM_FOCUS_COMMAND = os.environ.get(
+    "HAILO_VLM_FOCUS_COMMAND",
+    "python /app/hailo_vlm_focus_runner.py --video {video} --model {model} --start {start} --end {end} --sample-interval {sample_interval} --max-samples {max_samples} {hef_arg} {optimize_memory_arg}",
+)
 HAILO_COMMAND_TIMEOUT_SECONDS = int(os.environ.get("HAILO_COMMAND_TIMEOUT_SECONDS", "900"))
+HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS = float(
+    os.environ.get("HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS", "1.0")
+)
+HAILO_VLM_FOCUS_MAX_SAMPLES = int(os.environ.get("HAILO_VLM_FOCUS_MAX_SAMPLES", "8"))
+HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE = (
+    os.environ.get("HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE", "true").lower()
+    in ("1", "true", "yes")
+)
 MODEL_LOCK = Lock()
 MODEL_CACHE: dict[str, WhisperModel] = {}
 SUPPORTED_PROVIDERS = {"faster-whisper", "hailo"}
@@ -104,6 +118,11 @@ def detect_hailo_runtime() -> dict[str, Any]:
         "transcribeCommandConfigured": bool(HAILO_TRANSCRIBE_COMMAND),
         "model": HAILO_WHISPER_MODEL,
         "hefPathConfigured": bool(HAILO_WHISPER_HEF_PATH),
+        "vlm": {
+            "model": HAILO_VLM_MODEL,
+            "hefPathConfigured": bool(HAILO_VLM_HEF_PATH),
+            "focusCommandConfigured": bool(HAILO_VLM_FOCUS_COMMAND),
+        },
     }
 
 
@@ -292,6 +311,71 @@ async def benchmark(
             pass
 
 
+@app.post("/focus-detections")
+async def focus_detections(
+    file: UploadFile = File(...),
+    start_seconds: float = Form(default=0),
+    end_seconds: float = Form(default=1),
+    model: str = Form(default=HAILO_VLM_MODEL),
+    sample_interval_seconds: float = Form(default=HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS),
+    max_samples: int = Form(default=HAILO_VLM_FOCUS_MAX_SAMPLES),
+) -> dict:
+    runtime = detect_hailo_runtime()
+    if not runtime["available"]:
+        raise HTTPException(status_code=503, detail="Hailo runtime was not detected")
+    if not HAILO_VLM_FOCUS_COMMAND:
+        raise HTTPException(
+            status_code=503,
+            detail="HAILO_VLM_FOCUS_COMMAND is required for Hailo VLM focus detection",
+        )
+
+    suffix = Path(file.filename or "video.mp4").suffix or ".mp4"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+        temp_file.write(await file.read())
+        temp_path = temp_file.name
+
+    try:
+        command = HAILO_VLM_FOCUS_COMMAND.format(
+            video=temp_path,
+            model=model or HAILO_VLM_MODEL,
+            start=f"{start_seconds:.3f}",
+            end=f"{end_seconds:.3f}",
+            sample_interval=f"{sample_interval_seconds:.3f}",
+            max_samples=max_samples,
+            hef_path=HAILO_VLM_HEF_PATH,
+            hef_arg=f"--hef-path {HAILO_VLM_HEF_PATH}" if HAILO_VLM_HEF_PATH else "",
+            optimize_memory_arg=(
+                "--optimize-memory-on-device" if HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE else ""
+            ),
+        )
+        result = subprocess.run(
+            command,
+            shell=True,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=HAILO_COMMAND_TIMEOUT_SECONDS,
+        )
+        if result.returncode != 0:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Hailo VLM focus detection failed: {result.stderr.strip() or result.stdout.strip()}",
+            )
+        try:
+            payload = json.loads(result.stdout)
+        except json.JSONDecodeError as error:
+            raise HTTPException(
+                status_code=503,
+                detail="Hailo VLM focus detection returned invalid JSON",
+            ) from error
+        return validate_focus_payload(payload)
+    finally:
+        try:
+            os.unlink(temp_path)
+        except FileNotFoundError:
+            pass
+
+
 def normalize_provider(provider: str) -> str:
     provider_name = (provider or DEFAULT_PROVIDER).strip().lower()
     if provider_name not in SUPPORTED_PROVIDERS:
@@ -415,4 +499,19 @@ def validate_transcription_payload(payload: Any) -> dict:
         "language": payload.get("language") or "unknown",
         "duration": payload.get("duration"),
         "segments": segments,
+    }
+
+
+def validate_focus_payload(payload: Any) -> dict:
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=503, detail="Hailo VLM returned invalid JSON")
+    detections = payload.get("detections")
+    if not isinstance(detections, list):
+        raise HTTPException(
+            status_code=503,
+            detail="Hailo VLM response must include a detections array",
+        )
+    return {
+        "detections": detections,
+        "detectorBackend": "hailo-vlm",
     }

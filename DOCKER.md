@@ -152,6 +152,14 @@ curl -F file=@sample.wav "http://localhost:8000/benchmark?providers=faster-whisp
 
 After the service is healthy, open ClipSE AI Settings and select `Hailo-10H` as the transcription backend. The settings dialog shows the same backend detection state from `/health`.
 
+To use Hailo VLM for vertical short face/person focus detection, set:
+
+```bash
+CLIPSE_FOCUS_PROVIDER=hailo-vlm
+```
+
+The worker will call the Hailo service `POST /focus-detections` before the local YOLO/OpenCV detector. If Hailo is unavailable or returns no detections, ClipSE falls back to the existing local detector. The VLM runner samples frames, converts each image to the model input shape, asks for the primary face/person location, and returns the same focus detection shape used by the crop renderer.
+
 ### Garage initialization fails
 
 `garage-init` now logs each setup step. Inspect its output:

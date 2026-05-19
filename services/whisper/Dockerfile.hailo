@@ -30,9 +30,10 @@ RUN git clone --depth 1 --branch "${HAILO_APPS_REF}" https://github.com/hailo-ai
 
 ENV PYTHONPATH="/opt/hailo-apps:${PYTHONPATH}" \
     HAILO_TRANSCRIBE_COMMAND="python /app/hailo_whisper_runner.py --audio {audio} --model {model} --language {language} {hef_arg}" \
+    HAILO_VLM_FOCUS_COMMAND="python /app/hailo_vlm_focus_runner.py --video {video} --model {model} --start {start} --end {end} --sample-interval {sample_interval} --max-samples {max_samples} {hef_arg} {optimize_memory_arg}" \
     WHISPER_PROVIDER="hailo"
 
-COPY app.py hailo_whisper_runner.py ./
+COPY app.py hailo_whisper_runner.py hailo_vlm_focus_runner.py ./
 
 EXPOSE 8000
 

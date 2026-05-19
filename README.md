@@ -151,6 +151,8 @@ WHISPER_PROVIDER=hailo docker compose -f docker-compose.yml -f docker-compose.ha
 curl http://localhost:8000/health
 ```
 
+Set `CLIPSE_FOCUS_PROVIDER=hailo-vlm` to use the UGen300 M2 VLM backend for vertical short face/person focus detection before falling back to the existing local detector.
+
 ## Architecture
 
 - `apps/web/src/app` - Next.js App Router pages and route handlers

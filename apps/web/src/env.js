@@ -16,6 +16,10 @@ export const env = createEnv({
 			.enum(["development", "test", "production"])
 			.default("development"),
 		WHISPER_SERVICE_URL: z.string().url().default("http://whisper:8000"),
+		CLIPSE_FOCUS_PROVIDER: z
+			.enum(["auto", "local", "hailo-vlm"])
+			.default("auto"),
+		CLIPSE_HAILO_SERVICE_URL: z.string().url().default("http://whisper:8000"),
 		CLIPSE_S3_ENDPOINT: z.string().url().default("http://garage:3900"),
 		CLIPSE_S3_PUBLIC_ENDPOINT: z
 			.string()
@@ -65,6 +69,8 @@ export const env = createEnv({
 		DATABASE_URL: process.env.DATABASE_URL,
 		NODE_ENV: process.env.NODE_ENV,
 		WHISPER_SERVICE_URL: process.env.WHISPER_SERVICE_URL,
+		CLIPSE_FOCUS_PROVIDER: process.env.CLIPSE_FOCUS_PROVIDER,
+		CLIPSE_HAILO_SERVICE_URL: process.env.CLIPSE_HAILO_SERVICE_URL,
 		CLIPSE_S3_ENDPOINT: process.env.CLIPSE_S3_ENDPOINT,
 		CLIPSE_S3_PUBLIC_ENDPOINT: process.env.CLIPSE_S3_PUBLIC_ENDPOINT,
 		CLIPSE_S3_REGION: process.env.CLIPSE_S3_REGION,

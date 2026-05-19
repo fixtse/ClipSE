@@ -1,8 +1,11 @@
 import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { z } from "zod";
 
 const execFileAsync = promisify(execFile);
+const DEFAULT_HAILO_SERVICE_URL = "http://whisper:8000";
 
 export interface FocusDetection {
 	timestampSeconds: number;
@@ -26,8 +29,33 @@ export type DetectorBackend =
 	| "opencv"
 	| "rtdetr-cpu"
 	| "rtdetr-cuda"
+	| "hailo-vlm"
 	| "yolo-cpu"
 	| "yolo-cuda";
+
+const hailoFocusResponseSchema = z.object({
+	detections: z.array(
+		z.object({
+			timestampSeconds: z.number(),
+			x: z.number(),
+			y: z.number(),
+			width: z.number(),
+			height: z.number(),
+			score: z.number(),
+			source: z.enum([
+				"face",
+				"face-group",
+				"motion",
+				"person",
+				"person-group",
+				"product",
+				"product-group",
+				"screen-interest",
+			]),
+		}),
+	),
+	detectorBackend: z.literal("hailo-vlm"),
+});
 
 export interface FocusRegion {
 	centerX: number;
@@ -405,6 +433,13 @@ export async function detectFocusRegions(input: {
 	frameHeight: number;
 	detectionMode?: "people" | "people_strict" | "product" | "screen";
 }): Promise<FocusPlan> {
+	if (readFocusProvider() === "hailo-vlm") {
+		const hailoPlan = await detectHailoVlmFocusRegions(input);
+		if (hailoPlan && !hailoPlan.fallback) {
+			return hailoPlan;
+		}
+	}
+
 	const scriptPath = join(
 		process.cwd(),
 		"apps/worker/scripts/detect-video-focus.py",
@@ -446,7 +481,8 @@ export async function detectFocusRegions(input: {
 				parsed.detectorBackend === "yolo-cuda" ||
 				parsed.detectorBackend === "yolo-cpu" ||
 				parsed.detectorBackend === "rtdetr-cuda" ||
-				parsed.detectorBackend === "rtdetr-cpu"
+				parsed.detectorBackend === "rtdetr-cpu" ||
+				parsed.detectorBackend === "hailo-vlm"
 					? parsed.detectorBackend
 					: "opencv",
 		});
@@ -461,4 +497,61 @@ export async function detectFocusRegions(input: {
 			detectorBackend: "opencv",
 		});
 	}
+}
+
+async function detectHailoVlmFocusRegions(input: {
+	inputFilePath: string;
+	startSeconds: number;
+	endSeconds: number;
+	frameWidth: number;
+	frameHeight: number;
+}): Promise<FocusPlan | null> {
+	try {
+		const formData = new FormData();
+		const fileBuffer = await readFile(input.inputFilePath);
+		formData.set(
+			"file",
+			new File([fileBuffer], "clip-source.mp4", {
+				type: "video/mp4",
+			}),
+		);
+		formData.set("start_seconds", input.startSeconds.toFixed(3));
+		formData.set("end_seconds", input.endSeconds.toFixed(3));
+
+		const response = await fetch(`${readHailoServiceUrl()}/focus-detections`, {
+			method: "POST",
+			body: formData,
+		});
+		if (!response.ok) {
+			console.warn(
+				`Hailo VLM focus detection failed with ${response.status}: ${await response.text()}`,
+			);
+			return null;
+		}
+
+		const parsed = hailoFocusResponseSchema.parse(await response.json());
+		if (parsed.detections.length === 0) {
+			return null;
+		}
+		return buildFocusPlan({
+			detections: parsed.detections,
+			frameWidth: input.frameWidth,
+			frameHeight: input.frameHeight,
+			clipStartSeconds: input.startSeconds,
+			clipEndSeconds: input.endSeconds,
+			detectorBackend: parsed.detectorBackend,
+		});
+	} catch (error) {
+		console.warn("Hailo VLM focus detection failed; falling back:", error);
+		return null;
+	}
+}
+
+function readFocusProvider(): "auto" | "local" | "hailo-vlm" {
+	const provider = process.env.CLIPSE_FOCUS_PROVIDER;
+	return provider === "hailo-vlm" || provider === "local" ? provider : "auto";
+}
+
+function readHailoServiceUrl(): string {
+	return process.env.CLIPSE_HAILO_SERVICE_URL || DEFAULT_HAILO_SERVICE_URL;
 }
