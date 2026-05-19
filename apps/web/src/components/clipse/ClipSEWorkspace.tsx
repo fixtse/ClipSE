@@ -226,6 +226,8 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 	const [openrouterModel, setOpenrouterModel] = useState("");
 	const [codexModel, setCodexModel] = useState("gpt-5.3-codex");
 	const [whisperModel, setWhisperModel] = useState<WhisperModel>("medium");
+	const [whisperChunkingEnabled, setWhisperChunkingEnabled] = useState(false);
+	const [whisperChunkMinutes, setWhisperChunkMinutes] = useState(20);
 	const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
 	const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
 	const [jobQueueOpen, setJobQueueOpen] = useState(false);
@@ -352,6 +354,8 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 		setOpenrouterModel(settings.openrouterModel);
 		setCodexModel(settings.codexModel);
 		setWhisperModel(settings.whisperModel);
+		setWhisperChunkingEnabled(settings.whisperChunkingEnabled);
+		setWhisperChunkMinutes(settings.whisperChunkMinutes);
 	}, [aiSettingsQuery.data]);
 
 	useEffect(() => {
@@ -873,6 +877,10 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 	}
 
 	async function handleSaveAiSettings() {
+		const boundedWhisperChunkMinutes = Math.min(
+			120,
+			Math.max(1, Math.trunc(whisperChunkMinutes)),
+		);
 		const result = await updateContentAiSettingsAction({
 			provider: aiProvider,
 			openaiApiKey,
@@ -884,6 +892,8 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 			openrouterModel,
 			codexModel,
 			whisperModel,
+			whisperChunkingEnabled,
+			whisperChunkMinutes: boundedWhisperChunkMinutes,
 		});
 
 		if (!result.success) {
@@ -1877,6 +1887,51 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 												{selectedWhisperModelOption?.description}
 											</p>
 										</Tabs>
+										<button
+											className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"
+											onClick={() =>
+												setWhisperChunkingEnabled((value) => !value)
+											}
+											type="button"
+										>
+											<Checkbox
+												checked={whisperChunkingEnabled}
+												onCheckedChange={(checked) =>
+													setWhisperChunkingEnabled(checked === true)
+												}
+												onClick={(event) => event.stopPropagation()}
+											/>
+											<span>
+												<span className="block font-medium text-sm text-white">
+													{t("workspace.settings.whisperChunkingTitle")}
+												</span>
+												<span className="block text-slate-400 text-xs">
+													{t("workspace.settings.whisperChunkingDescription")}
+												</span>
+											</span>
+										</button>
+										<div className="space-y-2">
+											<label
+												className="font-medium text-slate-200 text-sm"
+												htmlFor="whisper-chunk-minutes"
+											>
+												{t("workspace.settings.whisperChunkMinutes")}
+											</label>
+											<Input
+												className="border-white/10 bg-slate-950/60 text-slate-100"
+												disabled={!whisperChunkingEnabled}
+												id="whisper-chunk-minutes"
+												max={120}
+												min={1}
+												onChange={(event) =>
+													setWhisperChunkMinutes(
+														Number.parseInt(event.target.value, 10) || 20,
+													)
+												}
+												type="number"
+												value={whisperChunkMinutes}
+											/>
+										</div>
 									</div>
 									<Button
 										className="w-full border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"

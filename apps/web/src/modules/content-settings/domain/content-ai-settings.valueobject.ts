@@ -15,6 +15,8 @@ export const ContentAiSettingsSchema = z.object({
 	openrouterModel: z.string().max(180),
 	codexModel: z.string().min(1).max(180),
 	whisperModel: z.enum(WHISPER_MODELS),
+	whisperChunkingEnabled: z.boolean(),
+	whisperChunkMinutes: z.number().int().min(1).max(120),
 	createdAt: z.date(),
 	updatedAt: z.date(),
 });
@@ -32,6 +34,8 @@ export const UpdateContentAiSettingsSchema = z.object({
 	openrouterModel: z.string().max(180),
 	codexModel: z.string().min(1).max(180),
 	whisperModel: z.enum(WHISPER_MODELS).default("medium"),
+	whisperChunkingEnabled: z.boolean().default(false),
+	whisperChunkMinutes: z.number().int().min(1).max(120).default(20),
 });
 
 export type UpdateContentAiSettingsInput = z.infer<

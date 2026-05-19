@@ -189,6 +189,11 @@ export const contentAiSettings = createTable("content_ai_settings", (d) => ({
 		.varchar("whisper_model", { length: 40 })
 		.notNull()
 		.default("medium"),
+	whisperChunkingEnabled: d
+		.boolean("whisper_chunking_enabled")
+		.notNull()
+		.default(false),
+	whisperChunkMinutes: d.integer("whisper_chunk_minutes").notNull().default(20),
 	createdAt: d
 		.timestamp("created_at", { withTimezone: true })
 		.$defaultFn(() => new Date())

@@ -268,6 +268,8 @@ export const ContentAiSettingsMother = {
 			openrouterModel: "openrouter/model",
 			codexModel: "gpt-5.3-codex",
 			whisperModel: "medium",
+			whisperChunkingEnabled: false,
+			whisperChunkMinutes: 20,
 			createdAt: date(),
 			updatedAt: date(),
 		};

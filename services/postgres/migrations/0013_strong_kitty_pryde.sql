@@ -1,0 +1,2 @@
+ALTER TABLE "content_ai_settings" ADD COLUMN "whisper_chunking_enabled" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "content_ai_settings" ADD COLUMN "whisper_chunk_minutes" integer DEFAULT 20 NOT NULL;

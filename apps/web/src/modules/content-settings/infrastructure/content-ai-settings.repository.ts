@@ -9,6 +9,7 @@ import type {
 import { WHISPER_MODELS } from "../domain/content-ai-settings.valueobject";
 
 const SETTINGS_ID = 1;
+const DEFAULT_WHISPER_CHUNK_MINUTES = 20;
 
 function normalizeWhisperModel(
 	model: string,
@@ -45,6 +46,8 @@ export class ContentAiSettingsRepository
 				openrouterModel: "",
 				codexModel: "gpt-5.3-codex",
 				whisperModel: "medium",
+				whisperChunkingEnabled: false,
+				whisperChunkMinutes: DEFAULT_WHISPER_CHUNK_MINUTES,
 				createdAt: new Date(),
 				updatedAt: new Date(),
 			})
@@ -75,6 +78,8 @@ export class ContentAiSettingsRepository
 				openrouterModel: input.openrouterModel.trim(),
 				codexModel: input.codexModel.trim(),
 				whisperModel: input.whisperModel,
+				whisperChunkingEnabled: input.whisperChunkingEnabled,
+				whisperChunkMinutes: input.whisperChunkMinutes,
 				updatedAt: new Date(),
 			})
 			.where(eq(contentAiSettings.id, SETTINGS_ID))
@@ -100,6 +105,9 @@ export class ContentAiSettingsRepository
 			openrouterModel: row.openrouterModel,
 			codexModel: row.codexModel,
 			whisperModel: normalizeWhisperModel(row.whisperModel),
+			whisperChunkingEnabled: row.whisperChunkingEnabled,
+			whisperChunkMinutes:
+				row.whisperChunkMinutes || DEFAULT_WHISPER_CHUNK_MINUTES,
 			createdAt: row.createdAt,
 			updatedAt: row.updatedAt,
 		};

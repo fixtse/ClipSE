@@ -111,6 +111,10 @@ export const messages = {
 				whisperTitle: "Transcription model",
 				whisperDescription:
 					"Choose the Whisper model used for server-side transcription.",
+				whisperChunkingTitle: "Chunk long transcriptions",
+				whisperChunkingDescription:
+					"Process long audio in overlapping 20-minute chunks. Leave off for maximum wording consistency.",
+				whisperChunkMinutes: "Chunk length in minutes",
 				whisperModels: {
 					medium: {
 						label: "Medium",
@@ -488,6 +492,10 @@ export const messages = {
 				whisperTitle: "Modelo de transcripcion",
 				whisperDescription:
 					"Elige el modelo Whisper usado para transcribir en el servidor.",
+				whisperChunkingTitle: "Dividir transcripciones largas",
+				whisperChunkingDescription:
+					"Procesa audios largos en fragmentos superpuestos de 20 minutos. Dejalo apagado para maxima consistencia de texto.",
+				whisperChunkMinutes: "Duracion del fragmento en minutos",
 				whisperModels: {
 					medium: {
 						label: "Medium",

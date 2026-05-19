@@ -21,10 +21,13 @@ describe("content AI settings use cases", () => {
 				openrouterModel: "",
 				codexModel: "gpt-5.3-codex",
 				whisperModel: "large-v3-turbo",
+				whisperChunkingEnabled: true,
+				whisperChunkMinutes: 20,
 			}),
 		).resolves.toMatchObject({
 			provider: "gemini",
 			whisperModel: "large-v3-turbo",
+			whisperChunkingEnabled: true,
 		});
 		expect(repository.update).toHaveBeenCalledWith({
 			provider: "gemini",
@@ -33,6 +36,8 @@ describe("content AI settings use cases", () => {
 			openrouterModel: "",
 			codexModel: "gpt-5.3-codex",
 			whisperModel: "large-v3-turbo",
+			whisperChunkingEnabled: true,
+			whisperChunkMinutes: 20,
 		});
 	});
 
@@ -47,6 +52,8 @@ describe("content AI settings use cases", () => {
 				openrouterModel: "",
 				codexModel: "gpt-5.3-codex",
 				whisperModel: "medium",
+				whisperChunkingEnabled: false,
+				whisperChunkMinutes: 20,
 			}),
 		).rejects.toThrow();
 		expect(repository.update).not.toHaveBeenCalled();

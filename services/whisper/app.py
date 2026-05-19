@@ -21,7 +21,7 @@ MODEL_CACHE: dict[str, WhisperModel] = {}
 
 
 @contextmanager
-def loaded_whisper_model(model_name: str) -> WhisperModel:
+def loaded_whisper_model(model_name: str, unload_after: bool) -> WhisperModel:
     cache_key = f"{model_name}:{MODEL_DEVICE}:{MODEL_COMPUTE_TYPE}"
     with MODEL_LOCK:
         if cache_key not in MODEL_CACHE:
@@ -34,15 +34,16 @@ def loaded_whisper_model(model_name: str) -> WhisperModel:
         try:
             yield MODEL_CACHE[cache_key]
         finally:
-            whisper_model = MODEL_CACHE.pop(cache_key, None)
-            ctranslate_model = getattr(whisper_model, "model", None)
-            unload_model = getattr(ctranslate_model, "unload_model", None)
-            if callable(unload_model):
-                try:
-                    unload_model()
-                except Exception:
-                    logger.exception("Failed to unload Whisper model %s", cache_key)
-            gc.collect()
+            if unload_after:
+                whisper_model = MODEL_CACHE.pop(cache_key, None)
+                ctranslate_model = getattr(whisper_model, "model", None)
+                unload_model = getattr(ctranslate_model, "unload_model", None)
+                if callable(unload_model):
+                    try:
+                        unload_model()
+                    except Exception:
+                        logger.exception("Failed to unload Whisper model %s", cache_key)
+                gc.collect()
 
 
 @app.get("/health")
@@ -62,6 +63,7 @@ async def transcribe(
     file: UploadFile = File(...),
     model: str = Form(default=DEFAULT_MODEL_NAME),
     language: str | None = Form(default=None),
+    unload_after: bool = Form(default=True),
 ) -> dict:
     suffix = Path(file.filename or "audio.wav").suffix or ".wav"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
@@ -70,7 +72,10 @@ async def transcribe(
 
     try:
         try:
-            with loaded_whisper_model(model_name=model or DEFAULT_MODEL_NAME) as whisper_model:
+            with loaded_whisper_model(
+                model_name=model or DEFAULT_MODEL_NAME,
+                unload_after=unload_after,
+            ) as whisper_model:
                 segments, info = whisper_model.transcribe(
                     temp_path,
                     language=None if language in (None, "", "auto") else language,
