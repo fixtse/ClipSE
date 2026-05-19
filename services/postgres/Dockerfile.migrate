@@ -7,7 +7,7 @@ RUN apt-get update \
 WORKDIR /app
 
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV PATH="$PNPM_HOME:$PNPM_HOME/bin:$PATH"
 
 RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
 
