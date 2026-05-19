@@ -4,9 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ContentChannelBumperPosition } from "~/modules/content-channels/domain/content-channel.valueobject";
 import { contentChannelRepository } from "~/modules/content-channels/infrastructure/content-channel.repository";
+import { replaceContentVideoChapters } from "~/modules/content-chapters/application/replace-content-video-chapters";
 import { contentChapterRepository } from "~/modules/content-chapters/infrastructure/content-chapter.repository";
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
 import { contentJobRepository } from "~/modules/content-jobs/infrastructure/content-job.repository";
+import { getContentVideoTranscription } from "~/modules/content-transcriptions/application/get-content-video-transcription";
+import { saveContentVideoTranscription } from "~/modules/content-transcriptions/application/save-content-video-transcription";
 import { contentTranscriptionRepository } from "~/modules/content-transcriptions/infrastructure/content-transcription.repository";
 import {
 	buildSourceStorageKey,
@@ -210,7 +213,7 @@ async function processTranscriptionJob(
 		message: "Saving transcript",
 	});
 
-	await contentTranscriptionRepository.upsert({
+	await saveContentVideoTranscription(contentTranscriptionRepository, {
 		videoId,
 		language: transcription.language,
 		provider: "whisper-service",
@@ -406,7 +409,7 @@ async function processAnalysisJob(
 ): Promise<void> {
 	const [video, transcription] = await Promise.all([
 		contentVideoRepository.findById(videoId),
-		contentTranscriptionRepository.findByVideoId(videoId),
+		getContentVideoTranscription(contentTranscriptionRepository, videoId),
 	]);
 
 	if (!video || !transcription) {
@@ -479,7 +482,11 @@ async function processAnalysisJob(
 			? contentClipRepository.replaceForVideo(videoId, strategy.shorts, "short")
 			: Promise.resolve([]),
 		shouldGenerateChapters
-			? contentChapterRepository.replaceForVideo(videoId, strategy.chapters)
+			? replaceContentVideoChapters(
+					contentChapterRepository,
+					videoId,
+					strategy.chapters,
+				)
 			: Promise.resolve([]),
 	]);
 	await contentVideoRepository.updateStage({
@@ -616,7 +623,8 @@ async function processRenderJob(
 			progress: 8,
 			message: "Preparing burned subtitles",
 		});
-		const transcription = await contentTranscriptionRepository.findByVideoId(
+		const transcription = await getContentVideoTranscription(
+			contentTranscriptionRepository,
 			video.id,
 		);
 		if (!transcription) {

@@ -1,6 +1,7 @@
 "use server";
 
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
+import { getContentVideoTranscription } from "~/modules/content-transcriptions/application/get-content-video-transcription";
 import { contentTranscriptionRepository } from "~/modules/content-transcriptions/infrastructure/content-transcription.repository";
 import { contentVideoRepository } from "~/modules/content-videos/infrastructure/content-video.repository";
 import { requireSession } from "~/server/auth";
@@ -34,7 +35,10 @@ export async function generateClipSEMetadataAction(input: {
 
 		const [video, transcription] = await Promise.all([
 			contentVideoRepository.findById(clip.videoId),
-			contentTranscriptionRepository.findByVideoId(clip.videoId),
+			getContentVideoTranscription(
+				contentTranscriptionRepository,
+				clip.videoId,
+			),
 		]);
 
 		if (!video || !transcription) {
