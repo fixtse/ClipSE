@@ -1,5 +1,11 @@
 # ClipSE
 
+[![CI](https://github.com/fixtse/ClipSE/actions/workflows/ci.yml/badge.svg)](https://github.com/fixtse/ClipSE/actions/workflows/ci.yml)
+[![Docker Images](https://github.com/fixtse/ClipSE/actions/workflows/docker.yml/badge.svg)](https://github.com/fixtse/ClipSE/actions/workflows/docker.yml)
+[![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178c6.svg)](https://www.typescriptlang.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-10.x-f69220.svg)](https://pnpm.io/)
+
 Server-side AI clip production for long-form video.
 
 ClipSE lets you upload large source videos to S3-compatible storage, transcribe them with Whisper, score self-contained clip candidates with an OpenAI-compatible model, review and trim segments, and render final exports with FFmpeg.
@@ -64,6 +70,8 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 The published image names are:
 
 - `ghcr.io/fixtse/clipse-app`
+- `ghcr.io/fixtse/clipse-worker`
+- `ghcr.io/fixtse/clipse-migrate`
 - `ghcr.io/fixtse/clipse-whisper`
 - `ghcr.io/fixtse/clipse-garage-init`
 
@@ -88,6 +96,12 @@ pnpm db:migrate
 ```
 
 Use `pnpm db:generate` after changing the Drizzle schema in `apps/web/src/server/db/schema.ts`.
+
+## Contributing and Security
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+- Read [SECURITY.md](SECURITY.md) for supported security reporting.
+- Read [DOCKER.md](DOCKER.md) for image overrides, logs, startup checks, and troubleshooting.
 
 ## Whisper GPU Notes
 
