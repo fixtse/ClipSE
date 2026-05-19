@@ -65,13 +65,23 @@ export class ContentAiSettingsRepository
 				createdAt: new Date(),
 				updatedAt: new Date(),
 			})
+			.onConflictDoNothing()
 			.returning();
 
-		if (!created) {
+		if (created) {
+			return this.map(created);
+		}
+
+		const [existing] = await db
+			.select()
+			.from(contentAiSettings)
+			.where(eq(contentAiSettings.id, SETTINGS_ID));
+
+		if (!existing) {
 			throw new Error("Failed to create AI settings");
 		}
 
-		return this.map(created);
+		return this.map(existing);
 	}
 
 	async update(

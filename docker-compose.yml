@@ -99,7 +99,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: drizzle-kit migrate --config services/postgres/drizzle.config.ts
+    command: pnpm db:migrate
 
   app:
     image: ${CLIPSE_APP_IMAGE:-ghcr.io/fixtse/clipse-app:latest}

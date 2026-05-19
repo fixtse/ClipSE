@@ -146,6 +146,27 @@ type GeneratedClipMetadataResult = Pick<
 type IntakeSourceTab = "file" | "url";
 type WhisperModel = ContentAiSettings["whisperModel"];
 type WhisperProvider = ContentAiSettings["whisperProvider"];
+const FASTER_WHISPER_MODELS = ["medium", "large-v3-turbo"] as const;
+const HAILO_WHISPER_MODELS = [
+	"whisper-tiny",
+	"whisper-base",
+	"whisper-small",
+] as const;
+
+function isWhisperModelForProvider(
+	provider: WhisperProvider,
+	model: WhisperModel,
+): boolean {
+	const providerModels =
+		provider === "hailo" ? HAILO_WHISPER_MODELS : FASTER_WHISPER_MODELS;
+
+	return (providerModels as readonly string[]).includes(model);
+}
+
+function getDefaultWhisperModel(provider: WhisperProvider): WhisperModel {
+	return provider === "hailo" ? "whisper-base" : "medium";
+}
+
 type RenderOptionsState = {
 	aspectMode: ClipSERenderAspectMode;
 	burnSubtitles: boolean;
@@ -370,6 +391,14 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 		setWhisperChunkingEnabled(settings.whisperChunkingEnabled);
 		setWhisperChunkMinutes(settings.whisperChunkMinutes);
 	}, [aiSettingsQuery.data]);
+
+	useEffect(() => {
+		if (isWhisperModelForProvider(whisperProvider, whisperModel)) {
+			return;
+		}
+
+		setWhisperModel(getDefaultWhisperModel(whisperProvider));
+	}, [whisperModel, whisperProvider]);
 
 	useEffect(() => {
 		if (!selectedChannelId && dashboardQuery.data?.selectedChannel?.id) {
@@ -1283,13 +1312,55 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 
 	const modelOptions = aiModelsQuery.data ?? [];
 	const whisperModelOptions = getWhisperModelOptions(t);
+	const providerWhisperModelOptions = whisperModelOptions.filter((option) =>
+		isWhisperModelForProvider(whisperProvider, option.value),
+	);
 	const whisperProviderOptions = getWhisperProviderOptions(t);
 	const selectedWhisperProviderOption =
 		whisperProviderOptions.find((option) => option.value === whisperProvider) ??
 		whisperProviderOptions[0];
 	const selectedWhisperModelOption =
-		whisperModelOptions.find((option) => option.value === whisperModel) ??
-		whisperModelOptions[0];
+		providerWhisperModelOptions.find(
+			(option) => option.value === whisperModel,
+		) ?? providerWhisperModelOptions[0];
+	const whisperBackendHealth = whisperBackendQuery.data;
+	const normalizedWhisperDevice = whisperBackendHealth?.device?.toLowerCase();
+	const fasterWhisperAvailable =
+		whisperBackendHealth?.providers["faster-whisper"]?.available ?? false;
+	const fasterWhisperBadgeLabel = !whisperBackendHealth
+		? t("workspace.settings.whisperBackendDetecting")
+		: normalizedWhisperDevice?.includes("cuda") ||
+				normalizedWhisperDevice?.includes("gpu")
+			? t("workspace.settings.whisperBackendGpuReady")
+			: normalizedWhisperDevice?.includes("cpu")
+				? t("workspace.settings.whisperBackendCpuReady")
+				: fasterWhisperAvailable
+					? t("workspace.settings.whisperBackendFasterReady")
+					: t("workspace.settings.whisperBackendFasterUnavailable");
+	const fasterWhisperBackendDetails = whisperBackendHealth
+		? t("workspace.settings.whisperBackendFasterDetails", {
+				device: whisperBackendHealth.device ?? "unknown",
+				computeType: whisperBackendHealth.computeType ?? "unknown",
+			})
+		: t("workspace.settings.whisperBackendDetecting");
+	const hailoAvailable =
+		whisperBackendHealth?.providers.hailo.available ?? false;
+	const whisperBackendAvailable =
+		whisperProvider === "hailo" ? hailoAvailable : fasterWhisperAvailable;
+	const whisperBackendBadgeLabel =
+		whisperProvider === "hailo"
+			? hailoAvailable
+				? t("workspace.settings.whisperBackendHailoReady")
+				: t("workspace.settings.whisperBackendHailoUnavailable")
+			: fasterWhisperBadgeLabel;
+	const whisperBackendDetails =
+		whisperProvider === "hailo"
+			? t("workspace.settings.whisperBackendDevices", {
+					devices:
+						whisperBackendHealth?.providers.hailo.devices.join(", ") ||
+						"none",
+				})
+			: fasterWhisperBackendDetails;
 	const audioLanguageOptions = getAudioLanguageOptions(t);
 	const selectedChannelName =
 		selectedChannel?.name ?? t("workspace.channels.select");
@@ -1889,9 +1960,18 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 										</div>
 										<Tabs
 											className="w-full"
-											onValueChange={(value) =>
-												setWhisperProvider(value as WhisperProvider)
-											}
+											onValueChange={(value) => {
+												const nextProvider = value as WhisperProvider;
+												setWhisperProvider(nextProvider);
+												setWhisperModel((currentModel) =>
+													isWhisperModelForProvider(
+														nextProvider,
+														currentModel,
+													)
+														? currentModel
+														: getDefaultWhisperModel(nextProvider),
+												);
+											}}
 											value={whisperProvider}
 										>
 											<TabsList className="grid w-full grid-cols-2 border border-white/10 bg-slate-900/75">
@@ -1913,28 +1993,19 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 												<Badge
 													className={cn(
 														"border-white/10",
-														whisperBackendQuery.data?.providers.hailo.available
+														whisperBackendAvailable
 															? "bg-emerald-400/10 text-emerald-100"
 															: "bg-slate-800 text-slate-300",
 													)}
 													variant="outline"
 												>
-													{whisperBackendQuery.data?.providers.hailo.available
-														? t("workspace.settings.whisperBackendHailoReady")
-														: t(
-																"workspace.settings.whisperBackendHailoUnavailable",
-															)}
+													{whisperBackendBadgeLabel}
 												</Badge>
 											</div>
 											<p className="mt-2 text-slate-400">
 												{whisperBackendQuery.error
 													? whisperBackendQuery.error.message
-													: t("workspace.settings.whisperBackendDevices", {
-															devices:
-																whisperBackendQuery.data?.providers.hailo.devices.join(
-																	", ",
-																) || "none",
-														})}
+													: whisperBackendDetails}
 											</p>
 										</div>
 										<Tabs
@@ -1944,8 +2015,15 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 											}
 											value={whisperModel}
 										>
-											<TabsList className="grid w-full grid-cols-2 border border-white/10 bg-slate-900/75">
-												{whisperModelOptions.map((option) => (
+											<TabsList
+												className={cn(
+													"grid h-auto min-h-9 w-full border border-white/10 bg-slate-900/75",
+													whisperProvider === "hailo"
+														? "grid-cols-1 sm:grid-cols-3"
+														: "grid-cols-2",
+												)}
+											>
+												{providerWhisperModelOptions.map((option) => (
 													<TabsTrigger key={option.value} value={option.value}>
 														{option.label}
 													</TabsTrigger>

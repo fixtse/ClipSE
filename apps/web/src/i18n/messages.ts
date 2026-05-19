@@ -112,6 +112,13 @@ export const messages = {
 				whisperDescription:
 					"Choose the Whisper model used for server-side transcription.",
 				whisperBackendStatus: "Backend detection",
+				whisperBackendDetecting: "Detecting backend",
+				whisperBackendGpuReady: "GPU detected",
+				whisperBackendCpuReady: "CPU detected",
+				whisperBackendFasterReady: "faster-whisper ready",
+				whisperBackendFasterUnavailable: "faster-whisper unavailable",
+				whisperBackendFasterDetails:
+					"Detected faster-whisper backend: {device} / {computeType}",
 				whisperBackendHailoReady: "Hailo ready",
 				whisperBackendHailoUnavailable: "Hailo unavailable",
 				whisperBackendDevices: "Detected Hailo devices: {devices}",
@@ -523,6 +530,13 @@ export const messages = {
 				whisperDescription:
 					"Elige el modelo Whisper usado para transcribir en el servidor.",
 				whisperBackendStatus: "Deteccion del backend",
+				whisperBackendDetecting: "Detectando backend",
+				whisperBackendGpuReady: "GPU detectada",
+				whisperBackendCpuReady: "CPU detectada",
+				whisperBackendFasterReady: "faster-whisper listo",
+				whisperBackendFasterUnavailable: "faster-whisper no disponible",
+				whisperBackendFasterDetails:
+					"Backend faster-whisper detectado: {device} / {computeType}",
 				whisperBackendHailoReady: "Hailo listo",
 				whisperBackendHailoUnavailable: "Hailo no disponible",
 				whisperBackendDevices: "Dispositivos Hailo detectados: {devices}",

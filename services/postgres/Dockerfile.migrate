@@ -12,10 +12,10 @@ ENV PATH="$PNPM_HOME:$PNPM_HOME/bin:$PATH"
 RUN corepack enable && corepack prepare pnpm@11.1.2 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm add --global drizzle-kit@0.31.10 drizzle-orm@0.45.2 postgres@3.4.9
+RUN pnpm install --frozen-lockfile
 
 COPY services/postgres/drizzle.config.ts ./services/postgres/drizzle.config.ts
 COPY services/postgres/migrations ./services/postgres/migrations
 COPY apps/web/src/server/db/schema.ts ./apps/web/src/server/db/schema.ts
 
-CMD ["drizzle-kit", "migrate", "--config", "services/postgres/drizzle.config.ts"]
+CMD ["pnpm", "db:migrate"]
