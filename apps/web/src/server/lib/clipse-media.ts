@@ -276,7 +276,15 @@ export interface MediaMetadata {
 
 const INTERNAL_TRANSITION_SECONDS = 0.35;
 const DEFAULT_CAPTION_Y_RATIO = 0.73;
-const STACKED_VERTICAL_CAPTION_Y_RATIO = 0.84;
+const STACKED_VERTICAL_CAPTION_Y_RATIO = 0.5;
+
+export function getVerticalCaptionYRatio(input: {
+	hasStackedLayout: boolean;
+}): number {
+	return input.hasStackedLayout
+		? STACKED_VERTICAL_CAPTION_Y_RATIO
+		: DEFAULT_CAPTION_Y_RATIO;
+}
 
 export async function getMediaMetadata(
 	filePath: string,
@@ -1081,9 +1089,7 @@ async function renderVerticalClipSegment(input: {
 				durationSeconds: input.durationSeconds,
 				width: 1080,
 				height: 1920,
-				captionYRatio: hasStackedLayout
-					? STACKED_VERTICAL_CAPTION_Y_RATIO
-					: DEFAULT_CAPTION_Y_RATIO,
+				captionYRatio: getVerticalCaptionYRatio({ hasStackedLayout }),
 				onProgress: async (progress) => input.onProgress?.(80 + progress * 0.2),
 			});
 		}
@@ -1116,9 +1122,9 @@ async function renderVerticalClipSegment(input: {
 			durationSeconds: input.durationSeconds,
 			width: 1080,
 			height: 1920,
-			captionYRatio: hasStaticStackedLayout
-				? STACKED_VERTICAL_CAPTION_Y_RATIO
-				: DEFAULT_CAPTION_Y_RATIO,
+			captionYRatio: getVerticalCaptionYRatio({
+				hasStackedLayout: hasStaticStackedLayout,
+			}),
 			onProgress: async (progress) => input.onProgress?.(75 + progress * 0.25),
 		});
 	}
