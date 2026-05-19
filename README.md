@@ -6,9 +6,11 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178c6.svg)](https://www.typescriptlang.org/)
 [![pnpm](https://img.shields.io/badge/pnpm-10.x-f69220.svg)](https://pnpm.io/)
 
-Server-side AI clip production for long-form video.
+Turn long videos into short, reviewable clips with a self-hosted workflow.
 
-ClipSE lets you upload large source videos to S3-compatible storage, transcribe them with Whisper, score self-contained clip candidates with an OpenAI-compatible model, review and trim segments, and render final exports with FFmpeg.
+ClipSE helps creators and teams find usable short-form moments inside long recordings. Upload a video or add a video URL, let ClipSE transcribe and analyze it, then review suggested clips in a browser before exporting the final cuts.
+
+Everything runs through Docker Compose: the web app, background worker, transcription service, database, and local object storage. You keep control of the app, data, models, and storage while still getting an end-to-end clip production flow.
 
 ## License
 
@@ -18,11 +20,11 @@ ClipSE is licensed under AGPL-3.0-only.
 
 1. Create a local account.
 2. Create a channel and video draft.
-3. Upload a source asset or add a video URL.
-4. Run server-side Whisper transcription.
-5. Analyze the transcript for clip candidates.
-6. Review thumbnails, waveform, and frame-accurate in/out points.
-7. Queue render jobs and download finished clips.
+3. Upload a video file or paste a video URL.
+4. Transcribe the video.
+5. Ask the AI analyzer to find promising clip moments.
+6. Review each suggestion with thumbnails, waveform, and precise in/out points.
+7. Render and download the clips you want to keep.
 
 ## Stack
 
@@ -38,11 +40,11 @@ ClipSE is licensed under AGPL-3.0-only.
 
 ## Run With Prebuilt Images
 
-The default Docker Compose file uses GHCR images so users do not need to build ClipSE locally.
+The default Docker Compose file uses published GHCR images, so you can run ClipSE without building the app from source.
 
 ## Quick Start
 
-Run ClipSE with Docker Compose without cloning the repository:
+Start ClipSE with Docker Compose without cloning the repository:
 
 ```bash
 mkdir clipse && cd clipse
@@ -52,7 +54,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Open `http://localhost:3000`, create a local account, then configure the AI provider and transcription model in the app settings.
+Open `http://localhost:3000`, create a local account, then choose your AI provider and transcription model in the app settings.
 
 To stop ClipSE:
 
