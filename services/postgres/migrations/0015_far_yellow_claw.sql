@@ -1,0 +1,2 @@
+ALTER TABLE "content_ai_settings" ADD COLUMN "subtitle_color" varchar(7) DEFAULT '#ffffff' NOT NULL;--> statement-breakpoint
+ALTER TABLE "content_ai_settings" ADD COLUMN "subtitle_font_family" varchar(80) DEFAULT 'Arial' NOT NULL;

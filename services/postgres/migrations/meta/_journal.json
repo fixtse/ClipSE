@@ -106,6 +106,13 @@
       "when": 1779154973097,
       "tag": "0014_outstanding_boomer",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1779943861738,
+      "tag": "0015_far_yellow_claw",
+      "breakpoints": true
     }
   ]
 }

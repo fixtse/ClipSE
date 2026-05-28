@@ -271,6 +271,8 @@ export const ContentAiSettingsMother = {
 			whisperModel: "medium",
 			whisperChunkingEnabled: false,
 			whisperChunkMinutes: 20,
+			subtitleColor: "#ffffff",
+			subtitleFontFamily: "Arial",
 			createdAt: date(),
 			updatedAt: date(),
 		};

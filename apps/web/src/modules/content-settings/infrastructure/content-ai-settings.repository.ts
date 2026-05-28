@@ -36,7 +36,9 @@ function normalizeWhisperProvider(
 }
 
 function normalizeSubtitleColor(color: string): string {
-	return /^#[0-9A-Fa-f]{6}$/.test(color) ? color.toLowerCase() : DEFAULT_SUBTITLE_COLOR;
+	return /^#[0-9A-Fa-f]{6}$/.test(color)
+		? color.toLowerCase()
+		: DEFAULT_SUBTITLE_COLOR;
 }
 
 function normalizeSubtitleFontFamily(

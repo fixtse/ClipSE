@@ -13,6 +13,7 @@ import {
 	Link,
 	LoaderCircle,
 	LogOut,
+	Palette,
 	Plus,
 	RefreshCcw,
 	RotateCcw,
@@ -21,6 +22,7 @@ import {
 	Search,
 	Settings2,
 	Trash2,
+	Type,
 	Upload,
 	UserPlus,
 	Video,
@@ -46,7 +48,10 @@ import {
 	getWhisperProviderOptions,
 } from "~/modules/content-settings/application/content-ai-settings-form";
 import type { ContentAiProvider } from "~/modules/content-settings/domain/content-ai-models";
-import type { ContentAiSettings } from "~/modules/content-settings/domain/content-ai-settings.valueobject";
+import {
+	type ContentAiSettings,
+	SUBTITLE_FONT_FAMILIES,
+} from "~/modules/content-settings/domain/content-ai-settings.valueobject";
 import {
 	buildLibraryVideoSignature,
 	type ClipItem,
@@ -147,11 +152,20 @@ type GeneratedClipMetadataResult = Pick<
 type IntakeSourceTab = "file" | "url";
 type WhisperModel = ContentAiSettings["whisperModel"];
 type WhisperProvider = ContentAiSettings["whisperProvider"];
+type SubtitleFontFamily = ContentAiSettings["subtitleFontFamily"];
 const FASTER_WHISPER_MODELS = ["medium", "large-v3-turbo"] as const;
 const HAILO_WHISPER_MODELS = [
 	"whisper-tiny",
 	"whisper-base",
 	"whisper-small",
+] as const;
+const SUBTITLE_COLOR_OPTIONS = [
+	{ label: "White", value: "#ffffff" },
+	{ label: "Yellow", value: "#ffe45c" },
+	{ label: "Cyan", value: "#67e8f9" },
+	{ label: "Green", value: "#86efac" },
+	{ label: "Pink", value: "#f9a8d4" },
+	{ label: "Orange", value: "#fdba74" },
 ] as const;
 
 function isWhisperModelForProvider(
@@ -258,6 +272,9 @@ export function ClipSEWorkspace({
 	const [whisperModel, setWhisperModel] = useState<WhisperModel>("medium");
 	const [whisperChunkingEnabled, setWhisperChunkingEnabled] = useState(false);
 	const [whisperChunkMinutes, setWhisperChunkMinutes] = useState(20);
+	const [subtitleColor, setSubtitleColor] = useState("#ffffff");
+	const [subtitleFontFamily, setSubtitleFontFamily] =
+		useState<SubtitleFontFamily>("Arial");
 	const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
 	const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
 	const [jobQueueOpen, setJobQueueOpen] = useState(false);
@@ -395,6 +412,8 @@ export function ClipSEWorkspace({
 		setWhisperModel(settings.whisperModel);
 		setWhisperChunkingEnabled(settings.whisperChunkingEnabled);
 		setWhisperChunkMinutes(settings.whisperChunkMinutes);
+		setSubtitleColor(settings.subtitleColor);
+		setSubtitleFontFamily(settings.subtitleFontFamily);
 	}, [aiSettingsQuery.data]);
 
 	useEffect(() => {
@@ -947,6 +966,8 @@ export function ClipSEWorkspace({
 			whisperModel,
 			whisperChunkingEnabled,
 			whisperChunkMinutes: boundedWhisperChunkMinutes,
+			subtitleColor,
+			subtitleFontFamily,
 		});
 
 		if (!result.success) {
@@ -1867,234 +1888,358 @@ export function ClipSEWorkspace({
 									</DialogDescription>
 								</DialogHeader>
 								<div className="space-y-4">
-									<div className="space-y-2">
-										<p className="font-medium text-slate-200 text-xs uppercase tracking-[0.18em]">
-											{t("workspace.settings.provider")}
-										</p>
-										<Select
-											onValueChange={(value) => {
-												const nextProvider = value as ContentAiProvider;
-												setAiProvider(nextProvider);
-											}}
-											value={aiProvider}
-										>
-											<SelectTrigger className="border-white/10 bg-slate-900/75 text-white">
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="openai">
-													{t("workspace.settings.openAiCompatible")}
-												</SelectItem>
-												<SelectItem value="gemini">Gemini</SelectItem>
-												<SelectItem value="openrouter">OpenRouter</SelectItem>
-												<SelectItem value="codex">Codex CLI</SelectItem>
-											</SelectContent>
-										</Select>
-									</div>
-									{aiProvider === "openai" ? (
-										<div className="space-y-3">
-											<Input
-												className="border-white/10 bg-slate-900/75 text-white"
-												onChange={(event) =>
-													setOpenaiApiKey(event.target.value)
-												}
-												placeholder={t("workspace.settings.openAiApiKey")}
-												type="password"
-												value={openaiApiKey}
-											/>
-											<Input
-												className="border-white/10 bg-slate-900/75 text-white"
-												onChange={(event) =>
-													setOpenaiBaseUrl(event.target.value)
-												}
-												placeholder={t("workspace.settings.openAiBaseUrl")}
-												value={openaiBaseUrl}
-											/>
-											<ModelCombobox
-												isLoading={aiModelsQuery.isLoading}
-												onChange={setOpenaiModel}
-												options={modelOptions}
-												value={openaiModel}
-											/>
-										</div>
-									) : aiProvider === "gemini" ? (
-										<div className="space-y-3">
-											<Input
-												className="border-white/10 bg-slate-900/75 text-white"
-												onChange={(event) =>
-													setGeminiApiKey(event.target.value)
-												}
-												placeholder={t("workspace.settings.geminiApiKey")}
-												type="password"
-												value={geminiApiKey}
-											/>
-											<ModelCombobox
-												isLoading={aiModelsQuery.isLoading}
-												onChange={setGeminiModel}
-												options={modelOptions}
-												value={geminiModel}
-											/>
-										</div>
-									) : aiProvider === "openrouter" ? (
-										<div className="space-y-3">
-											<Input
-												className="border-white/10 bg-slate-900/75 text-white"
-												onChange={(event) =>
-													setOpenrouterApiKey(event.target.value)
-												}
-												placeholder={t("workspace.settings.openRouterApiKey")}
-												type="password"
-												value={openrouterApiKey}
-											/>
-											<ModelCombobox
-												isLoading={aiModelsQuery.isLoading}
-												onChange={setOpenrouterModel}
-												options={modelOptions}
-												value={openrouterModel}
-											/>
-										</div>
-									) : (
-										<div className="space-y-3">
-											<ModelCombobox
-												isLoading={aiModelsQuery.isLoading}
-												onChange={setCodexModel}
-												options={modelOptions}
-												value={codexModel}
-											/>
-										</div>
-									)}
-									{aiModelsQuery.error ? (
-										<p className="rounded-md border border-rose-400/20 bg-rose-400/10 p-3 text-rose-100 text-sm">
-											{aiModelsQuery.error.message}
-										</p>
-									) : null}
-									<div className="space-y-3 border-white/10 border-t pt-4">
-										<div className="space-y-1">
-											<p className="font-medium text-slate-200 text-xs uppercase tracking-[0.18em]">
-												{t("workspace.settings.whisperTitle")}
-											</p>
-											<p className="text-slate-400 text-sm">
-												{t("workspace.settings.whisperDescription")}
-											</p>
-										</div>
-										<Tabs
-											className="w-full"
-											onValueChange={(value) => {
-												const nextProvider = value as WhisperProvider;
-												setWhisperProvider(nextProvider);
-												setWhisperModel((currentModel) =>
-													isWhisperModelForProvider(nextProvider, currentModel)
-														? currentModel
-														: getDefaultWhisperModel(nextProvider),
-												);
-											}}
-											value={whisperProvider}
-										>
-											<TabsList className="grid w-full grid-cols-2 border border-white/10 bg-slate-900/75">
-												{whisperProviderOptions.map((option) => (
-													<TabsTrigger key={option.value} value={option.value}>
-														{option.label}
-													</TabsTrigger>
-												))}
-											</TabsList>
-											<p className="mt-2 min-h-5 text-slate-400 text-xs">
-												{selectedWhisperProviderOption?.description}
-											</p>
-										</Tabs>
-										<div className="rounded-md border border-white/10 bg-slate-950/50 p-3 text-xs">
-											<div className="flex items-center justify-between gap-3">
-												<span className="font-medium text-slate-300">
-													{t("workspace.settings.whisperBackendStatus")}
-												</span>
-												<Badge
-													className={cn(
-														"border-white/10",
-														whisperBackendAvailable
-															? "bg-emerald-400/10 text-emerald-100"
-															: "bg-slate-800 text-slate-300",
-													)}
-													variant="outline"
+									<Tabs className="w-full" defaultValue="ai">
+										<TabsList className="grid w-full grid-cols-2 border border-white/10 bg-slate-900/75">
+											<TabsTrigger value="ai">
+												<Settings2 className="h-4 w-4" />
+												{t("workspace.settings.aiTab")}
+											</TabsTrigger>
+											<TabsTrigger value="subtitles">
+												<Type className="h-4 w-4" />
+												{t("workspace.settings.subtitlesTab")}
+											</TabsTrigger>
+										</TabsList>
+										<TabsContent className="mt-4 space-y-4" value="ai">
+											<div className="space-y-2">
+												<p className="font-medium text-slate-200 text-xs uppercase tracking-[0.18em]">
+													{t("workspace.settings.provider")}
+												</p>
+												<Select
+													onValueChange={(value) => {
+														const nextProvider = value as ContentAiProvider;
+														setAiProvider(nextProvider);
+													}}
+													value={aiProvider}
 												>
-													{whisperBackendBadgeLabel}
-												</Badge>
+													<SelectTrigger className="border-white/10 bg-slate-900/75 text-white">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="openai">
+															{t("workspace.settings.openAiCompatible")}
+														</SelectItem>
+														<SelectItem value="gemini">Gemini</SelectItem>
+														<SelectItem value="openrouter">
+															OpenRouter
+														</SelectItem>
+														<SelectItem value="codex">Codex CLI</SelectItem>
+													</SelectContent>
+												</Select>
 											</div>
-											<p className="mt-2 text-slate-400">
-												{whisperBackendQuery.error
-													? whisperBackendQuery.error.message
-													: whisperBackendDetails}
-											</p>
-										</div>
-										<Tabs
-											className="w-full"
-											onValueChange={(value) =>
-												setWhisperModel(value as WhisperModel)
-											}
-											value={whisperModel}
-										>
-											<TabsList
-												className={cn(
-													"grid h-auto min-h-9 w-full border border-white/10 bg-slate-900/75",
-													whisperProvider === "hailo"
-														? "grid-cols-1 sm:grid-cols-3"
-														: "grid-cols-2",
-												)}
-											>
-												{providerWhisperModelOptions.map((option) => (
-													<TabsTrigger key={option.value} value={option.value}>
-														{option.label}
-													</TabsTrigger>
-												))}
-											</TabsList>
-											<p className="mt-2 min-h-5 text-slate-400 text-xs">
-												{selectedWhisperModelOption?.description}
-											</p>
-										</Tabs>
-										<button
-											className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"
-											onClick={() =>
-												setWhisperChunkingEnabled((value) => !value)
-											}
-											type="button"
-										>
-											<Checkbox
-												checked={whisperChunkingEnabled}
-												onCheckedChange={(checked) =>
-													setWhisperChunkingEnabled(checked === true)
-												}
-												onClick={(event) => event.stopPropagation()}
-											/>
-											<span>
-												<span className="block font-medium text-sm text-white">
-													{t("workspace.settings.whisperChunkingTitle")}
-												</span>
-												<span className="block text-slate-400 text-xs">
-													{t("workspace.settings.whisperChunkingDescription")}
-												</span>
-											</span>
-										</button>
-										<div className="space-y-2">
-											<label
-												className="font-medium text-slate-200 text-sm"
-												htmlFor="whisper-chunk-minutes"
-											>
-												{t("workspace.settings.whisperChunkMinutes")}
-											</label>
-											<Input
-												className="border-white/10 bg-slate-950/60 text-slate-100"
-												disabled={!whisperChunkingEnabled}
-												id="whisper-chunk-minutes"
-												max={120}
-												min={1}
-												onChange={(event) =>
-													setWhisperChunkMinutes(
-														Number.parseInt(event.target.value, 10) || 20,
-													)
-												}
-												type="number"
-												value={whisperChunkMinutes}
-											/>
-										</div>
-									</div>
+											{aiProvider === "openai" ? (
+												<div className="space-y-3">
+													<Input
+														className="border-white/10 bg-slate-900/75 text-white"
+														onChange={(event) =>
+															setOpenaiApiKey(event.target.value)
+														}
+														placeholder={t("workspace.settings.openAiApiKey")}
+														type="password"
+														value={openaiApiKey}
+													/>
+													<Input
+														className="border-white/10 bg-slate-900/75 text-white"
+														onChange={(event) =>
+															setOpenaiBaseUrl(event.target.value)
+														}
+														placeholder={t("workspace.settings.openAiBaseUrl")}
+														value={openaiBaseUrl}
+													/>
+													<ModelCombobox
+														isLoading={aiModelsQuery.isLoading}
+														onChange={setOpenaiModel}
+														options={modelOptions}
+														value={openaiModel}
+													/>
+												</div>
+											) : aiProvider === "gemini" ? (
+												<div className="space-y-3">
+													<Input
+														className="border-white/10 bg-slate-900/75 text-white"
+														onChange={(event) =>
+															setGeminiApiKey(event.target.value)
+														}
+														placeholder={t("workspace.settings.geminiApiKey")}
+														type="password"
+														value={geminiApiKey}
+													/>
+													<ModelCombobox
+														isLoading={aiModelsQuery.isLoading}
+														onChange={setGeminiModel}
+														options={modelOptions}
+														value={geminiModel}
+													/>
+												</div>
+											) : aiProvider === "openrouter" ? (
+												<div className="space-y-3">
+													<Input
+														className="border-white/10 bg-slate-900/75 text-white"
+														onChange={(event) =>
+															setOpenrouterApiKey(event.target.value)
+														}
+														placeholder={t(
+															"workspace.settings.openRouterApiKey",
+														)}
+														type="password"
+														value={openrouterApiKey}
+													/>
+													<ModelCombobox
+														isLoading={aiModelsQuery.isLoading}
+														onChange={setOpenrouterModel}
+														options={modelOptions}
+														value={openrouterModel}
+													/>
+												</div>
+											) : (
+												<div className="space-y-3">
+													<ModelCombobox
+														isLoading={aiModelsQuery.isLoading}
+														onChange={setCodexModel}
+														options={modelOptions}
+														value={codexModel}
+													/>
+												</div>
+											)}
+											{aiModelsQuery.error ? (
+												<p className="rounded-md border border-rose-400/20 bg-rose-400/10 p-3 text-rose-100 text-sm">
+													{aiModelsQuery.error.message}
+												</p>
+											) : null}
+											<div className="space-y-3 border-white/10 border-t pt-4">
+												<div className="space-y-1">
+													<p className="font-medium text-slate-200 text-xs uppercase tracking-[0.18em]">
+														{t("workspace.settings.whisperTitle")}
+													</p>
+													<p className="text-slate-400 text-sm">
+														{t("workspace.settings.whisperDescription")}
+													</p>
+												</div>
+												<Tabs
+													className="w-full"
+													onValueChange={(value) => {
+														const nextProvider = value as WhisperProvider;
+														setWhisperProvider(nextProvider);
+														setWhisperModel((currentModel) =>
+															isWhisperModelForProvider(
+																nextProvider,
+																currentModel,
+															)
+																? currentModel
+																: getDefaultWhisperModel(nextProvider),
+														);
+													}}
+													value={whisperProvider}
+												>
+													<TabsList className="grid w-full grid-cols-2 border border-white/10 bg-slate-900/75">
+														{whisperProviderOptions.map((option) => (
+															<TabsTrigger
+																key={option.value}
+																value={option.value}
+															>
+																{option.label}
+															</TabsTrigger>
+														))}
+													</TabsList>
+													<p className="mt-2 min-h-5 text-slate-400 text-xs">
+														{selectedWhisperProviderOption?.description}
+													</p>
+												</Tabs>
+												<div className="rounded-md border border-white/10 bg-slate-950/50 p-3 text-xs">
+													<div className="flex items-center justify-between gap-3">
+														<span className="font-medium text-slate-300">
+															{t("workspace.settings.whisperBackendStatus")}
+														</span>
+														<Badge
+															className={cn(
+																"border-white/10",
+																whisperBackendAvailable
+																	? "bg-emerald-400/10 text-emerald-100"
+																	: "bg-slate-800 text-slate-300",
+															)}
+															variant="outline"
+														>
+															{whisperBackendBadgeLabel}
+														</Badge>
+													</div>
+													<p className="mt-2 text-slate-400">
+														{whisperBackendQuery.error
+															? whisperBackendQuery.error.message
+															: whisperBackendDetails}
+													</p>
+												</div>
+												<Tabs
+													className="w-full"
+													onValueChange={(value) =>
+														setWhisperModel(value as WhisperModel)
+													}
+													value={whisperModel}
+												>
+													<TabsList
+														className={cn(
+															"grid h-auto min-h-9 w-full border border-white/10 bg-slate-900/75",
+															whisperProvider === "hailo"
+																? "grid-cols-1 sm:grid-cols-3"
+																: "grid-cols-2",
+														)}
+													>
+														{providerWhisperModelOptions.map((option) => (
+															<TabsTrigger
+																key={option.value}
+																value={option.value}
+															>
+																{option.label}
+															</TabsTrigger>
+														))}
+													</TabsList>
+													<p className="mt-2 min-h-5 text-slate-400 text-xs">
+														{selectedWhisperModelOption?.description}
+													</p>
+												</Tabs>
+												<button
+													className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"
+													onClick={() =>
+														setWhisperChunkingEnabled((value) => !value)
+													}
+													type="button"
+												>
+													<Checkbox
+														checked={whisperChunkingEnabled}
+														onCheckedChange={(checked) =>
+															setWhisperChunkingEnabled(checked === true)
+														}
+														onClick={(event) => event.stopPropagation()}
+													/>
+													<span>
+														<span className="block font-medium text-sm text-white">
+															{t("workspace.settings.whisperChunkingTitle")}
+														</span>
+														<span className="block text-slate-400 text-xs">
+															{t(
+																"workspace.settings.whisperChunkingDescription",
+															)}
+														</span>
+													</span>
+												</button>
+												<div className="space-y-2">
+													<label
+														className="font-medium text-slate-200 text-sm"
+														htmlFor="whisper-chunk-minutes"
+													>
+														{t("workspace.settings.whisperChunkMinutes")}
+													</label>
+													<Input
+														className="border-white/10 bg-slate-950/60 text-slate-100"
+														disabled={!whisperChunkingEnabled}
+														id="whisper-chunk-minutes"
+														max={120}
+														min={1}
+														onChange={(event) =>
+															setWhisperChunkMinutes(
+																Number.parseInt(event.target.value, 10) || 20,
+															)
+														}
+														type="number"
+														value={whisperChunkMinutes}
+													/>
+												</div>
+											</div>
+										</TabsContent>
+										<TabsContent className="mt-4 space-y-4" value="subtitles">
+											<div className="space-y-1">
+												<p className="font-medium text-slate-200 text-xs uppercase tracking-[0.18em]">
+													{t("workspace.settings.subtitleAppearanceTitle")}
+												</p>
+												<p className="text-slate-400 text-sm">
+													{t(
+														"workspace.settings.subtitleAppearanceDescription",
+													)}
+												</p>
+											</div>
+											<div className="grid gap-4 sm:grid-cols-2">
+												<div className="space-y-2">
+													<label
+														className="flex items-center gap-2 font-medium text-slate-200 text-sm"
+														htmlFor="subtitle-color"
+													>
+														<Palette className="h-4 w-4 text-slate-400" />
+														{t("workspace.settings.subtitleColor")}
+													</label>
+													<Select
+														onValueChange={setSubtitleColor}
+														value={subtitleColor}
+													>
+														<SelectTrigger
+															className="border-white/10 bg-slate-900/75 text-white"
+															id="subtitle-color"
+														>
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															{SUBTITLE_COLOR_OPTIONS.map((option) => (
+																<SelectItem
+																	key={option.value}
+																	value={option.value}
+																>
+																	<span className="flex items-center gap-2">
+																		<span
+																			className="h-3 w-3 rounded-full border border-slate-500"
+																			style={{ backgroundColor: option.value }}
+																		/>
+																		{option.label}
+																	</span>
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+												<div className="space-y-2">
+													<label
+														className="flex items-center gap-2 font-medium text-slate-200 text-sm"
+														htmlFor="subtitle-font-family"
+													>
+														<Type className="h-4 w-4 text-slate-400" />
+														{t("workspace.settings.subtitleFontFamily")}
+													</label>
+													<Select
+														onValueChange={(value) =>
+															setSubtitleFontFamily(value as SubtitleFontFamily)
+														}
+														value={subtitleFontFamily}
+													>
+														<SelectTrigger
+															className="border-white/10 bg-slate-900/75 text-white"
+															id="subtitle-font-family"
+														>
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															{SUBTITLE_FONT_FAMILIES.map((fontFamily) => (
+																<SelectItem key={fontFamily} value={fontFamily}>
+																	{fontFamily}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+											</div>
+											<div className="rounded-md border border-white/10 bg-slate-900/75 p-4">
+												<div className="flex justify-center rounded-md bg-black/50 px-4 py-8">
+													<span
+														className="font-black text-4xl uppercase leading-none"
+														style={{
+															color: subtitleColor,
+															fontFamily: subtitleFontFamily,
+															textShadow:
+																"0 5px 0 #000, 0 0 12px rgba(0,0,0,0.9)",
+															WebkitTextStroke: "2px #000",
+														}}
+													>
+														{t("workspace.settings.subtitlePreview")}
+													</span>
+												</div>
+											</div>
+										</TabsContent>
+									</Tabs>
 									<Button
 										className="w-full border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"
 										disabled={isPending}

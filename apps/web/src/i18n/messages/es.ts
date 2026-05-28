@@ -101,6 +101,8 @@ export const esMessages = {
 			title: "Ajustes de IA",
 			description:
 				"Credenciales del proveedor y modelo usado para analizar candidatos de clips.",
+			aiTab: "IA",
+			subtitlesTab: "Subtitulos",
 			provider: "Proveedor",
 			openAiCompatible: "Compatible con OpenAI",
 			openAiApiKey: "Clave API de OpenAI",
@@ -125,6 +127,12 @@ export const esMessages = {
 			whisperChunkingDescription:
 				"Procesa audios largos en fragmentos superpuestos de 20 minutos. Dejalo apagado para maxima consistencia de texto.",
 			whisperChunkMinutes: "Duracion del fragmento en minutos",
+			subtitleAppearanceTitle: "Apariencia de subtitulos",
+			subtitleAppearanceDescription:
+				"Estilo predeterminado para subtitulos incrustados en clips renderizados.",
+			subtitleColor: "Color",
+			subtitleFontFamily: "Fuente",
+			subtitlePreview: "Vista previa",
 			whisperProviders: {
 				"faster-whisper": {
 					label: "GPU / CPU",

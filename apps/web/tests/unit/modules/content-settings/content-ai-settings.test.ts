@@ -24,6 +24,8 @@ describe("content AI settings use cases", () => {
 				whisperModel: "large-v3-turbo",
 				whisperChunkingEnabled: true,
 				whisperChunkMinutes: 20,
+				subtitleColor: "#67e8f9",
+				subtitleFontFamily: "Impact",
 			}),
 		).resolves.toMatchObject({
 			provider: "gemini",
@@ -41,6 +43,8 @@ describe("content AI settings use cases", () => {
 			whisperModel: "large-v3-turbo",
 			whisperChunkingEnabled: true,
 			whisperChunkMinutes: 20,
+			subtitleColor: "#67e8f9",
+			subtitleFontFamily: "Impact",
 		});
 	});
 
@@ -58,6 +62,8 @@ describe("content AI settings use cases", () => {
 				whisperModel: "medium",
 				whisperChunkingEnabled: false,
 				whisperChunkMinutes: 20,
+				subtitleColor: "#ffffff",
+				subtitleFontFamily: "Arial",
 			}),
 		).rejects.toThrow();
 		expect(repository.update).not.toHaveBeenCalled();

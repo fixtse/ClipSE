@@ -100,6 +100,8 @@ export const enMessages = {
 			title: "AI Settings",
 			description:
 				"Provider credentials and model used for clip candidate analysis.",
+			aiTab: "AI",
+			subtitlesTab: "Subtitles",
 			provider: "Provider",
 			openAiCompatible: "OpenAI compatible",
 			openAiApiKey: "OpenAI API key",
@@ -124,6 +126,12 @@ export const enMessages = {
 			whisperChunkingDescription:
 				"Process long audio in overlapping 20-minute chunks. Leave off for maximum wording consistency.",
 			whisperChunkMinutes: "Chunk length in minutes",
+			subtitleAppearanceTitle: "Subtitle appearance",
+			subtitleAppearanceDescription:
+				"Default style for burned subtitles in rendered clips.",
+			subtitleColor: "Color",
+			subtitleFontFamily: "Font",
+			subtitlePreview: "Subtitle preview",
 			whisperProviders: {
 				"faster-whisper": {
 					label: "GPU / CPU",

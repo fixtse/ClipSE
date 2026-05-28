@@ -8,6 +8,7 @@ import { replaceContentVideoChapters } from "~/modules/content-chapters/applicat
 import { contentChapterRepository } from "~/modules/content-chapters/infrastructure/content-chapter.repository";
 import { contentClipRepository } from "~/modules/content-clips/infrastructure/content-clip.repository";
 import { contentJobRepository } from "~/modules/content-jobs/infrastructure/content-job.repository";
+import { contentAiSettingsRepository } from "~/modules/content-settings/infrastructure/content-ai-settings.repository";
 import { getContentVideoTranscription } from "~/modules/content-transcriptions/application/get-content-video-transcription";
 import { saveContentVideoTranscription } from "~/modules/content-transcriptions/application/save-content-video-transcription";
 import { contentTranscriptionRepository } from "~/modules/content-transcriptions/infrastructure/content-transcription.repository";
@@ -525,6 +526,9 @@ async function processRenderJob(
 	const job = await contentJobRepository.findById(jobId);
 	const aspectMode = readRenderAspectMode(job?.payload.aspectMode);
 	const burnSubtitles = readRenderBurnSubtitles(job?.payload.burnSubtitles);
+	const aiSettings = burnSubtitles
+		? await contentAiSettingsRepository.get()
+		: null;
 	const shortDetectionMode = readShortDetectionMode(
 		job?.payload.shortDetectionMode,
 	);
@@ -671,6 +675,12 @@ async function processRenderJob(
 		shortDetectionMode:
 			aspectMode === "vertical9x16" ? shortDetectionMode : undefined,
 		subtitleFilePath: subtitlePath,
+		captionStyle: aiSettings
+			? {
+					color: aiSettings.subtitleColor,
+					fontFamily: aiSettings.subtitleFontFamily,
+				}
+			: undefined,
 		onProgress: async (progress) => {
 			await contentJobRepository.updateProgress({
 				id: jobId,

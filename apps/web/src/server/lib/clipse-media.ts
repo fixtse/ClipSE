@@ -20,6 +20,16 @@ import type { RenderSubtitleCue } from "~/server/lib/clipse-subtitles";
 
 const execFileAsync = promisify(execFile);
 
+export interface CaptionStyle {
+	readonly color: string;
+	readonly fontFamily: string;
+}
+
+const DEFAULT_CAPTION_STYLE: CaptionStyle = {
+	color: "#ffffff",
+	fontFamily: "Arial",
+};
+
 async function runBinary(command: string, args: string[]): Promise<string> {
 	const { stdout, stderr } = await execFileAsync(command, args, {
 		maxBuffer: 1024 * 1024 * 20,
@@ -363,6 +373,7 @@ export async function renderClipSegment(input: {
 		| "product_view"
 		| "screen_only";
 	subtitleFilePath?: string | null;
+	captionStyle?: CaptionStyle;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const durationSeconds = Math.max(1, input.endSeconds - input.startSeconds);
@@ -416,6 +427,7 @@ export async function renderClipSegment(input: {
 			focusPlan,
 			shortDetectionMode: input.shortDetectionMode,
 			subtitleFilePath: input.subtitleFilePath,
+			captionStyle: input.captionStyle,
 			onProgress: async (progress) => reportProgress(progress * 0.72),
 		});
 	} else if (input.subtitleFilePath) {
@@ -425,6 +437,7 @@ export async function renderClipSegment(input: {
 			startSeconds: input.startSeconds,
 			durationSeconds,
 			subtitleFilePath: input.subtitleFilePath,
+			captionStyle: input.captionStyle,
 			onProgress: async (progress) => reportProgress(progress * 0.72),
 		});
 	} else {
@@ -975,6 +988,7 @@ async function renderVerticalClipSegment(input: {
 		| "product_view"
 		| "screen_only";
 	subtitleFilePath?: string | null;
+	captionStyle?: CaptionStyle;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const windows = input.focusPlan.windows.filter(
@@ -1015,6 +1029,7 @@ async function renderVerticalClipSegment(input: {
 				width: 1080,
 				height: 1920,
 				captionYRatio: DEFAULT_CAPTION_Y_RATIO,
+				captionStyle: input.captionStyle,
 				onProgress: async (progress) =>
 					input.onProgress?.(75 + progress * 0.25),
 			});
@@ -1090,6 +1105,7 @@ async function renderVerticalClipSegment(input: {
 				width: 1080,
 				height: 1920,
 				captionYRatio: getVerticalCaptionYRatio({ hasStackedLayout }),
+				captionStyle: input.captionStyle,
 				onProgress: async (progress) => input.onProgress?.(80 + progress * 0.2),
 			});
 		}
@@ -1125,6 +1141,7 @@ async function renderVerticalClipSegment(input: {
 			captionYRatio: getVerticalCaptionYRatio({
 				hasStackedLayout: hasStaticStackedLayout,
 			}),
+			captionStyle: input.captionStyle,
 			onProgress: async (progress) => input.onProgress?.(75 + progress * 0.25),
 		});
 	}
@@ -1467,6 +1484,7 @@ async function renderSourceClipSegmentWithSubtitles(input: {
 	startSeconds: number;
 	durationSeconds: number;
 	subtitleFilePath: string;
+	captionStyle?: CaptionStyle;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const workspace = dirname(input.outputFilePath);
@@ -1526,6 +1544,7 @@ async function renderSourceClipSegmentWithSubtitles(input: {
 		durationSeconds: input.durationSeconds,
 		width: segmentMetadata.width ?? 1920,
 		height: segmentMetadata.height ?? 1080,
+		captionStyle: input.captionStyle,
 		onProgress: async (progress) => input.onProgress?.(58 + progress * 0.42),
 	});
 }
@@ -1583,8 +1602,10 @@ function clampSubtitleTime(value: number, durationSeconds: number): number {
 function setCaptionFont(
 	context: ReturnType<ReturnType<typeof createCanvas>["getContext"]>,
 	fontSize: number,
+	fontFamily: string,
 ): void {
-	context.font = `900 ${fontSize}px Arial, Helvetica, sans-serif`;
+	const escapedFontFamily = fontFamily.replaceAll('"', "");
+	context.font = `900 ${fontSize}px "${escapedFontFamily}", Arial, Helvetica, sans-serif`;
 	context.textBaseline = "middle";
 }
 
@@ -1592,9 +1613,10 @@ function fitCaptionFontSize(input: {
 	context: ReturnType<ReturnType<typeof createCanvas>["getContext"]>;
 	words: readonly string[];
 	maxWidth: number;
+	fontFamily: string;
 }): number {
 	for (let fontSize = 108; fontSize >= 58; fontSize -= 4) {
-		setCaptionFont(input.context, fontSize);
+		setCaptionFont(input.context, fontSize, input.fontFamily);
 		const totalWidth =
 			input.words.reduce(
 				(width, word) => width + input.context.measureText(word).width,
@@ -1643,6 +1665,7 @@ function drawCaptionFrame(input: {
 	width: number;
 	height: number;
 	captionYRatio: number;
+	captionStyle?: CaptionStyle;
 }): Buffer {
 	const canvas = createCanvas(input.width, input.height);
 	const context = canvas.getContext("2d");
@@ -1658,12 +1681,14 @@ function drawCaptionFrame(input: {
 	}
 
 	const activeWordIndex = getActiveWordIndex(input.cue, input.timeSeconds);
+	const captionStyle = input.captionStyle ?? DEFAULT_CAPTION_STYLE;
 	const fontSize = fitCaptionFontSize({
 		context,
 		words,
 		maxWidth: input.width * 0.86,
+		fontFamily: captionStyle.fontFamily,
 	});
-	setCaptionFont(context, fontSize);
+	setCaptionFont(context, fontSize, captionStyle.fontFamily);
 
 	const gap = fontSize * 0.34;
 	const wordWidths = words.map((word) => context.measureText(word).width);
@@ -1698,7 +1723,7 @@ function drawCaptionFrame(input: {
 		context.shadowOffsetY = 7;
 		context.strokeText(word, cursorX, y);
 		context.shadowColor = "transparent";
-		context.fillStyle = index === activeWordIndex ? "#ffe45c" : "#ffffff";
+		context.fillStyle = captionStyle.color;
 		context.fillText(word, cursorX, y);
 		cursorX += (wordWidths[index] ?? 0) + gap;
 	}
@@ -1742,6 +1767,7 @@ async function renderCaptionConcatList(input: {
 	width: number;
 	height: number;
 	captionYRatio: number;
+	captionStyle?: CaptionStyle;
 }): Promise<string> {
 	await mkdir(input.outputDirectory, { recursive: true });
 	const boundaries = getCaptionStateBoundaries({
@@ -1772,6 +1798,7 @@ async function renderCaptionConcatList(input: {
 				width: input.width,
 				height: input.height,
 				captionYRatio: input.captionYRatio,
+				captionStyle: input.captionStyle,
 			}),
 		);
 		lines.push(`file ${quoteFfmpegConcatPath(framePath)}`);
@@ -1789,6 +1816,7 @@ async function renderCaptionConcatList(input: {
 				width: input.width,
 				height: input.height,
 				captionYRatio: input.captionYRatio,
+				captionStyle: input.captionStyle,
 			}),
 		);
 		lines.push(`file ${quoteFfmpegConcatPath(lastFramePath)}`);
@@ -1810,6 +1838,7 @@ async function renderCaptionOverlayAndComposite(input: {
 	width: number;
 	height: number;
 	captionYRatio?: number;
+	captionStyle?: CaptionStyle;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
 	const cues = await readSubtitleCues(input.subtitleFilePath);
@@ -1821,6 +1850,7 @@ async function renderCaptionOverlayAndComposite(input: {
 		width: input.width,
 		height: input.height,
 		captionYRatio: input.captionYRatio ?? DEFAULT_CAPTION_Y_RATIO,
+		captionStyle: input.captionStyle,
 	});
 	const filterComplex = `[1:v]fps=30,format=rgba[caption];[0:v][caption]overlay=0:0:format=auto:eof_action=pass,format=yuv420p[v]`;
 
