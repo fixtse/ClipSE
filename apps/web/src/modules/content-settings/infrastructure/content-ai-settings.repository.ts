@@ -7,12 +7,15 @@ import type {
 	UpdateContentAiSettingsInput,
 } from "../domain/content-ai-settings.valueobject";
 import {
+	SUBTITLE_FONT_FAMILIES,
 	WHISPER_MODELS,
 	WHISPER_PROVIDERS,
 } from "../domain/content-ai-settings.valueobject";
 
 const SETTINGS_ID = 1;
 const DEFAULT_WHISPER_CHUNK_MINUTES = 20;
+const DEFAULT_SUBTITLE_COLOR = "#ffffff";
+const DEFAULT_SUBTITLE_FONT_FAMILY = "Arial";
 
 function normalizeWhisperModel(
 	model: string,
@@ -30,6 +33,20 @@ function normalizeWhisperProvider(
 	)
 		? (provider as ContentAiSettings["whisperProvider"])
 		: "faster-whisper";
+}
+
+function normalizeSubtitleColor(color: string): string {
+	return /^#[0-9A-Fa-f]{6}$/.test(color) ? color.toLowerCase() : DEFAULT_SUBTITLE_COLOR;
+}
+
+function normalizeSubtitleFontFamily(
+	fontFamily: string,
+): ContentAiSettings["subtitleFontFamily"] {
+	return SUBTITLE_FONT_FAMILIES.includes(
+		fontFamily as ContentAiSettings["subtitleFontFamily"],
+	)
+		? (fontFamily as ContentAiSettings["subtitleFontFamily"])
+		: DEFAULT_SUBTITLE_FONT_FAMILY;
 }
 
 export class ContentAiSettingsRepository
@@ -62,6 +79,8 @@ export class ContentAiSettingsRepository
 				whisperModel: "medium",
 				whisperChunkingEnabled: false,
 				whisperChunkMinutes: DEFAULT_WHISPER_CHUNK_MINUTES,
+				subtitleColor: DEFAULT_SUBTITLE_COLOR,
+				subtitleFontFamily: DEFAULT_SUBTITLE_FONT_FAMILY,
 				createdAt: new Date(),
 				updatedAt: new Date(),
 			})
@@ -105,6 +124,8 @@ export class ContentAiSettingsRepository
 				whisperModel: input.whisperModel,
 				whisperChunkingEnabled: input.whisperChunkingEnabled,
 				whisperChunkMinutes: input.whisperChunkMinutes,
+				subtitleColor: normalizeSubtitleColor(input.subtitleColor),
+				subtitleFontFamily: input.subtitleFontFamily,
 				updatedAt: new Date(),
 			})
 			.where(eq(contentAiSettings.id, SETTINGS_ID))
@@ -134,6 +155,8 @@ export class ContentAiSettingsRepository
 			whisperChunkingEnabled: row.whisperChunkingEnabled,
 			whisperChunkMinutes:
 				row.whisperChunkMinutes || DEFAULT_WHISPER_CHUNK_MINUTES,
+			subtitleColor: normalizeSubtitleColor(row.subtitleColor),
+			subtitleFontFamily: normalizeSubtitleFontFamily(row.subtitleFontFamily),
 			createdAt: row.createdAt,
 			updatedAt: row.updatedAt,
 		};

@@ -198,6 +198,14 @@ export const contentAiSettings = createTable("content_ai_settings", (d) => ({
 		.notNull()
 		.default(false),
 	whisperChunkMinutes: d.integer("whisper_chunk_minutes").notNull().default(20),
+	subtitleColor: d
+		.varchar("subtitle_color", { length: 7 })
+		.notNull()
+		.default("#ffffff"),
+	subtitleFontFamily: d
+		.varchar("subtitle_font_family", { length: 80 })
+		.notNull()
+		.default("Arial"),
 	createdAt: d
 		.timestamp("created_at", { withTimezone: true })
 		.$defaultFn(() => new Date())

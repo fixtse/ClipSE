@@ -1,149 +1,256 @@
-# ClipSE
+<div align="center">
+  <img src="apps/web/public/logo.webp" alt="ClipSE logo" width="160" />
 
-[![CI](https://github.com/fixtse/ClipSE/actions/workflows/ci.yml/badge.svg)](https://github.com/fixtse/ClipSE/actions/workflows/ci.yml)
-[![Docker Images](https://github.com/fixtse/ClipSE/actions/workflows/docker.yml/badge.svg)](https://github.com/fixtse/ClipSE/actions/workflows/docker.yml)
-[![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178c6.svg)](https://www.typescriptlang.org/)
-[![pnpm](https://img.shields.io/badge/pnpm-11.1.2-f69220.svg)](https://pnpm.io/)
+  <h1>ClipSE</h1>
 
-Turn long videos into short, reviewable clips with a self-hosted workflow.
+  <p>Self-hosted AI clip production for long-form video.</p>
 
-ClipSE helps creators and teams find usable short-form moments inside long recordings. Upload a video or add a video URL, let ClipSE transcribe and analyze it, then review suggested clips in a browser before exporting the final cuts.
+  <p>
+    <a href="https://github.com/fixtse/ClipSE/actions/workflows/ci.yml"><img src="https://github.com/fixtse/ClipSE/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <a href="https://github.com/fixtse/ClipSE/actions/workflows/docker.yml"><img src="https://github.com/fixtse/ClipSE/actions/workflows/docker.yml/badge.svg" alt="Docker Images" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL--3.0--only-blue.svg" alt="License: AGPL-3.0-only" /></a>
+    <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-6.x-3178c6.svg" alt="TypeScript" /></a>
+    <a href="https://pnpm.io/"><img src="https://img.shields.io/badge/pnpm-11.4.0-f69220.svg" alt="pnpm" /></a>
+  </p>
+</div>
 
-Everything runs through Docker Compose: the web app, background worker, transcription service, database, and local object storage. You keep control of the app, data, models, and storage while still getting an end-to-end clip production flow.
+ClipSE turns long videos into short, reviewable clips. Upload a video or add a video URL, transcribe it, ask an AI model to find promising short-form moments, review the suggestions in the browser, then render and download the clips you want to keep.
 
-## License
+The default deployment is Docker Compose and includes the web app, worker, PostgreSQL, local S3-compatible storage, and a Whisper transcription service. You control the app, data, model choices, storage, and runtime.
 
-ClipSE is licensed under AGPL-3.0-only.
+## Features
 
-## Core Flow
-
-1. Create a local account.
-2. Create a channel and video draft.
-3. Upload a video file or paste a video URL.
-4. Transcribe the video.
-5. Ask the AI analyzer to find promising clip moments.
-6. Review each suggestion with thumbnails, waveform, and precise in/out points.
-7. Render and download the clips you want to keep.
-
-## Stack
-
-- Next.js App Router + TypeScript
-- Better Auth local email/password authentication
-- tRPC + TanStack Query
-- Drizzle ORM + PostgreSQL
-- S3-compatible object storage
-- FFmpeg and yt-dlp
-- Whisper service container
-- OpenAI-compatible clip analysis provider
-- Tailwind CSS + shadcn/ui + Framer Motion
-
-## Run With Prebuilt Images
-
-The default Docker Compose file uses published GHCR images, so you can run ClipSE without building the app from source.
+- Local account sign-up with Better Auth.
+- Video upload and URL intake through yt-dlp.
+- Whisper transcription through `faster-whisper` or optional Hailo-10H.
+- AI clip analysis through OpenAI, Gemini, OpenRouter, or Codex CLI.
+- Browser review flow with transcript context, clip timing, and render controls.
+- Vertical-short focus detection with local detector or optional Hailo VLM.
+- S3-compatible media storage using Garage by default.
+- Published GHCR images plus local build overrides.
 
 ## Quick Start
 
-Start ClipSE with Docker Compose without cloning the repository:
+Run ClipSE with published images:
 
 ```bash
-mkdir clipse && cd clipse
+mkdir clipse
+cd clipse
 curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/docker-compose.yml
 curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/.env.example
+mkdir -p services/garage
+curl -fsSLo services/garage/garage.toml https://raw.githubusercontent.com/fixtse/ClipSE/main/services/garage/garage.toml
 cp .env.example .env
 docker compose up -d
 ```
 
-Open `http://localhost:3000`, create a local account, then choose your AI provider and transcription model in the app settings.
+Open `http://localhost:3000`, create a local account, then open the workspace settings to choose your AI provider, analysis model, transcription backend, and transcription model.
 
-To stop ClipSE:
+Stop the stack:
 
 ```bash
 docker compose down
 ```
 
-To remove persistent database and object-storage data:
+Remove persistent database and object-storage data:
 
 ```bash
 docker compose down -v
 ```
 
-## Full Repository Setup
+## Repository Setup
 
-The same prebuilt images work from a local checkout:
+From a cloned checkout:
 
 ```bash
 cp .env.example .env
 docker compose up -d
 ```
 
-Open:
-
-```text
-http://localhost:3000
-```
-
-On first launch, create a local account from the sign-up page. Configure the AI provider, analysis model, and Whisper transcription model in the app settings.
-
-For production, replace `BETTER_AUTH_SECRET` with a strong random value:
+For any non-local deployment, replace the default auth secret before starting:
 
 ```bash
 openssl rand -base64 32
 ```
 
-## Local Image Builds
+Set the generated value as `BETTER_AUTH_SECRET` in `.env`, and set `BETTER_AUTH_BASE_URL` to the public app URL.
 
-Maintainers can build the images from source with the build override:
+## How To Use ClipSE
+
+1. Sign in or create the first local account.
+2. Open settings and configure an AI provider.
+3. Choose the transcription provider and model.
+4. Create a channel.
+5. Add a video by uploading a file or pasting a video URL.
+6. Start transcription.
+7. Run AI analysis to generate clip suggestions.
+8. Review the suggested clips and adjust timing as needed.
+9. Render clips with the selected aspect and subtitle options.
+10. Download the finished clips.
+
+## App Options
+
+### AI Analysis Providers
+
+Configure these inside the app settings after sign-in.
+
+| Provider | Required settings | Notes |
+| --- | --- | --- |
+| `openai` | OpenAI API key, model | Uses the official OpenAI-compatible API. Optional base URL can point at another OpenAI-compatible service. |
+| `gemini` | Gemini API key, model | Loads available Gemini models from Google when an API key is present. |
+| `openrouter` | OpenRouter API key, model | Loads models from OpenRouter. |
+| `codex` | Codex model | Uses the Codex CLI mounted into the app and worker containers. Run `codex login` on the host first. |
+
+### Transcription Providers
+
+| Provider | Models | Notes |
+| --- | --- | --- |
+| `faster-whisper` | `medium`, `large-v3-turbo` | Default provider. The default Docker service uses CUDA. |
+| `hailo` | `whisper-tiny`, `whisper-base`, `whisper-small` | Optional Hailo-10H provider through `docker-compose.hailo.yml`. |
+
+Transcription chunking can be enabled in settings. The chunk length accepts `1` to `120` minutes and defaults to `20` minutes when enabled.
+
+### Render Options
+
+Render controls are selected per clip in the review flow.
+
+| Option | Use |
+| --- | --- |
+| Aspect mode | Choose the output framing for the rendered clip, including short-form vertical output. |
+| Burn subtitles | Render transcript captions into the video. |
+| Intro/outro bumper | Add configured bumper media before or after rendered clips when available. |
+
+## Environment Options
+
+Copy `.env.example` to `.env` and change values for your environment. Docker Compose supplies internal service URLs for containers, so most local installs only need `BETTER_AUTH_SECRET`, `BETTER_AUTH_BASE_URL`, and provider credentials configured in the app.
+
+### Core
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5433/clipse` | PostgreSQL connection string for local tooling. Compose overrides this inside containers. |
+| `BETTER_AUTH_SECRET` | local development secret | Cookie/session signing secret. Replace for any shared or public deployment. |
+| `BETTER_AUTH_BASE_URL` | `http://localhost:3000` | Browser-facing app URL. |
+
+### Limits
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `CLIPSE_MAX_CLIPS_PER_VIDEO` | `8` | Maximum regular clip suggestions per analysis. Valid range: `1` to `20`. |
+| `CLIPSE_MAX_SHORTS_PER_VIDEO` | `16` | Maximum short-form candidates per analysis. Valid range: `1` to `40`. |
+
+### Storage
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `CLIPSE_S3_ENDPOINT` | `http://localhost:3900` | Internal S3-compatible endpoint. Compose sets this to Garage inside containers. |
+| `CLIPSE_S3_PUBLIC_ENDPOINT` | `http://localhost:3900` | Browser-reachable S3-compatible endpoint for signed media URLs. |
+| `CLIPSE_S3_REGION` | `garage` | S3 region value. |
+| `CLIPSE_S3_BUCKET` | `clipse` | Bucket for uploads, thumbnails, transcripts, and renders. |
+| `CLIPSE_S3_ACCESS_KEY_ID` | local Garage key | S3 access key. |
+| `CLIPSE_S3_SECRET_ACCESS_KEY` | local Garage secret | S3 secret key. |
+| `CLIPSE_S3_FORCE_PATH_STYLE` | `true` | Use path-style S3 URLs. Keep `true` for Garage and MinIO. |
+
+### Whisper
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `WHISPER_SERVICE_URL` | `http://localhost:8000` | Whisper API URL for local tooling. Compose sets this to `http://whisper:8000` inside containers. |
+| `WHISPER_PROVIDER` | `faster-whisper` | Whisper service default provider. Use `hailo` with the Hailo override. |
+| `WHISPER_DEVICE` | `cuda` | `faster-whisper` device. Use `cpu` only with a compatible compute type and enough patience. |
+| `WHISPER_COMPUTE_TYPE` | `float16` | `faster-whisper` compute type. |
+| `WHISPER_CPU_FALLBACK` | `false` | Whisper container CPU fallback toggle. |
+| `NVIDIA_VISIBLE_DEVICES` | `all` | GPU devices exposed to CUDA containers. |
+| `NVIDIA_DRIVER_CAPABILITIES` | `compute,utility,video` | NVIDIA container capabilities. |
+| `WHISPER_CACHE_DIR` | `./.clipse-whisper-cache` in dev compose | Host cache path for downloaded Whisper models in development. |
+
+### Hailo-10H
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `CLIPSE_WHISPER_HAILO_IMAGE` | `ghcr.io/fixtse/clipse-whisper-hailo:latest` | Hailo Whisper image. |
+| `HAILO_DEVICE` | `/dev/hailo0` | Hailo accelerator device passed into the container. |
+| `HAILO_WHISPER_MODEL` | `whisper-base` | Hailo transcription model. |
+| `HAILO_WHISPER_HEF_PATH` | empty | Optional explicit Whisper HEF path. |
+| `HAILO_VLM_MODEL` | `qwen2-vl-2b` | Hailo VLM focus-detection model. |
+| `HAILO_VLM_HEF_PATH` | empty | Optional explicit VLM HEF path. |
+| `HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS` | `1.0` | Frame sampling interval for Hailo VLM focus detection. |
+| `HAILO_VLM_FOCUS_MAX_SAMPLES` | `8` | Maximum sampled frames per focus-detection request. |
+| `HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE` | `true` | Hailo VLM memory optimization toggle. |
+| `HAILO_COMMAND_TIMEOUT_SECONDS` | `900` | Timeout for Hailo helper commands. |
+| `HAILO_APPS_REF` | `main` | Hailo Apps git ref used when building the Hailo image. |
+| `HAILO_HOST_LIB_DIR` | `/usr/lib/hailo` | Host HailoRT library mount path. |
+| `HAILO_HOST_BIN_DIR` | `/usr/bin` | Host binary mount path for `hailortcli`. |
+| `HAILO_HOST_PYTHON_DIR` | `/opt/hailo/hailo_platform` | Host PyHailoRT package mount path. |
+
+### Focus Detection
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `CLIPSE_FOCUS_PROVIDER` | `auto` | `auto`, `local`, or `hailo-vlm`. |
+| `CLIPSE_HAILO_SERVICE_URL` | `http://localhost:8000` | Hailo focus API URL. Compose sets this to `http://whisper:8000` inside containers. |
+| `CLIPSE_YOLO_MODEL` | `yolo11n.pt` | Local person/face focus model used by the worker. |
+
+### Video URL Intake
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `CLIPSE_YTDLP_COOKIES_FILE` | empty | Optional cookies file path for yt-dlp when a source requires browser cookies. Mount the file into the worker container. |
+| `CLIPSE_YTDLP_USER_AGENT` | empty | Optional yt-dlp user agent override. |
+
+### Codex Provider
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `HOST_CODEX_HOME` | `${HOME}/.codex` | Host Codex config directory mounted into containers. |
+| `CLIPSE_CODEX_COMMAND` | `codex` | Command used by the app and worker. |
+| `CLIPSE_CODEX_HOME` | `/root/.codex` | Container Codex config directory. |
+| `CLIPSE_CODEX_CWD` | `/app` | Working directory for Codex CLI calls. |
+| `CLIPSE_CODEX_TIMEOUT_MS` | `300000` | Codex request timeout in milliseconds. |
+
+Authenticate on the host before selecting the Codex provider:
+
+```bash
+codex login
+```
+
+For Windows PowerShell:
+
+```bash
+HOST_CODEX_HOME="C:/Users/<you>/.codex"
+```
+
+For WSL:
+
+```bash
+HOST_CODEX_HOME="/mnt/c/Users/<you>/.codex"
+```
+
+### Image Overrides
+
+| Variable | Default |
+| --- | --- |
+| `CLIPSE_APP_IMAGE` | `ghcr.io/fixtse/clipse-app:latest` |
+| `CLIPSE_WORKER_IMAGE` | `ghcr.io/fixtse/clipse-worker:latest` |
+| `CLIPSE_MIGRATE_IMAGE` | `ghcr.io/fixtse/clipse-migrate:latest` |
+| `CLIPSE_WHISPER_IMAGE` | `ghcr.io/fixtse/clipse-whisper:latest` |
+| `CLIPSE_GARAGE_INIT_IMAGE` | `ghcr.io/fixtse/clipse-garage-init:latest` |
+
+## Docker Options
+
+Run with published images:
+
+```bash
+docker compose up -d
+```
+
+Build app images locally:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
 
-The published image names are:
-
-- `ghcr.io/fixtse/clipse-app`
-- `ghcr.io/fixtse/clipse-worker`
-- `ghcr.io/fixtse/clipse-migrate`
-- `ghcr.io/fixtse/clipse-whisper`
-- `ghcr.io/fixtse/clipse-garage-init`
-
-The Docker workflow publishes `latest` for `main`, branch tags, semver tags, and `sha-*` tags.
-
-## Development
-
-```bash
-pnpm install
-cp .env.example .env
-docker compose -f docker-compose.dev.yml up --build
-```
-
-Useful commands:
-
-```bash
-pnpm check
-pnpm typecheck
-pnpm test:unit
-pnpm db:generate
-pnpm db:migrate
-```
-
-Use `pnpm db:generate` after changing the Drizzle schema in `apps/web/src/server/db/schema.ts`.
-
-## Contributing and Security
-
-- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
-- Read [SECURITY.md](SECURITY.md) for supported security reporting.
-- Read [DOCKER.md](DOCKER.md) for image overrides, logs, startup checks, and troubleshooting.
-
-## Whisper GPU Notes
-
-- The Whisper container is configured for NVIDIA GPU inference by default.
-- Default model: `medium`.
-- Default device: `cuda` with `float16`.
-- The model is loaded only for an active transcription request and released after the request finishes.
-- Docker host prerequisites still apply: NVIDIA drivers plus Docker GPU support.
-- Hailo-10H is available as an optional Whisper provider through `docker-compose.hailo.yml`.
-  Install the host PCIe driver from the ASUS amd64 zip and make HailoRT/PyHailoRT available to the container, then run:
+Run the Hailo-10H Whisper provider:
 
 ```bash
 ./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
@@ -151,18 +258,83 @@ WHISPER_PROVIDER=hailo docker compose -f docker-compose.yml -f docker-compose.ha
 curl http://localhost:8000/health
 ```
 
-Set `CLIPSE_FOCUS_PROVIDER=hailo-vlm` to use the UGen300 M2 VLM backend for vertical short face/person focus detection before falling back to the existing local detector.
+Use Hailo VLM for vertical-short focus detection:
+
+```bash
+CLIPSE_FOCUS_PROVIDER=hailo-vlm WHISPER_PROVIDER=hailo docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
+```
+
+Check logs:
+
+```bash
+docker compose ps
+docker compose logs -f app
+docker compose logs -f worker
+docker compose logs -f whisper
+```
+
+See [DOCKER.md](DOCKER.md) for startup checks, troubleshooting, Hailo licensing notes, Garage reset steps, and private Hailo image builds.
+
+## Development
+
+Use pnpm for local commands:
+
+```bash
+PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm install
+cp .env.example .env
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Useful commands:
+
+```bash
+PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm check
+PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm typecheck
+PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm test:unit
+PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm db:generate
+PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm db:migrate
+```
+
+Generate migrations after changing the Drizzle schema:
+
+```bash
+PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm db:generate
+```
 
 ## Architecture
 
-- `apps/web/src/app` - Next.js App Router pages and route handlers
-- `apps/web/src/modules/content-videos` - upload drafts, dashboard, analysis settings
-- `apps/web/src/modules/content-transcriptions` - transcript persistence
-- `apps/web/src/modules/content-clips` - clip suggestions and render state
-- `apps/web/src/modules/content-jobs` - background job queue state
-- `apps/web/src/server/actions` - mutation-oriented server actions
-- `apps/web/src/server/api/routers` - query-oriented tRPC endpoints
-- `apps/worker/src/clipse-worker.ts` - transcription, analysis, and render worker
-- `services/whisper` - Whisper API container
-- `services/postgres/migrations` - Drizzle migrations
-- `services/garage` - Garage object storage config and init image
+- `apps/web/src/app` - Next.js App Router pages and route handlers.
+- `apps/web/src/components/clipse` - workspace UI.
+- `apps/web/src/modules/content-videos` - upload drafts, dashboard, and video state.
+- `apps/web/src/modules/content-transcriptions` - transcript persistence.
+- `apps/web/src/modules/content-clips` - clip suggestions and render state.
+- `apps/web/src/modules/content-jobs` - background job queue state.
+- `apps/web/src/modules/content-settings` - AI and transcription settings.
+- `apps/web/src/server/actions` - mutation-oriented server actions.
+- `apps/web/src/server/api/routers` - query-oriented tRPC endpoints.
+- `apps/worker/src/clipse-worker.ts` - transcription, analysis, and render worker.
+- `services/whisper` - Whisper and Hailo API container.
+- `services/postgres/migrations` - Drizzle migrations.
+- `services/garage` - Garage object storage config and init image.
+
+## Tech Stack
+
+- Next.js App Router, React, and TypeScript.
+- Better Auth local email/password authentication.
+- tRPC and TanStack Query.
+- Drizzle ORM and PostgreSQL.
+- S3-compatible object storage.
+- FFmpeg and yt-dlp.
+- Whisper, faster-whisper, optional Hailo-10H.
+- OpenAI-compatible AI SDK providers, Gemini, OpenRouter, and Codex CLI.
+- Tailwind CSS, shadcn/ui, and Framer Motion.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Keep changes focused, update tests for behavior changes, and run the local checks before submitting.
+
+Security issues should be reported privately. See [SECURITY.md](SECURITY.md).
+
+## License
+
+ClipSE is licensed under [AGPL-3.0-only](LICENSE).

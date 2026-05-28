@@ -129,7 +129,7 @@ if container_id="$($DOCKER_CMD run -d \
   -e POSTGRES_PASSWORD="$DB_PASSWORD" \
   -e POSTGRES_DB="$DB_NAME" \
   -p "$DB_PORT":5432 \
-  docker.io/pgvector/pgvector:pg17)"; then
+  docker.io/postgres:17)"; then
   echo "Database container '$DB_CONTAINER_NAME' was successfully created on port $DB_PORT."
   echo "Container id: $container_id"
 else

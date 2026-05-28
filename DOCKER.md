@@ -16,7 +16,7 @@ The app runs at `http://localhost:3000`.
 - `app` - Next.js web app
 - `worker` - background transcription, analysis, and rendering worker
 - `whisper` - Whisper API service
-- `postgres` - PostgreSQL with pgvector
+- `postgres` - PostgreSQL
 - `garage` - S3-compatible object storage
 - `garage-init` - local Garage bucket/key initialization
 
