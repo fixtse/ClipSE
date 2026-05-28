@@ -1839,7 +1839,7 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 									{t("workspace.header.settings")}
 								</Button>
 							</DialogTrigger>
-							<DialogContent className="border-white/10 bg-slate-950 text-white sm:max-w-2xl">
+							<DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-white/10 bg-slate-950 text-white sm:max-w-2xl">
 								<DialogHeader>
 									<DialogTitle>{t("workspace.settings.title")}</DialogTitle>
 									<DialogDescription className="text-slate-400">
