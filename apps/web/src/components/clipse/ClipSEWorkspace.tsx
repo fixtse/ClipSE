@@ -3900,36 +3900,35 @@ export function ClipSEWorkspace({
 															count: visibleClips.length,
 														})}
 													</div>
-													{clipListTab === "standard" ? (
-														<Select
-															onValueChange={(value) =>
-																setRenderOptions((current) => ({
-																	...current,
-																	aspectMode:
-																		value === "vertical9x16"
-																			? "vertical9x16"
-																			: "source",
-																}))
-															}
-															value={renderOptions.aspectMode}
-														>
-															<SelectTrigger className="h-9 w-[150px] border-white/10 bg-slate-900/75 text-white">
-																<SelectValue />
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value="source">
-																	{t("workspace.renderOptions.source")}
-																</SelectItem>
-																<SelectItem value="vertical9x16">
-																	{t("workspace.renderOptions.vertical")}
-																</SelectItem>
-															</SelectContent>
-														</Select>
-													) : (
-														<Badge className="h-9 border-white/10 bg-slate-900/75 px-3 text-slate-200">
-															{t("workspace.renderOptions.vertical")}
-														</Badge>
-													)}
+													<Select
+														disabled={clipListTab === "short"}
+														onValueChange={(value) =>
+															setRenderOptions((current) => ({
+																...current,
+																aspectMode:
+																	value === "vertical9x16"
+																		? "vertical9x16"
+																		: "source",
+															}))
+														}
+														value={
+															clipListTab === "short"
+																? "vertical9x16"
+																: renderOptions.aspectMode
+														}
+													>
+														<SelectTrigger className="h-9 w-[150px] border-white/10 bg-slate-900/75 text-white disabled:cursor-default disabled:opacity-100">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="source">
+																{t("workspace.renderOptions.source")}
+															</SelectItem>
+															<SelectItem value="vertical9x16">
+																{t("workspace.renderOptions.vertical")}
+															</SelectItem>
+														</SelectContent>
+													</Select>
 													<button
 														aria-pressed={renderOptions.burnSubtitles}
 														className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-slate-900/75 px-3 text-slate-200 text-sm transition hover:bg-slate-900"
