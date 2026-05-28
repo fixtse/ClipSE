@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { createContentVideoDraft } from "~/modules/content-videos/application/create-content-video-draft";
-import { ContentVideoMother } from "../../../mothers/domain-mothers";
-import { ContentVideoRepositoryMother } from "../../../mothers/repository-mothers";
+import { ClipSEVideoMother } from "../../../mothers/domain-mothers";
+import { ClipSEVideoRepositoryMother } from "../../../mothers/repository-mothers";
 
 describe("createContentVideoDraft", () => {
 	it("validates input and delegates draft creation to the repository", async () => {
-		const createdVideo = ContentVideoMother.create({
+		const createdVideo = ClipSEVideoMother.create({
 			originalFilename: "launch.mp4",
 			title: "launch",
 		});
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			createDraft: vi.fn(async () => createdVideo),
 		});
 		const input = {

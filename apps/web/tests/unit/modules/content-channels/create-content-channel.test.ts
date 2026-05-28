@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { createContentChannel } from "~/modules/content-channels/application/create-content-channel";
-import { ContentChannelRepositoryMother } from "../../../mothers/repository-mothers";
+import { ClipSEChannelRepositoryMother } from "../../../mothers/repository-mothers";
 
 describe("createContentChannel", () => {
 	it("validates and delegates channel creation", async () => {
-		const channelRepository = ContentChannelRepositoryMother.create({
+		const channelRepository = ClipSEChannelRepositoryMother.create({
 			create: vi.fn(async (input) => ({
 				id: "22222222-2222-4222-8222-222222222222",
 				name: input.name,

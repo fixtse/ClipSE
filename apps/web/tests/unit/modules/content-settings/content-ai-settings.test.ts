@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { getContentAiSettings } from "~/modules/content-settings/application/get-content-ai-settings";
 import { listContentAiModels } from "~/modules/content-settings/application/list-content-ai-models";
 import { updateContentAiSettings } from "~/modules/content-settings/application/update-content-ai-settings";
-import { ContentAiSettingsMother } from "../../../mothers/domain-mothers";
-import { ContentAiSettingsRepositoryMother } from "../../../mothers/repository-mothers";
+import { ClipSEAiSettingsMother } from "../../../mothers/domain-mothers";
+import { ClipSEAiSettingsRepositoryMother } from "../../../mothers/repository-mothers";
 
-describe("content AI settings use cases", () => {
+describe("ClipSE AI settings use cases", () => {
 	it("loads and updates settings through the repository", async () => {
-		const settings = ContentAiSettingsMother.create();
-		const repository = ContentAiSettingsRepositoryMother.create({
+		const settings = ClipSEAiSettingsMother.create();
+		const repository = ClipSEAiSettingsRepositoryMother.create({
 			get: vi.fn(async () => settings),
 		});
 
@@ -49,7 +49,7 @@ describe("content AI settings use cases", () => {
 	});
 
 	it("rejects invalid updates before calling the repository", async () => {
-		const repository = ContentAiSettingsRepositoryMother.create();
+		const repository = ClipSEAiSettingsRepositoryMother.create();
 
 		await expect(
 			updateContentAiSettings(repository, {
@@ -70,9 +70,9 @@ describe("content AI settings use cases", () => {
 	});
 
 	it("returns no models when provider credentials are missing", async () => {
-		const repository = ContentAiSettingsRepositoryMother.create({
+		const repository = ClipSEAiSettingsRepositoryMother.create({
 			get: vi.fn(async () =>
-				ContentAiSettingsMother.create({
+				ClipSEAiSettingsMother.create({
 					openaiApiKey: "",
 					geminiApiKey: "",
 					openrouterApiKey: "",
@@ -135,9 +135,9 @@ describe("content AI settings use cases", () => {
 			statusText: "OK",
 		})) as unknown as typeof fetch;
 		vi.stubGlobal("fetch", fetchMock);
-		const repository = ContentAiSettingsRepositoryMother.create({
+		const repository = ClipSEAiSettingsRepositoryMother.create({
 			get: vi.fn(async () =>
-				ContentAiSettingsMother.create({
+				ClipSEAiSettingsMother.create({
 					openaiBaseUrl: "https://openai.proxy/v1/",
 				}),
 			),
@@ -179,7 +179,7 @@ describe("content AI settings use cases", () => {
 		);
 
 		await expect(
-			listContentAiModels(ContentAiSettingsRepositoryMother.create(), "openai"),
+			listContentAiModels(ClipSEAiSettingsRepositoryMother.create(), "openai"),
 		).rejects.toThrow("Failed to load OpenAI models: 503 Unavailable");
 	});
 });

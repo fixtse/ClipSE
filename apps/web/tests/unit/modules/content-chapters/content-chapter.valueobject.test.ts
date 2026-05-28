@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
-	ContentChapterSchema,
-	GeneratedChapterSchema,
+	ContentChapterSchema as ClipSEChapterSchema,
+	GeneratedChapterSchema as GeneratedClipSEChapterSchema,
 } from "~/modules/content-chapters/domain/content-chapter.valueobject";
 import { DashboardChapterMother } from "../../../mothers/domain-mothers";
 
-describe("content chapter schemas", () => {
+describe("ClipSE chapter schemas", () => {
 	it("parses stored chapters and applies generated chapter defaults", () => {
 		expect(
-			ContentChapterSchema.parse(DashboardChapterMother.create()).title,
+			ClipSEChapterSchema.parse(DashboardChapterMother.create()).title,
 		).toBe("Intro");
 		expect(
-			GeneratedChapterSchema.parse({
+			GeneratedClipSEChapterSchema.parse({
 				title: "Chapter",
 				startSeconds: 0,
 				endSeconds: 30,

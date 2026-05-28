@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { deleteContentVideo } from "~/modules/content-videos/application/delete-content-video";
 import {
 	ClipSEMother,
-	ContentVideoMother,
+	ClipSEVideoMother,
 } from "../../../mothers/domain-mothers";
 import {
 	ClipSERepositoryMother,
-	ContentVideoRepositoryMother,
+	ClipSEVideoRepositoryMother,
 } from "../../../mothers/repository-mothers";
 
 const mocks = vi.hoisted(() => ({
@@ -24,7 +24,7 @@ vi.mock("~/server/lib/clipse-storage", () => ({
 
 describe("deleteContentVideo", () => {
 	it("returns zero deleted assets when the video is missing", async () => {
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () => null),
 		});
 		const clipRepository = ClipSERepositoryMother.create();
@@ -41,7 +41,7 @@ describe("deleteContentVideo", () => {
 	});
 
 	it("deletes unique source and clip assets before deleting the video", async () => {
-		const video = ContentVideoMother.create({
+		const video = ClipSEVideoMother.create({
 			storageKey: "videos/source.mp4",
 		});
 		const clip = ClipSEMother.create({
@@ -51,7 +51,7 @@ describe("deleteContentVideo", () => {
 			id: "33333333-3333-4333-8333-333333333334",
 			outputStorageKey: "clips/rendered.mp4",
 		});
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () => video),
 		});
 		const clipRepository = ClipSERepositoryMother.create({
@@ -74,7 +74,7 @@ describe("deleteContentVideo", () => {
 	});
 
 	it("continues deleting the database row when storage cleanup fails", async () => {
-		const video = ContentVideoMother.create({
+		const video = ClipSEVideoMother.create({
 			storageKey: "videos/source.mp4",
 		});
 		mocks.deleteStorageObject.mockRejectedValueOnce(new Error("S3 down"));
@@ -82,7 +82,7 @@ describe("deleteContentVideo", () => {
 		const consoleWarnSpy = vi
 			.spyOn(console, "warn")
 			.mockImplementation(() => {});
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () => video),
 		});
 

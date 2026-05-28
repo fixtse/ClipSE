@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { clearFinishedContentJobs } from "~/modules/content-jobs/application/clear-finished-content-jobs";
-import { ContentJobRepositoryMother } from "../../../mothers/repository-mothers";
+import { ClipSEJobRepositoryMother } from "../../../mothers/repository-mothers";
 
 describe("clearFinishedContentJobs", () => {
 	it("returns the number of cleared completed and failed jobs", async () => {
-		const jobRepository = ContentJobRepositoryMother.create({
+		const jobRepository = ClipSEJobRepositoryMother.create({
 			clearCompletedAndFailedByVideoId: vi.fn(async () => 3),
 		});
 

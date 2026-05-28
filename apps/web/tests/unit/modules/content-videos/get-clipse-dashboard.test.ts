@@ -1,37 +1,37 @@
 import { describe, expect, it, vi } from "vitest";
 import { getClipSEDashboard } from "~/modules/content-videos/application/get-content-clip-dashboard";
 import {
+	ClipSEJobMother,
 	ClipSEMother,
-	ContentJobMother,
-	ContentTranscriptionMother,
-	ContentVideoMother,
+	ClipSETranscriptionMother,
+	ClipSEVideoMother,
 	DashboardChapterMother,
 } from "../../../mothers/domain-mothers";
 import {
+	ClipSEChannelRepositoryMother,
+	ClipSEChapterRepositoryMother,
+	ClipSEJobRepositoryMother,
 	ClipSERepositoryMother,
-	ContentChannelRepositoryMother,
-	ContentChapterRepositoryMother,
-	ContentJobRepositoryMother,
-	ContentTranscriptionRepositoryMother,
-	ContentVideoRepositoryMother,
+	ClipSETranscriptionRepositoryMother,
+	ClipSEVideoRepositoryMother,
 } from "../../../mothers/repository-mothers";
 
 describe("getClipSEDashboard", () => {
 	it("returns an empty dashboard when no channels exist", async () => {
-		const channelRepository = ContentChannelRepositoryMother.create({
+		const channelRepository = ClipSEChannelRepositoryMother.create({
 			listAll: vi.fn(async () => []),
 		});
-		const jobRepository = ContentJobRepositoryMother.create({
-			listRecent: vi.fn(async () => [ContentJobMother.create()]),
+		const jobRepository = ClipSEJobRepositoryMother.create({
+			listRecent: vi.fn(async () => [ClipSEJobMother.create()]),
 		});
 
 		await expect(
 			getClipSEDashboard(
 				channelRepository,
-				ContentVideoRepositoryMother.create(),
-				ContentTranscriptionRepositoryMother.create(),
+				ClipSEVideoRepositoryMother.create(),
+				ClipSETranscriptionRepositoryMother.create(),
 				ClipSERepositoryMother.create(),
-				ContentChapterRepositoryMother.create(),
+				ClipSEChapterRepositoryMother.create(),
 				jobRepository,
 			),
 		).resolves.toMatchObject({
@@ -60,7 +60,7 @@ describe("getClipSEDashboard", () => {
 			createdAt: new Date(0),
 			updatedAt: new Date(0),
 		};
-		const video = ContentVideoMother.create({
+		const video = ClipSEVideoMother.create({
 			channelId: channel.id,
 			storageKey: "videos/source.mp4",
 		});
@@ -69,13 +69,13 @@ describe("getClipSEDashboard", () => {
 			status: "ready",
 			outputStorageKey: "clips/rendered.mp4",
 		});
-		const pendingJob = ContentJobMother.create({
+		const pendingJob = ClipSEJobMother.create({
 			id: "44444444-4444-4444-8444-444444444444",
 			type: "transcribe-video",
 			status: "pending",
 			result: { message: "Waiting" },
 		});
-		const renderJob = ContentJobMother.create({
+		const renderJob = ClipSEJobMother.create({
 			id: "44444444-4444-4444-8444-444444444445",
 			type: "render-clip",
 			status: "running",
@@ -85,25 +85,25 @@ describe("getClipSEDashboard", () => {
 		});
 
 		const dashboard = await getClipSEDashboard(
-			ContentChannelRepositoryMother.create({
+			ClipSEChannelRepositoryMother.create({
 				listAll: vi.fn(async () => [channel]),
 			}),
-			ContentVideoRepositoryMother.create({
+			ClipSEVideoRepositoryMother.create({
 				findById: vi.fn(async () => video),
 				listByChannelId: vi.fn(async () => [video]),
 			}),
-			ContentTranscriptionRepositoryMother.create({
+			ClipSETranscriptionRepositoryMother.create({
 				findByVideoId: vi.fn(async () =>
-					ContentTranscriptionMother.create({ videoId: video.id }),
+					ClipSETranscriptionMother.create({ videoId: video.id }),
 				),
 			}),
 			ClipSERepositoryMother.create({
 				listByVideoId: vi.fn(async () => [readyClip]),
 			}),
-			ContentChapterRepositoryMother.create({
+			ClipSEChapterRepositoryMother.create({
 				listByVideoId: vi.fn(async () => [DashboardChapterMother.create()]),
 			}),
-			ContentJobRepositoryMother.create({
+			ClipSEJobRepositoryMother.create({
 				listByVideoId: vi.fn(async () => [pendingJob, renderJob]),
 				listRecent: vi.fn(async () => [pendingJob]),
 			}),
@@ -156,25 +156,25 @@ describe("getClipSEDashboard", () => {
 			createdAt: new Date(0),
 			updatedAt: new Date(0),
 		};
-		const video = ContentVideoMother.create({
+		const video = ClipSEVideoMother.create({
 			channelId: channel.id,
 			storageKey: null,
 		});
 
 		const dashboard = await getClipSEDashboard(
-			ContentChannelRepositoryMother.create({
+			ClipSEChannelRepositoryMother.create({
 				listAll: vi.fn(async () => [channel]),
 			}),
-			ContentVideoRepositoryMother.create({
+			ClipSEVideoRepositoryMother.create({
 				findById: vi.fn(async () => null),
 				listByChannelId: vi.fn(async () => [video]),
 			}),
-			ContentTranscriptionRepositoryMother.create(),
+			ClipSETranscriptionRepositoryMother.create(),
 			ClipSERepositoryMother.create({
 				listByVideoId: vi.fn(async () => []),
 			}),
-			ContentChapterRepositoryMother.create(),
-			ContentJobRepositoryMother.create({
+			ClipSEChapterRepositoryMother.create(),
+			ClipSEJobRepositoryMother.create({
 				listByVideoId: vi.fn(async () => []),
 			}),
 			{

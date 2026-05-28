@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { getContentVideoTranscription } from "~/modules/content-transcriptions/application/get-content-video-transcription";
 import { saveContentVideoTranscription } from "~/modules/content-transcriptions/application/save-content-video-transcription";
-import { ContentTranscriptionMother } from "../../../mothers/domain-mothers";
-import { ContentTranscriptionRepositoryMother } from "../../../mothers/repository-mothers";
+import { ClipSETranscriptionMother } from "../../../mothers/domain-mothers";
+import { ClipSETranscriptionRepositoryMother } from "../../../mothers/repository-mothers";
 
-describe("content transcription use cases", () => {
+describe("ClipSE transcription use cases", () => {
 	it("gets the transcription for a video", async () => {
-		const transcription = ContentTranscriptionMother.create();
-		const repository = ContentTranscriptionRepositoryMother.create({
+		const transcription = ClipSETranscriptionMother.create();
+		const repository = ClipSETranscriptionRepositoryMother.create({
 			findByVideoId: vi.fn(async () => transcription),
 		});
 
@@ -18,7 +18,7 @@ describe("content transcription use cases", () => {
 	});
 
 	it("saves a transcription", async () => {
-		const transcription = ContentTranscriptionMother.create();
+		const transcription = ClipSETranscriptionMother.create();
 		const input = {
 			videoId: transcription.videoId,
 			language: transcription.language,
@@ -28,7 +28,7 @@ describe("content transcription use cases", () => {
 			fullText: transcription.fullText,
 			metadata: transcription.metadata,
 		};
-		const repository = ContentTranscriptionRepositoryMother.create({
+		const repository = ClipSETranscriptionRepositoryMother.create({
 			upsert: vi.fn(async () => transcription),
 		});
 

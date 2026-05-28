@@ -1,26 +1,26 @@
 import { vi } from "vitest";
-import type { ContentChannelRepositoryInterface } from "~/modules/content-channels/domain/content-channel.repository.interface";
-import type { ContentChapterRepositoryInterface } from "~/modules/content-chapters/domain/content-chapter.repository.interface";
+import type { ContentChannelRepositoryInterface as ClipSEChannelRepositoryInterface } from "~/modules/content-channels/domain/content-channel.repository.interface";
+import type { ContentChapterRepositoryInterface as ClipSEChapterRepositoryInterface } from "~/modules/content-chapters/domain/content-chapter.repository.interface";
 import type { ClipSERepositoryInterface } from "~/modules/content-clips/domain/content-clip.repository.interface";
-import type { ContentJobRepositoryInterface } from "~/modules/content-jobs/domain/content-job.repository.interface";
-import type { ContentAiSettingsRepositoryInterface } from "~/modules/content-settings/domain/content-ai-settings.repository.interface";
-import type { ContentTranscriptionRepositoryInterface } from "~/modules/content-transcriptions/domain/content-transcription.repository.interface";
-import type { ContentVideoRepositoryInterface } from "~/modules/content-videos/domain/content-video.repository.interface";
+import type { ContentJobRepositoryInterface as ClipSEJobRepositoryInterface } from "~/modules/content-jobs/domain/content-job.repository.interface";
+import type { ContentAiSettingsRepositoryInterface as ClipSEAiSettingsRepositoryInterface } from "~/modules/content-settings/domain/content-ai-settings.repository.interface";
+import type { ContentTranscriptionRepositoryInterface as ClipSETranscriptionRepositoryInterface } from "~/modules/content-transcriptions/domain/content-transcription.repository.interface";
+import type { ContentVideoRepositoryInterface as ClipSEVideoRepositoryInterface } from "~/modules/content-videos/domain/content-video.repository.interface";
 import {
+	ClipSEAiSettingsMother,
+	ClipSEJobMother,
 	ClipSEMother,
-	ContentAiSettingsMother,
-	ContentJobMother,
-	ContentTranscriptionMother,
-	ContentVideoMother,
+	ClipSETranscriptionMother,
+	ClipSEVideoMother,
 } from "./domain-mothers";
 
-export const ContentChannelRepositoryMother = {
+export const ClipSEChannelRepositoryMother = {
 	create(
-		overrides: Partial<ContentChannelRepositoryInterface> = {},
-	): ContentChannelRepositoryInterface {
+		overrides: Partial<ClipSEChannelRepositoryInterface> = {},
+	): ClipSEChannelRepositoryInterface {
 		const channel = {
 			id: "22222222-2222-4222-8222-222222222222",
-			name: "Content Channel",
+			name: "ClipSE Channel",
 			logoStorageKey: null,
 			logoMimeType: null,
 			introStorageKey: null,
@@ -46,33 +46,33 @@ export const ContentChannelRepositoryMother = {
 	},
 };
 
-export const ContentAiSettingsRepositoryMother = {
+export const ClipSEAiSettingsRepositoryMother = {
 	create(
-		overrides: Partial<ContentAiSettingsRepositoryInterface> = {},
-	): ContentAiSettingsRepositoryInterface {
+		overrides: Partial<ClipSEAiSettingsRepositoryInterface> = {},
+	): ClipSEAiSettingsRepositoryInterface {
 		return {
-			get: vi.fn(async () => ContentAiSettingsMother.create()),
-			update: vi.fn(async (input) => ContentAiSettingsMother.create(input)),
+			get: vi.fn(async () => ClipSEAiSettingsMother.create()),
+			update: vi.fn(async (input) => ClipSEAiSettingsMother.create(input)),
 			...overrides,
 		};
 	},
 };
 
-export const ContentVideoRepositoryMother = {
+export const ClipSEVideoRepositoryMother = {
 	create(
-		overrides: Partial<ContentVideoRepositoryInterface> = {},
-	): ContentVideoRepositoryInterface {
+		overrides: Partial<ClipSEVideoRepositoryInterface> = {},
+	): ClipSEVideoRepositoryInterface {
 		return {
-			createDraft: vi.fn(async () => ContentVideoMother.create()),
+			createDraft: vi.fn(async () => ClipSEVideoMother.create()),
 			delete: vi.fn(async () => undefined),
-			findById: vi.fn(async () => ContentVideoMother.create()),
+			findById: vi.fn(async () => ClipSEVideoMother.create()),
 			listAll: vi.fn(async () => []),
 			listByChannelId: vi.fn(async () => []),
-			markDownloaded: vi.fn(async () => ContentVideoMother.create()),
-			markUploaded: vi.fn(async () => ContentVideoMother.create()),
-			update: vi.fn(async (input) => ContentVideoMother.create(input)),
-			updateBumper: vi.fn(async () => ContentVideoMother.create()),
-			updateStage: vi.fn(async (input) => ContentVideoMother.create(input)),
+			markDownloaded: vi.fn(async () => ClipSEVideoMother.create()),
+			markUploaded: vi.fn(async () => ClipSEVideoMother.create()),
+			update: vi.fn(async (input) => ClipSEVideoMother.create(input)),
+			updateBumper: vi.fn(async () => ClipSEVideoMother.create()),
+			updateStage: vi.fn(async (input) => ClipSEVideoMother.create(input)),
 			...overrides,
 		};
 	},
@@ -97,42 +97,42 @@ export const ClipSERepositoryMother = {
 	},
 };
 
-export const ContentJobRepositoryMother = {
+export const ClipSEJobRepositoryMother = {
 	create(
-		overrides: Partial<ContentJobRepositoryInterface> = {},
-	): ContentJobRepositoryInterface {
+		overrides: Partial<ClipSEJobRepositoryInterface> = {},
+	): ClipSEJobRepositoryInterface {
 		return {
 			claimNextPending: vi.fn(async () => null),
 			clearCompletedAndFailedByVideoId: vi.fn(async () => 0),
-			enqueue: vi.fn(async (input) => ContentJobMother.create(input)),
+			enqueue: vi.fn(async (input) => ClipSEJobMother.create(input)),
 			findById: vi.fn(async () => null),
 			listByVideoId: vi.fn(async () => []),
 			listRecent: vi.fn(async () => []),
-			markCompleted: vi.fn(async () => ContentJobMother.create()),
-			markFailed: vi.fn(async () => ContentJobMother.create()),
+			markCompleted: vi.fn(async () => ClipSEJobMother.create()),
+			markFailed: vi.fn(async () => ClipSEJobMother.create()),
 			requeueStaleRunningJobs: vi.fn(async () => 0),
-			updateProgress: vi.fn(async () => ContentJobMother.create()),
+			updateProgress: vi.fn(async () => ClipSEJobMother.create()),
 			...overrides,
 		};
 	},
 };
 
-export const ContentTranscriptionRepositoryMother = {
+export const ClipSETranscriptionRepositoryMother = {
 	create(
-		overrides: Partial<ContentTranscriptionRepositoryInterface> = {},
-	): ContentTranscriptionRepositoryInterface {
+		overrides: Partial<ClipSETranscriptionRepositoryInterface> = {},
+	): ClipSETranscriptionRepositoryInterface {
 		return {
-			findByVideoId: vi.fn(async () => ContentTranscriptionMother.create()),
-			upsert: vi.fn(async () => ContentTranscriptionMother.create()),
+			findByVideoId: vi.fn(async () => ClipSETranscriptionMother.create()),
+			upsert: vi.fn(async () => ClipSETranscriptionMother.create()),
 			...overrides,
 		};
 	},
 };
 
-export const ContentChapterRepositoryMother = {
+export const ClipSEChapterRepositoryMother = {
 	create(
-		overrides: Partial<ContentChapterRepositoryInterface> = {},
-	): ContentChapterRepositoryInterface {
+		overrides: Partial<ClipSEChapterRepositoryInterface> = {},
+	): ClipSEChapterRepositoryInterface {
 		return {
 			listByVideoId: vi.fn(async () => []),
 			replaceForVideo: vi.fn(async () => []),

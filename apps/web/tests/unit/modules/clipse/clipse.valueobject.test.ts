@@ -95,7 +95,7 @@ describe("parseClipSERenderOptions", () => {
 	});
 });
 
-describe("content clip short fields", () => {
+describe("ClipSE short fields", () => {
 	it("accepts clip kind and short detection mode on clip records", () => {
 		expect(
 			ClipSESchema.parse(

@@ -4,7 +4,7 @@ import {
 	buildChannelLogoStorageKey,
 } from "~/modules/content-channels/domain/content-channel.valueobject";
 
-describe("content channel helpers", () => {
+describe("ClipSE channel helpers", () => {
 	it("sanitizes channel asset storage keys", () => {
 		expect(
 			buildChannelLogoStorageKey("channel-123", "Primary Logo FINAL.png"),

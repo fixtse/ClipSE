@@ -91,6 +91,9 @@ export const esMessages = {
 			addTitle: "Agregar canal",
 			addDescription:
 				"Crea un canal con su propia biblioteca de videos y videos de inicio/fin.",
+			setupTitle: "Crea tu primer canal",
+			setupDescription:
+				"Crea un canal antes de usar ClipSE. Tus fuentes, clips y videos de inicio/fin se organizaran ahi.",
 			namePlaceholder: "Nombre del canal",
 			logoDropTitle: "Suelta aquí el logo del canal",
 			logoDropDescription: "o haz clic para elegir una imagen",

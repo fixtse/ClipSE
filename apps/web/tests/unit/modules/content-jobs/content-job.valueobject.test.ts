@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
-	ContentJobSchema,
-	CreateContentJobSchema,
+	ContentJobSchema as ClipSEJobSchema,
+	CreateContentJobSchema as CreateClipSEJobSchema,
 } from "~/modules/content-jobs/domain/content-job.valueobject";
-import { ContentJobMother } from "../../../mothers/domain-mothers";
+import { ClipSEJobMother } from "../../../mothers/domain-mothers";
 
-describe("content job schemas", () => {
+describe("ClipSE job schemas", () => {
 	it("parses stored jobs and validates create job inputs", () => {
-		expect(ContentJobSchema.parse(ContentJobMother.create()).status).toBe(
+		expect(ClipSEJobSchema.parse(ClipSEJobMother.create()).status).toBe(
 			"pending",
 		);
 		expect(
-			CreateContentJobSchema.parse({
+			CreateClipSEJobSchema.parse({
 				videoId: "11111111-1111-4111-8111-111111111111",
 				type: "analyze-video",
 			}),

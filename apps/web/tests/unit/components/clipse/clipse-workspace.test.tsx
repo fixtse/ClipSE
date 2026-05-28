@@ -2,11 +2,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ClipSEWorkspace } from "~/components/clipse/ClipSEWorkspace";
 import {
+	ClipSEAiSettingsMother,
+	ClipSEJobMother,
 	ClipSEMother,
-	ContentAiSettingsMother,
-	ContentJobMother,
-	ContentTranscriptionMother,
-	ContentVideoMother,
+	ClipSETranscriptionMother,
+	ClipSEVideoMother,
 	DashboardChapterMother,
 	DashboardVideoMother,
 } from "../../../mothers/domain-mothers";
@@ -200,7 +200,7 @@ function setDashboardData(input: {
 		updatedAt: new Date(0),
 		logoUrl: null,
 	};
-	const video = ContentVideoMother.create({
+	const video = ClipSEVideoMother.create({
 		channelId: channel.id,
 		...(input.failedLibraryVideo
 			? {
@@ -217,7 +217,7 @@ function setDashboardData(input: {
 		title: "Launch clip",
 		videoId: video.id,
 	});
-	const job = ContentJobMother.create({
+	const job = ClipSEJobMother.create({
 		status: "running",
 		progress: 42,
 		videoId: video.id,
@@ -250,7 +250,7 @@ function setDashboardData(input: {
 						: "/api/content/videos/video/source",
 					transcription: input.emptySelectedVideo
 						? null
-						: ContentTranscriptionMother.create({
+						: ClipSETranscriptionMother.create({
 								videoId: video.id,
 							}),
 					video,
@@ -276,14 +276,26 @@ function setDashboardData(input: {
 			}),
 		],
 	};
-	mocks.aiSettingsData = ContentAiSettingsMother.create();
+	mocks.aiSettingsData = ClipSEAiSettingsMother.create();
+}
+
+function setEmptyChannelDashboardData() {
+	mocks.dashboardIsLoading = false;
+	mocks.dashboardData = {
+		channels: [],
+		jobs: [],
+		selectedChannel: null,
+		selectedVideo: null,
+		videos: [],
+	};
+	mocks.aiSettingsData = ClipSEAiSettingsMother.create();
 }
 
 describe("ClipSEWorkspace", () => {
 	it("renders loading placeholders before dashboard data is available", () => {
 		mocks.dashboardData = undefined;
 		mocks.dashboardIsLoading = true;
-		mocks.aiSettingsData = ContentAiSettingsMother.create();
+		mocks.aiSettingsData = ClipSEAiSettingsMother.create();
 
 		const markup = renderToStaticMarkup(<ClipSEWorkspace />);
 
@@ -303,6 +315,14 @@ describe("ClipSEWorkspace", () => {
 		expect(markup).toContain("workspace.tabs.intake");
 		expect(markup).toContain("workspace.clipList.noSourceTitle");
 		expect(markup).toContain('data-testid="language-switcher"');
+	});
+
+	it("requires the first channel before the workspace can be used", () => {
+		setEmptyChannelDashboardData();
+
+		const markup = renderToStaticMarkup(<ClipSEWorkspace />);
+
+		expect(markup).toContain('data-requires-initial-channel="true"');
 	});
 
 	it("renders selected video details, transcript, chapters, and clip editor cards", () => {

@@ -2,17 +2,17 @@ import { describe, expect, it, vi } from "vitest";
 import { queueContentVideoClipRenders } from "~/modules/content-clips/application/queue-content-video-clip-renders";
 import {
 	ClipSEMother,
-	ContentVideoMother,
+	ClipSEVideoMother,
 } from "../../../mothers/domain-mothers";
 import {
+	ClipSEJobRepositoryMother,
 	ClipSERepositoryMother,
-	ContentJobRepositoryMother,
-	ContentVideoRepositoryMother,
+	ClipSEVideoRepositoryMother,
 } from "../../../mothers/repository-mothers";
 
 describe("queueContentVideoClipRenders", () => {
 	it("queues render jobs for clips that are not already queued or rendering", async () => {
-		const video = ContentVideoMother.create();
+		const video = ClipSEVideoMother.create();
 		const readyClip = ClipSEMother.create({
 			id: "33333333-3333-4333-8333-333333333333",
 			status: "ready",
@@ -25,10 +25,10 @@ describe("queueContentVideoClipRenders", () => {
 		const clipRepository = ClipSERepositoryMother.create({
 			listByVideoId: vi.fn(async () => [readyClip, queuedClip]),
 		});
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () => video),
 		});
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await expect(
 			queueContentVideoClipRenders(
@@ -64,7 +64,7 @@ describe("queueContentVideoClipRenders", () => {
 	});
 
 	it("passes vertical subtitle options to every queued render job", async () => {
-		const video = ContentVideoMother.create();
+		const video = ClipSEVideoMother.create();
 		const clips = [
 			ClipSEMother.create({
 				id: "33333333-3333-4333-8333-333333333333",
@@ -78,11 +78,11 @@ describe("queueContentVideoClipRenders", () => {
 		const clipRepository = ClipSERepositoryMother.create({
 			listByVideoId: vi.fn(async () => clips),
 		});
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await queueContentVideoClipRenders(
 			clipRepository,
-			ContentVideoRepositoryMother.create({
+			ClipSEVideoRepositoryMother.create({
 				findById: vi.fn(async () => video),
 			}),
 			jobRepository,
@@ -119,7 +119,7 @@ describe("queueContentVideoClipRenders", () => {
 	});
 
 	it("filters render-all by clip kind and forces vertical shorts with detection mode", async () => {
-		const video = ContentVideoMother.create();
+		const video = ClipSEVideoMother.create();
 		const short = ClipSEMother.create({
 			clipKind: "short",
 			shortDetectionMode: "people_and_screen",
@@ -128,11 +128,11 @@ describe("queueContentVideoClipRenders", () => {
 		const clipRepository = ClipSERepositoryMother.create({
 			listByVideoId: vi.fn(async () => [short]),
 		});
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await queueContentVideoClipRenders(
 			clipRepository,
-			ContentVideoRepositoryMother.create({
+			ClipSEVideoRepositoryMother.create({
 				findById: vi.fn(async () => video),
 			}),
 			jobRepository,
@@ -162,12 +162,12 @@ describe("queueContentVideoClipRenders", () => {
 
 	it("rejects when the source video is unavailable", async () => {
 		const clipRepository = ClipSERepositoryMother.create();
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () =>
-				ContentVideoMother.create({ storageKey: null }),
+				ClipSEVideoMother.create({ storageKey: null }),
 			),
 		});
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await expect(
 			queueContentVideoClipRenders(
@@ -181,7 +181,7 @@ describe("queueContentVideoClipRenders", () => {
 	});
 
 	it("does not enqueue jobs when all clips are already in progress", async () => {
-		const video = ContentVideoMother.create();
+		const video = ClipSEVideoMother.create();
 		const clipRepository = ClipSERepositoryMother.create({
 			listByVideoId: vi.fn(async () => [
 				ClipSEMother.create({ status: "queued" }),
@@ -191,12 +191,12 @@ describe("queueContentVideoClipRenders", () => {
 				}),
 			]),
 		});
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await expect(
 			queueContentVideoClipRenders(
 				clipRepository,
-				ContentVideoRepositoryMother.create({
+				ClipSEVideoRepositoryMother.create({
 					findById: vi.fn(async () => video),
 				}),
 				jobRepository,

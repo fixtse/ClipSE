@@ -5,7 +5,7 @@ import {
 	buildVideoTitle,
 } from "~/modules/content-videos/domain/content-video.valueobject";
 
-describe("content video helpers", () => {
+describe("ClipSE video helpers", () => {
 	it("builds a title from the source filename when none is provided", () => {
 		expect(buildVideoTitle("deep-dive_episode-01.mp4")).toBe(
 			"deep-dive_episode-01",

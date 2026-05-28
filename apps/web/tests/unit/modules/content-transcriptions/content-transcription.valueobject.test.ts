@@ -1,25 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
-	ContentTranscriptionSchema,
-	formatContentTimestamp,
-	UpsertContentTranscriptionSchema,
+	ContentTranscriptionSchema as ClipSETranscriptionSchema,
+	formatContentTimestamp as formatClipSETimestamp,
+	UpsertContentTranscriptionSchema as UpsertClipSETranscriptionSchema,
 } from "~/modules/content-transcriptions/domain/content-transcription.valueobject";
-import { ContentTranscriptionMother } from "../../../mothers/domain-mothers";
+import { ClipSETranscriptionMother } from "../../../mothers/domain-mothers";
 
-describe("content transcription helpers", () => {
-	it("formats content timestamps", () => {
-		expect(formatContentTimestamp(65.9)).toBe("01:05");
-		expect(formatContentTimestamp(3661.2)).toBe("01:01:01");
+describe("ClipSE transcription helpers", () => {
+	it("formats ClipSE timestamps", () => {
+		expect(formatClipSETimestamp(65.9)).toBe("01:05");
+		expect(formatClipSETimestamp(3661.2)).toBe("01:01:01");
 	});
 
 	it("parses stored transcriptions and optional upsert metadata", () => {
-		const transcription = ContentTranscriptionMother.create();
+		const transcription = ClipSETranscriptionMother.create();
 
-		expect(ContentTranscriptionSchema.parse(transcription).fullText).toBe(
+		expect(ClipSETranscriptionSchema.parse(transcription).fullText).toBe(
 			"Opening hook",
 		);
 		expect(
-			UpsertContentTranscriptionSchema.parse({
+			UpsertClipSETranscriptionSchema.parse({
 				videoId: transcription.videoId,
 				language: "en",
 				provider: "whisper",

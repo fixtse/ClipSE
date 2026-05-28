@@ -1,17 +1,17 @@
-import type { ContentChapter } from "~/modules/content-chapters/domain/content-chapter.valueobject";
+import type { ContentChapter as ClipSEChapter } from "~/modules/content-chapters/domain/content-chapter.valueobject";
 import type {
 	ClipSE,
 	GeneratedClipCandidate,
 } from "~/modules/content-clips/domain/content-clip.valueobject";
-import type { ContentJob } from "~/modules/content-jobs/domain/content-job.valueobject";
-import type { ContentAiSettings } from "~/modules/content-settings/domain/content-ai-settings.valueobject";
-import type { ContentTranscription } from "~/modules/content-transcriptions/domain/content-transcription.valueobject";
+import type { ContentJob as ClipSEJob } from "~/modules/content-jobs/domain/content-job.valueobject";
+import type { ContentAiSettings as ClipSEAiSettings } from "~/modules/content-settings/domain/content-ai-settings.valueobject";
+import type { ContentTranscription as ClipSETranscription } from "~/modules/content-transcriptions/domain/content-transcription.valueobject";
 import type {
 	ClipItem,
 	TranscriptSegment,
 } from "~/modules/content-videos/application/content-clip-dashboard-view";
 import type { ClipSEDashboardVideo } from "~/modules/content-videos/application/get-content-clip-dashboard";
-import type { ContentVideo } from "~/modules/content-videos/domain/content-video.valueobject";
+import type { ContentVideo as ClipSEVideo } from "~/modules/content-videos/domain/content-video.valueobject";
 
 const BASE_DATE = "2026-01-01T00:00:00.000Z";
 
@@ -21,9 +21,9 @@ const cloneRecord = (
 	value: Record<string, unknown> | undefined,
 ): Record<string, unknown> => ({ ...(value ?? {}) });
 
-export const ContentVideoMother = {
-	create(overrides: Partial<ContentVideo> = {}): ContentVideo {
-		const video: ContentVideo = {
+export const ClipSEVideoMother = {
+	create(overrides: Partial<ClipSEVideo> = {}): ClipSEVideo {
+		const video: ClipSEVideo = {
 			id: "11111111-1111-4111-8111-111111111111",
 			channelId: "22222222-2222-4222-8222-222222222222",
 			originalFilename: "source-video.mp4",
@@ -129,9 +129,9 @@ export const GeneratedClipCandidateMother = {
 	},
 };
 
-export const ContentJobMother = {
-	create(overrides: Partial<ContentJob> = {}): ContentJob {
-		const job: ContentJob = {
+export const ClipSEJobMother = {
+	create(overrides: Partial<ClipSEJob> = {}): ClipSEJob {
+		const job: ClipSEJob = {
 			id: "44444444-4444-4444-8444-444444444444",
 			videoId: "11111111-1111-4111-8111-111111111111",
 			clipId: null,
@@ -168,7 +168,7 @@ export const ContentJobMother = {
 export const DashboardVideoMother = {
 	create(overrides: Partial<ClipSEDashboardVideo> = {}): ClipSEDashboardVideo {
 		return {
-			...ContentVideoMother.create(overrides),
+			...ClipSEVideoMother.create(overrides),
 			activeJob: overrides.activeJob ?? null,
 			clipCount: overrides.clipCount ?? 0,
 			readyClipCount: overrides.readyClipCount ?? 0,
@@ -190,8 +190,8 @@ export const DashboardClipMother = {
 };
 
 export const DashboardChapterMother = {
-	create(overrides: Partial<ContentChapter> = {}): ContentChapter {
-		const chapter: ContentChapter = {
+	create(overrides: Partial<ClipSEChapter> = {}): ClipSEChapter {
+		const chapter: ClipSEChapter = {
 			id: "55555555-5555-4555-8555-555555555555",
 			videoId: "11111111-1111-4111-8111-111111111111",
 			orderIndex: 0,
@@ -226,9 +226,9 @@ export const TranscriptSegmentMother = {
 	},
 };
 
-export const ContentTranscriptionMother = {
-	create(overrides: Partial<ContentTranscription> = {}): ContentTranscription {
-		const transcription: ContentTranscription = {
+export const ClipSETranscriptionMother = {
+	create(overrides: Partial<ClipSETranscription> = {}): ClipSETranscription {
+		const transcription: ClipSETranscription = {
 			id: "66666666-6666-4666-8666-666666666666",
 			videoId: "11111111-1111-4111-8111-111111111111",
 			language: "en",
@@ -254,9 +254,9 @@ export const ContentTranscriptionMother = {
 	},
 };
 
-export const ContentAiSettingsMother = {
-	create(overrides: Partial<ContentAiSettings> = {}): ContentAiSettings {
-		const settings: ContentAiSettings = {
+export const ClipSEAiSettingsMother = {
+	create(overrides: Partial<ClipSEAiSettings> = {}): ClipSEAiSettings {
+		const settings: ClipSEAiSettings = {
 			id: 1,
 			provider: "openai",
 			openaiApiKey: "openai-key",

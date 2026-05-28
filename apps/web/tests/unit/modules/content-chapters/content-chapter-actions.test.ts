@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { listContentChapters } from "~/modules/content-chapters/application/list-content-chapters";
 import { replaceContentVideoChapters } from "~/modules/content-chapters/application/replace-content-video-chapters";
 import { DashboardChapterMother } from "../../../mothers/domain-mothers";
-import { ContentChapterRepositoryMother } from "../../../mothers/repository-mothers";
+import { ClipSEChapterRepositoryMother } from "../../../mothers/repository-mothers";
 
-describe("content chapter use cases", () => {
+describe("ClipSE chapter use cases", () => {
 	it("lists chapters for a video", async () => {
 		const chapters = [DashboardChapterMother.create()];
-		const repository = ContentChapterRepositoryMother.create({
+		const repository = ClipSEChapterRepositoryMother.create({
 			listByVideoId: vi.fn(async () => chapters),
 		});
 
@@ -29,7 +29,7 @@ describe("content chapter use cases", () => {
 				confidence: 0.9,
 			},
 		];
-		const repository = ContentChapterRepositoryMother.create({
+		const repository = ClipSEChapterRepositoryMother.create({
 			replaceForVideo: vi.fn(async () => chapters),
 		});
 

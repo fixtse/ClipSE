@@ -4,16 +4,16 @@ import { createContentVideoUrlSource } from "~/modules/content-videos/applicatio
 import { markContentVideoUploaded } from "~/modules/content-videos/application/mark-content-video-uploaded";
 import { retryContentVideoDownload } from "~/modules/content-videos/application/retry-content-video-download";
 import { updateContentVideo } from "~/modules/content-videos/application/update-content-video";
-import { ContentVideoMother } from "../../../mothers/domain-mothers";
+import { ClipSEVideoMother } from "../../../mothers/domain-mothers";
 import {
-	ContentJobRepositoryMother,
-	ContentVideoRepositoryMother,
+	ClipSEJobRepositoryMother,
+	ClipSEVideoRepositoryMother,
 } from "../../../mothers/repository-mothers";
 
-describe("content video action use cases", () => {
+describe("ClipSE video action use cases", () => {
 	it("cancels ingest for cancellable videos and no-ops missing videos", async () => {
-		const video = ContentVideoMother.create({ processingStage: "queued" });
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const video = ClipSEVideoMother.create({ processingStage: "queued" });
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () => video),
 		});
 
@@ -22,7 +22,7 @@ describe("content video action use cases", () => {
 		).resolves.toEqual({ id: video.id });
 		expect(videoRepository.delete).toHaveBeenCalledWith(video.id);
 
-		const missingRepository = ContentVideoRepositoryMother.create({
+		const missingRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () => null),
 		});
 		await expect(
@@ -32,9 +32,9 @@ describe("content video action use cases", () => {
 	});
 
 	it("rejects cancellation for ready videos", async () => {
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () =>
-				ContentVideoMother.create({ processingStage: "ready" }),
+				ClipSEVideoMother.create({ processingStage: "ready" }),
 			),
 		});
 
@@ -48,14 +48,14 @@ describe("content video action use cases", () => {
 	});
 
 	it("creates URL sources and enqueues a download job", async () => {
-		const createdVideo = ContentVideoMother.create({
+		const createdVideo = ClipSEVideoMother.create({
 			sourceType: "url",
 			sourceUrl: "https://example.com/video",
 		});
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			createDraft: vi.fn(async () => createdVideo),
 		});
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await expect(
 			createContentVideoUrlSource(videoRepository, jobRepository, {
@@ -82,8 +82,8 @@ describe("content video action use cases", () => {
 	});
 
 	it("rejects invalid URL source input before creating drafts or jobs", async () => {
-		const videoRepository = ContentVideoRepositoryMother.create();
-		const jobRepository = ContentJobRepositoryMother.create();
+		const videoRepository = ClipSEVideoRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await expect(
 			createContentVideoUrlSource(videoRepository, jobRepository, {
@@ -95,11 +95,11 @@ describe("content video action use cases", () => {
 	});
 
 	it("marks uploads and enqueues transcription", async () => {
-		const video = ContentVideoMother.create();
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const video = ClipSEVideoMother.create();
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			markUploaded: vi.fn(async () => video),
 		});
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await expect(
 			markContentVideoUploaded(videoRepository, jobRepository, {
@@ -117,7 +117,7 @@ describe("content video action use cases", () => {
 	});
 
 	it("updates video metadata through the repository", async () => {
-		const videoRepository = ContentVideoRepositoryMother.create();
+		const videoRepository = ClipSEVideoRepositoryMother.create();
 
 		await updateContentVideo(videoRepository, {
 			id: "11111111-1111-4111-8111-111111111111",
@@ -130,7 +130,7 @@ describe("content video action use cases", () => {
 	});
 
 	it("rejects invalid video updates before calling the repository", async () => {
-		const videoRepository = ContentVideoRepositoryMother.create();
+		const videoRepository = ClipSEVideoRepositoryMother.create();
 
 		await expect(
 			updateContentVideo(videoRepository, {
@@ -142,15 +142,15 @@ describe("content video action use cases", () => {
 	});
 
 	it("retries transcription when storage exists", async () => {
-		const video = ContentVideoMother.create({
+		const video = ClipSEVideoMother.create({
 			sourceType: "url",
 			storageKey: "videos/source.mp4",
 			latestError: "Previous failure",
 		});
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () => video),
 		});
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await retryContentVideoDownload(videoRepository, jobRepository, {
 			videoId: video.id,
@@ -174,16 +174,16 @@ describe("content video action use cases", () => {
 	});
 
 	it("retries download for URL sources and rejects non-retryable sources", async () => {
-		const urlVideo = ContentVideoMother.create({
+		const urlVideo = ClipSEVideoMother.create({
 			sourceType: "url",
 			sourceUrl: "https://example.com/video",
 			storageKey: null,
 			latestError: "Download failed",
 		});
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () => urlVideo),
 		});
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await retryContentVideoDownload(videoRepository, jobRepository, {
 			videoId: urlVideo.id,
@@ -202,9 +202,9 @@ describe("content video action use cases", () => {
 			},
 		});
 
-		const fileRepository = ContentVideoRepositoryMother.create({
+		const fileRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () =>
-				ContentVideoMother.create({ sourceType: "file", storageKey: null }),
+				ClipSEVideoMother.create({ sourceType: "file", storageKey: null }),
 			),
 		});
 		await expect(
@@ -217,10 +217,10 @@ describe("content video action use cases", () => {
 	it("rejects retry for missing videos", async () => {
 		await expect(
 			retryContentVideoDownload(
-				ContentVideoRepositoryMother.create({
+				ClipSEVideoRepositoryMother.create({
 					findById: vi.fn(async () => null),
 				}),
-				ContentJobRepositoryMother.create(),
+				ClipSEJobRepositoryMother.create(),
 				{ videoId: "11111111-1111-4111-8111-111111111111" },
 			),
 		).rejects.toThrow("Video not found");

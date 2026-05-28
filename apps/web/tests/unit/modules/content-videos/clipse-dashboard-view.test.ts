@@ -23,7 +23,7 @@ import {
 	TranscriptSegmentMother,
 } from "../../../mothers/domain-mothers";
 
-describe("content clip dashboard view helpers", () => {
+describe("ClipSE dashboard view helpers", () => {
 	const translate = (
 		key: string,
 		values?: Record<string, string | number>,

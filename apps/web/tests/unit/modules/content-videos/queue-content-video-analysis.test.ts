@@ -1,33 +1,33 @@
 import { describe, expect, it, vi } from "vitest";
 import { queueContentVideoAnalysis } from "~/modules/content-videos/application/queue-content-video-analysis";
 import {
-	ContentTranscriptionMother,
-	ContentVideoMother,
+	ClipSETranscriptionMother,
+	ClipSEVideoMother,
 } from "../../../mothers/domain-mothers";
 import {
+	ClipSEChapterRepositoryMother,
+	ClipSEJobRepositoryMother,
 	ClipSERepositoryMother,
-	ContentChapterRepositoryMother,
-	ContentJobRepositoryMother,
-	ContentTranscriptionRepositoryMother,
-	ContentVideoRepositoryMother,
+	ClipSETranscriptionRepositoryMother,
+	ClipSEVideoRepositoryMother,
 } from "../../../mothers/repository-mothers";
 
 describe("queueContentVideoAnalysis", () => {
 	const videoId = "11111111-1111-4111-8111-111111111111";
 
 	it("queues analysis with default clip and chapter generation", async () => {
-		const updatedVideo = ContentVideoMother.create({
+		const updatedVideo = ClipSEVideoMother.create({
 			id: videoId,
 			processingStage: "analyzing",
 		});
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			updateStage: vi.fn(async () => updatedVideo),
 		});
 		const transcriptionRepository =
-			ContentTranscriptionRepositoryMother.create();
-		const jobRepository = ContentJobRepositoryMother.create();
+			ClipSETranscriptionRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 		const clipRepository = ClipSERepositoryMother.create();
-		const chapterRepository = ContentChapterRepositoryMother.create();
+		const chapterRepository = ClipSEChapterRepositoryMother.create();
 
 		await expect(
 			queueContentVideoAnalysis(
@@ -68,17 +68,15 @@ describe("queueContentVideoAnalysis", () => {
 	});
 
 	it("updates the analysis prompt and only clears selected output types", async () => {
-		const videoRepository = ContentVideoRepositoryMother.create();
-		const transcriptionRepository = ContentTranscriptionRepositoryMother.create(
-			{
-				findByVideoId: vi.fn(async () =>
-					ContentTranscriptionMother.create({ videoId }),
-				),
-			},
-		);
-		const jobRepository = ContentJobRepositoryMother.create();
+		const videoRepository = ClipSEVideoRepositoryMother.create();
+		const transcriptionRepository = ClipSETranscriptionRepositoryMother.create({
+			findByVideoId: vi.fn(async () =>
+				ClipSETranscriptionMother.create({ videoId }),
+			),
+		});
+		const jobRepository = ClipSEJobRepositoryMother.create();
 		const clipRepository = ClipSERepositoryMother.create();
-		const chapterRepository = ContentChapterRepositoryMother.create();
+		const chapterRepository = ClipSEChapterRepositoryMother.create();
 
 		await queueContentVideoAnalysis(
 			videoRepository,
@@ -112,16 +110,16 @@ describe("queueContentVideoAnalysis", () => {
 	});
 
 	it("clears and queues shorts independently from normal clips", async () => {
-		const videoRepository = ContentVideoRepositoryMother.create();
+		const videoRepository = ClipSEVideoRepositoryMother.create();
 		const clipRepository = ClipSERepositoryMother.create();
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await queueContentVideoAnalysis(
 			videoRepository,
-			ContentTranscriptionRepositoryMother.create(),
+			ClipSETranscriptionRepositoryMother.create(),
 			jobRepository,
 			clipRepository,
-			ContentChapterRepositoryMother.create(),
+			ClipSEChapterRepositoryMother.create(),
 			{
 				videoId,
 				generateClips: false,
@@ -154,11 +152,11 @@ describe("queueContentVideoAnalysis", () => {
 	it("rejects when no output type is selected", async () => {
 		await expect(
 			queueContentVideoAnalysis(
-				ContentVideoRepositoryMother.create(),
-				ContentTranscriptionRepositoryMother.create(),
-				ContentJobRepositoryMother.create(),
+				ClipSEVideoRepositoryMother.create(),
+				ClipSETranscriptionRepositoryMother.create(),
+				ClipSEJobRepositoryMother.create(),
 				ClipSERepositoryMother.create(),
-				ContentChapterRepositoryMother.create(),
+				ClipSEChapterRepositoryMother.create(),
 				{
 					videoId,
 					generateClips: false,
@@ -170,18 +168,18 @@ describe("queueContentVideoAnalysis", () => {
 	});
 
 	it("rejects when the video is missing", async () => {
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () => null),
 		});
-		const jobRepository = ContentJobRepositoryMother.create();
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await expect(
 			queueContentVideoAnalysis(
 				videoRepository,
-				ContentTranscriptionRepositoryMother.create(),
+				ClipSETranscriptionRepositoryMother.create(),
 				jobRepository,
 				ClipSERepositoryMother.create(),
-				ContentChapterRepositoryMother.create(),
+				ClipSEChapterRepositoryMother.create(),
 				{ videoId },
 			),
 		).rejects.toThrow("Video not found");
@@ -189,20 +187,18 @@ describe("queueContentVideoAnalysis", () => {
 	});
 
 	it("rejects when transcription is not ready", async () => {
-		const transcriptionRepository = ContentTranscriptionRepositoryMother.create(
-			{
-				findByVideoId: vi.fn(async () => null),
-			},
-		);
-		const jobRepository = ContentJobRepositoryMother.create();
+		const transcriptionRepository = ClipSETranscriptionRepositoryMother.create({
+			findByVideoId: vi.fn(async () => null),
+		});
+		const jobRepository = ClipSEJobRepositoryMother.create();
 
 		await expect(
 			queueContentVideoAnalysis(
-				ContentVideoRepositoryMother.create(),
+				ClipSEVideoRepositoryMother.create(),
 				transcriptionRepository,
 				jobRepository,
 				ClipSERepositoryMother.create(),
-				ContentChapterRepositoryMother.create(),
+				ClipSEChapterRepositoryMother.create(),
 				{ videoId },
 			),
 		).rejects.toThrow("Transcription is not ready yet");

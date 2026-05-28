@@ -1394,6 +1394,15 @@ export function ClipSEWorkspace({
 	const audioLanguageOptions = getAudioLanguageOptions(t);
 	const selectedChannelName =
 		selectedChannel?.name ?? t("workspace.channels.select");
+	const requiresInitialChannel =
+		!!dashboardQuery.data && dashboardQuery.data.channels.length === 0;
+	const isChannelDialogOpen = requiresInitialChannel || channelDialogOpen;
+	const channelDialogTitle = requiresInitialChannel
+		? t("workspace.channels.setupTitle")
+		: t("workspace.channels.addTitle");
+	const channelDialogDescription = requiresInitialChannel
+		? t("workspace.channels.setupDescription")
+		: t("workspace.channels.addDescription");
 	const handleFloatingJobClick = () => {
 		if (workspaceTab === "media") {
 			setJobQueueOpen((open) => !open);
@@ -1652,7 +1661,12 @@ export function ClipSEWorkspace({
 	) : null;
 
 	return (
-		<div className="min-h-screen bg-slate-950 text-white">
+		<div
+			className="min-h-screen bg-slate-950 text-white"
+			data-requires-initial-channel={
+				requiresInitialChannel ? "true" : undefined
+			}
+		>
 			<div className="mx-auto flex max-w-[1680px] flex-col gap-4 px-4 py-4 sm:px-5">
 				<header className="flex flex-wrap items-center justify-between gap-3 border-white/10 border-b pb-3">
 					<div className="flex min-w-0 items-center gap-3">
@@ -1724,16 +1738,22 @@ export function ClipSEWorkspace({
 								</SelectContent>
 							</Select>
 							<Dialog
-								onOpenChange={setChannelDialogOpen}
-								open={channelDialogOpen}
+								onOpenChange={(open) => {
+									if (requiresInitialChannel && !open) {
+										return;
+									}
+									setChannelDialogOpen(open);
+								}}
+								open={isChannelDialogOpen}
 							>
-								<DialogContent className="border-white/10 bg-slate-950 text-white sm:max-w-md">
+								<DialogContent
+									className="border-white/10 bg-slate-950 text-white sm:max-w-md"
+									showCloseButton={!requiresInitialChannel}
+								>
 									<DialogHeader>
-										<DialogTitle>
-											{t("workspace.channels.addTitle")}
-										</DialogTitle>
+										<DialogTitle>{channelDialogTitle}</DialogTitle>
 										<DialogDescription className="text-slate-400">
-											{t("workspace.channels.addDescription")}
+											{channelDialogDescription}
 										</DialogDescription>
 									</DialogHeader>
 									<div className="space-y-4">

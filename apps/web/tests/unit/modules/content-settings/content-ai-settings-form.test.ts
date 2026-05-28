@@ -6,7 +6,7 @@ import {
 	getWhisperProviderOptions,
 } from "~/modules/content-settings/application/content-ai-settings-form";
 
-describe("content AI settings form helpers", () => {
+describe("ClipSE AI settings form helpers", () => {
 	const translate = (key: string): string => `translated:${key}`;
 
 	it("builds audio language options with translated labels", () => {

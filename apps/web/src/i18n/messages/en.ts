@@ -90,6 +90,9 @@ export const enMessages = {
 			addTitle: "Add channel",
 			addDescription:
 				"Create a channel for its own video library and start/end videos.",
+			setupTitle: "Create your first channel",
+			setupDescription:
+				"Create a channel before using ClipSE. Your sources, clips, and start/end videos will be organized under it.",
 			namePlaceholder: "Channel name",
 			logoDropTitle: "Drop a channel logo here",
 			logoDropDescription: "or click to choose an image",

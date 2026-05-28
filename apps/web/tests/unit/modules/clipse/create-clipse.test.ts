@@ -3,7 +3,7 @@ import { createClipSE } from "~/modules/content-clips/application/create-content
 import { ClipSEMother } from "../../../mothers/domain-mothers";
 import {
 	ClipSERepositoryMother,
-	ContentVideoRepositoryMother,
+	ClipSEVideoRepositoryMother,
 } from "../../../mothers/repository-mothers";
 
 describe("createClipSE", () => {
@@ -21,7 +21,7 @@ describe("createClipSE", () => {
 		const clipRepository = ClipSERepositoryMother.create({
 			create: vi.fn(async () => createdClip),
 		});
-		const videoRepository = ContentVideoRepositoryMother.create();
+		const videoRepository = ClipSEVideoRepositoryMother.create();
 
 		await expect(
 			createClipSE(clipRepository, videoRepository, input),
@@ -36,7 +36,7 @@ describe("createClipSE", () => {
 
 	it("rejects when the source video is missing", async () => {
 		const clipRepository = ClipSERepositoryMother.create();
-		const videoRepository = ContentVideoRepositoryMother.create({
+		const videoRepository = ClipSEVideoRepositoryMother.create({
 			findById: vi.fn(async () => null),
 		});
 
@@ -48,7 +48,7 @@ describe("createClipSE", () => {
 
 	it("rejects invalid timing", async () => {
 		const clipRepository = ClipSERepositoryMother.create();
-		const videoRepository = ContentVideoRepositoryMother.create();
+		const videoRepository = ClipSEVideoRepositoryMother.create();
 
 		await expect(
 			createClipSE(clipRepository, videoRepository, {
@@ -62,7 +62,7 @@ describe("createClipSE", () => {
 
 	it("rejects clips that exceed the source duration", async () => {
 		const clipRepository = ClipSERepositoryMother.create();
-		const videoRepository = ContentVideoRepositoryMother.create();
+		const videoRepository = ClipSEVideoRepositoryMother.create();
 
 		await expect(
 			createClipSE(clipRepository, videoRepository, {
@@ -75,7 +75,7 @@ describe("createClipSE", () => {
 
 	it("rejects invalid input before repository access", async () => {
 		const clipRepository = ClipSERepositoryMother.create();
-		const videoRepository = ContentVideoRepositoryMother.create();
+		const videoRepository = ClipSEVideoRepositoryMother.create();
 
 		await expect(
 			createClipSE(clipRepository, videoRepository, {
