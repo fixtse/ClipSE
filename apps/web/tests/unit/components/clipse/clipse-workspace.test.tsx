@@ -88,6 +88,12 @@ vi.mock("~/server/actions/content-jobs/clear-finished-content-jobs", () => ({
 vi.mock("~/server/actions/content-settings/update-content-ai-settings", () => ({
 	updateContentAiSettingsAction: vi.fn(),
 }));
+vi.mock(
+	"~/server/actions/content-transcriptions/update-content-transcription-segment",
+	() => ({
+		updateContentTranscriptionSegmentAction: vi.fn(),
+	}),
+);
 vi.mock("~/server/actions/content-videos/create-content-video-draft", () => ({
 	createContentVideoDraftAction: vi.fn(),
 }));
