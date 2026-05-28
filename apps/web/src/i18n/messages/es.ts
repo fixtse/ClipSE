@@ -136,6 +136,9 @@ export const esMessages = {
 			subtitleColor: "Color",
 			subtitleHighlightColor: "Resaltado",
 			subtitleFontFamily: "Fuente",
+			subtitleFontSearch: "Buscar en Google Fonts...",
+			subtitleFontEmpty: "No hay sugerencias de fuente.",
+			subtitleFontUseGoogle: 'Usar "{font}" de Google Fonts',
 			subtitlePreview: "Vista previa",
 			subtitleHighlightPreview: "resaltado",
 			whisperProviders: {

@@ -7,9 +7,10 @@ import {
 	stat,
 	writeFile,
 } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, GlobalFonts } from "@napi-rs/canvas";
 import {
 	detectFocusRegions,
 	type FocusPlan,
@@ -31,6 +32,16 @@ const DEFAULT_CAPTION_STYLE: CaptionStyle = {
 	highlightColor: "#ffe45c",
 	fontFamily: "Arial",
 };
+const SYSTEM_CAPTION_FONTS = new Set([
+	"Arial",
+	"Helvetica",
+	"Impact",
+	"Verdana",
+	"Georgia",
+	"Times New Roman",
+	"Courier New",
+]);
+const GOOGLE_FONT_REGISTRATION_PROMISES = new Map<string, Promise<void>>();
 
 async function runBinary(command: string, args: string[]): Promise<string> {
 	const { stdout, stderr } = await execFileAsync(command, args, {
@@ -1601,6 +1612,90 @@ function clampSubtitleTime(value: number, durationSeconds: number): number {
 	return Math.min(durationSeconds, Math.max(0, value));
 }
 
+function getGoogleFontCssUrl(fontFamily: string): string {
+	const family = encodeURIComponent(fontFamily.trim()).replaceAll("%20", "+");
+	return `https://fonts.googleapis.com/css2?family=${family}&display=swap`;
+}
+
+function parseGoogleFontUrl(css: string): string | null {
+	const match = css.match(/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/);
+	return match?.[1] ?? null;
+}
+
+async function downloadAndRegisterGoogleFont(
+	fontFamily: string,
+): Promise<void> {
+	if (SYSTEM_CAPTION_FONTS.has(fontFamily)) {
+		return;
+	}
+
+	const cssResponse = await fetch(getGoogleFontCssUrl(fontFamily), {
+		headers: {
+			"User-Agent": "Mozilla/5.0 AppleWebKit/537.36 Chrome/120.0 Safari/537.36",
+		},
+	});
+
+	if (!cssResponse.ok) {
+		throw new Error(`Google Fonts returned ${cssResponse.status}`);
+	}
+
+	const fontUrl = parseGoogleFontUrl(await cssResponse.text());
+	if (!fontUrl) {
+		throw new Error("Google Fonts CSS did not include a font file");
+	}
+
+	const fontResponse = await fetch(fontUrl);
+	if (!fontResponse.ok) {
+		throw new Error(`Google font file returned ${fontResponse.status}`);
+	}
+
+	const fontBuffer = Buffer.from(await fontResponse.arrayBuffer());
+	const registered = GlobalFonts.register(fontBuffer, fontFamily);
+	if (!registered) {
+		const fontPath = join(
+			tmpdir(),
+			`clipse-google-font-${fontFamily
+				.toLowerCase()
+				.replace(/[^a-z0-9]+/g, "-")
+				.replace(/^-|-$/g, "")}.woff2`,
+		);
+		await writeFile(fontPath, fontBuffer);
+		const registeredFromPath = GlobalFonts.registerFromPath(
+			fontPath,
+			fontFamily,
+		);
+		if (!registeredFromPath) {
+			throw new Error("Downloaded font could not be registered");
+		}
+	}
+}
+
+async function ensureCaptionFontRegistered(fontFamily: string): Promise<void> {
+	const normalizedFontFamily = fontFamily.trim();
+	if (!normalizedFontFamily || SYSTEM_CAPTION_FONTS.has(normalizedFontFamily)) {
+		return;
+	}
+
+	const existingPromise =
+		GOOGLE_FONT_REGISTRATION_PROMISES.get(normalizedFontFamily);
+	if (existingPromise) {
+		await existingPromise;
+		return;
+	}
+
+	const promise = downloadAndRegisterGoogleFont(normalizedFontFamily).catch(
+		(error: unknown) => {
+			GOOGLE_FONT_REGISTRATION_PROMISES.delete(normalizedFontFamily);
+			console.warn(
+				`Failed to load Google Font "${normalizedFontFamily}", falling back to system fonts:`,
+				error,
+			);
+		},
+	);
+	GOOGLE_FONT_REGISTRATION_PROMISES.set(normalizedFontFamily, promise);
+	await promise;
+}
+
 function setCaptionFont(
 	context: ReturnType<ReturnType<typeof createCanvas>["getContext"]>,
 	fontSize: number,
@@ -1846,6 +1941,9 @@ async function renderCaptionOverlayAndComposite(input: {
 	captionStyle?: CaptionStyle;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
+	if (input.captionStyle?.fontFamily) {
+		await ensureCaptionFontRegistered(input.captionStyle.fontFamily);
+	}
 	const cues = await readSubtitleCues(input.subtitleFilePath);
 	const workspace = dirname(input.outputFilePath);
 	const captionListPath = await renderCaptionConcatList({

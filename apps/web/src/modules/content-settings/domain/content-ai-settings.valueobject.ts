@@ -20,6 +20,7 @@ export const SUBTITLE_FONT_FAMILIES = [
 ] as const;
 
 const HexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
+const SubtitleFontFamilySchema = z.string().trim().min(1).max(80);
 
 export const ContentAiSettingsSchema = z.object({
 	id: z.number().int().positive(),
@@ -38,7 +39,7 @@ export const ContentAiSettingsSchema = z.object({
 	whisperChunkMinutes: z.number().int().min(1).max(120),
 	subtitleColor: HexColorSchema,
 	subtitleHighlightColor: HexColorSchema,
-	subtitleFontFamily: z.enum(SUBTITLE_FONT_FAMILIES),
+	subtitleFontFamily: SubtitleFontFamilySchema,
 	createdAt: z.date(),
 	updatedAt: z.date(),
 });
@@ -61,7 +62,7 @@ export const UpdateContentAiSettingsSchema = z.object({
 	whisperChunkMinutes: z.number().int().min(1).max(120).default(20),
 	subtitleColor: HexColorSchema.default("#ffffff"),
 	subtitleHighlightColor: HexColorSchema.default("#ffe45c"),
-	subtitleFontFamily: z.enum(SUBTITLE_FONT_FAMILIES).default("Arial"),
+	subtitleFontFamily: SubtitleFontFamilySchema.default("Arial"),
 });
 
 export type UpdateContentAiSettingsInput = z.infer<

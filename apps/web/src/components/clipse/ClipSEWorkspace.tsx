@@ -6,6 +6,7 @@ import {
 	Check,
 	ChevronLeft,
 	ChevronRight,
+	ChevronsUpDown,
 	Clapperboard,
 	Clipboard,
 	Clock3,
@@ -110,6 +111,14 @@ import {
 	CardTitle,
 } from "../ui/card";
 import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "../ui/command";
+import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -124,6 +133,7 @@ import {
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Input } from "../ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Progress } from "../ui/progress";
 import { ScrollArea } from "../ui/scroll-area";
 import {
@@ -180,6 +190,31 @@ const SUBTITLE_COLOR_OPTIONS = [
 	{ label: "Pink", value: "#f9a8d4" },
 	{ label: "Orange", value: "#fdba74" },
 ] as const;
+const GOOGLE_SUBTITLE_FONT_FAMILIES = [
+	"Bebas Neue",
+	"Roboto Condensed",
+	"Anton",
+	"Oswald",
+	"Montserrat",
+	"Poppins",
+	"Inter",
+	"Nunito Sans",
+	"Archivo Black",
+	"Barlow Condensed",
+	"Fjalla One",
+	"League Spartan",
+	"Rubik",
+	"Urbanist",
+	"Work Sans",
+	"DM Sans",
+	"Manrope",
+	"Raleway",
+	"Merriweather Sans",
+	"Noto Sans",
+] as const;
+const SUBTITLE_FONT_OPTIONS = Array.from(
+	new Set([...SUBTITLE_FONT_FAMILIES, ...GOOGLE_SUBTITLE_FONT_FAMILIES]),
+);
 const TRANSCRIPT_EXPORT_FORMATS: ReadonlyArray<{
 	extension: TranscriptExportFormat;
 	labelKey: `workspace.transcriptPanel.exportFormats.${TranscriptExportFormat}`;
@@ -327,6 +362,109 @@ function SelectableOptionIndicator({ checked }: { checked: boolean }) {
 		>
 			{checked ? <Check className="size-3.5" /> : null}
 		</span>
+	);
+}
+
+function SubtitleFontCombobox(input: {
+	value: string;
+	onChange: (value: string) => void;
+}) {
+	const t = useTranslations();
+	const [open, setOpen] = useState(false);
+	const [search, setSearch] = useState("");
+	const listRef = useRef<HTMLDivElement | null>(null);
+	const normalizedSearch = search.trim();
+	const matchingOptions = SUBTITLE_FONT_OPTIONS.filter((fontFamily) =>
+		fontFamily.toLowerCase().includes(normalizedSearch.toLowerCase()),
+	);
+	const canUseSearchValue =
+		normalizedSearch.length > 0 &&
+		!SUBTITLE_FONT_OPTIONS.some(
+			(fontFamily) =>
+				fontFamily.toLowerCase() === normalizedSearch.toLowerCase(),
+		);
+
+	return (
+		<Popover onOpenChange={setOpen} open={open}>
+			<PopoverTrigger asChild>
+				<Button
+					aria-expanded={open}
+					className="w-full justify-between border-white/10 bg-slate-900/75 text-slate-100 hover:bg-slate-900"
+					id="subtitle-font-family"
+					role="combobox"
+					variant="outline"
+				>
+					<span className="truncate">{input.value}</span>
+					<ChevronsUpDown className="h-4 w-4 opacity-60" />
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent
+				align="start"
+				className="w-[--radix-popover-trigger-width] overflow-hidden border-white/10 bg-slate-950 p-0 text-slate-100"
+			>
+				<Command className="bg-slate-950 text-slate-100" shouldFilter={false}>
+					<CommandInput
+						onValueChange={setSearch}
+						placeholder={t("workspace.settings.subtitleFontSearch")}
+						value={search}
+					/>
+					<CommandList
+						className="max-h-72 overflow-y-auto overscroll-contain"
+						onWheelCapture={(event) => {
+							const list = listRef.current;
+							if (!list || list.scrollHeight <= list.clientHeight) {
+								return;
+							}
+
+							event.preventDefault();
+							event.stopPropagation();
+							list.scrollTop += event.deltaY;
+						}}
+						ref={listRef}
+					>
+						<CommandEmpty>
+							{t("workspace.settings.subtitleFontEmpty")}
+						</CommandEmpty>
+						<CommandGroup>
+							{canUseSearchValue ? (
+								<CommandItem
+									onSelect={() => {
+										input.onChange(normalizedSearch);
+										setOpen(false);
+									}}
+									value={normalizedSearch}
+								>
+									<Type className="h-4 w-4" />
+									<span className="truncate">
+										{t("workspace.settings.subtitleFontUseGoogle", {
+											font: normalizedSearch,
+										})}
+									</span>
+								</CommandItem>
+							) : null}
+							{matchingOptions.map((fontFamily) => (
+								<CommandItem
+									key={fontFamily}
+									onSelect={() => {
+										input.onChange(fontFamily);
+										setOpen(false);
+									}}
+									value={fontFamily}
+								>
+									<Check
+										className={cn(
+											"h-4 w-4",
+											input.value === fontFamily ? "opacity-100" : "opacity-0",
+										)}
+									/>
+									<span style={{ fontFamily }}>{fontFamily}</span>
+								</CommandItem>
+							))}
+						</CommandGroup>
+					</CommandList>
+				</Command>
+			</PopoverContent>
+		</Popover>
 	);
 }
 
@@ -2553,26 +2691,10 @@ export function ClipSEWorkspace({
 														<Type className="h-4 w-4 text-slate-400" />
 														{t("workspace.settings.subtitleFontFamily")}
 													</label>
-													<Select
-														onValueChange={(value) =>
-															setSubtitleFontFamily(value as SubtitleFontFamily)
-														}
+													<SubtitleFontCombobox
+														onChange={setSubtitleFontFamily}
 														value={subtitleFontFamily}
-													>
-														<SelectTrigger
-															className="border-white/10 bg-slate-900/75 text-white"
-															id="subtitle-font-family"
-														>
-															<SelectValue />
-														</SelectTrigger>
-														<SelectContent>
-															{SUBTITLE_FONT_FAMILIES.map((fontFamily) => (
-																<SelectItem key={fontFamily} value={fontFamily}>
-																	{fontFamily}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
+													/>
 												</div>
 											</div>
 											<div className="rounded-md border border-white/10 bg-slate-900/75 p-4">

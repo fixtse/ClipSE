@@ -7,7 +7,6 @@ import type {
 	UpdateContentAiSettingsInput,
 } from "../domain/content-ai-settings.valueobject";
 import {
-	SUBTITLE_FONT_FAMILIES,
 	WHISPER_MODELS,
 	WHISPER_PROVIDERS,
 } from "../domain/content-ai-settings.valueobject";
@@ -51,10 +50,9 @@ function normalizeSubtitleHighlightColor(color: string): string {
 function normalizeSubtitleFontFamily(
 	fontFamily: string,
 ): ContentAiSettings["subtitleFontFamily"] {
-	return SUBTITLE_FONT_FAMILIES.includes(
-		fontFamily as ContentAiSettings["subtitleFontFamily"],
-	)
-		? (fontFamily as ContentAiSettings["subtitleFontFamily"])
+	const normalizedFontFamily = fontFamily.trim().slice(0, 80);
+	return normalizedFontFamily.length > 0
+		? normalizedFontFamily
 		: DEFAULT_SUBTITLE_FONT_FAMILY;
 }
 
@@ -138,7 +136,9 @@ export class ContentAiSettingsRepository
 				subtitleHighlightColor: normalizeSubtitleHighlightColor(
 					input.subtitleHighlightColor,
 				),
-				subtitleFontFamily: input.subtitleFontFamily,
+				subtitleFontFamily: normalizeSubtitleFontFamily(
+					input.subtitleFontFamily,
+				),
 				updatedAt: new Date(),
 			})
 			.where(eq(contentAiSettings.id, SETTINGS_ID))

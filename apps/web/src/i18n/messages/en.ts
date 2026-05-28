@@ -135,6 +135,9 @@ export const enMessages = {
 			subtitleColor: "Color",
 			subtitleHighlightColor: "Highlight",
 			subtitleFontFamily: "Font",
+			subtitleFontSearch: "Search Google Fonts...",
+			subtitleFontEmpty: "No matching font suggestions.",
+			subtitleFontUseGoogle: 'Use "{font}" from Google Fonts',
 			subtitlePreview: "Subtitle preview",
 			subtitleHighlightPreview: "highlight",
 			whisperProviders: {
