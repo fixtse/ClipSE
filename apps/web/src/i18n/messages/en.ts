@@ -408,6 +408,8 @@ export const enMessages = {
 			noChaptersToCopy: "No chapters to copy yet.",
 			noTranscriptToExport: "No transcript to export yet.",
 			transcriptExported: "Transcript exported.",
+			transcriptSegmentTextRequired: "Transcript text cannot be empty.",
+			transcriptSegmentSaved: "Transcript line saved.",
 			uploadFailed: "Upload failed",
 			uploadInitializeFailed: "Failed to initialize multipart upload.",
 			uploadStartFailed: "Failed to initialize upload.",

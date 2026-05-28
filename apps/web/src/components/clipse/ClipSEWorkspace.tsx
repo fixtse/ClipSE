@@ -16,6 +16,7 @@ import {
 	LoaderCircle,
 	LogOut,
 	Palette,
+	Pencil,
 	Plus,
 	RefreshCcw,
 	RotateCcw,
@@ -28,6 +29,7 @@ import {
 	Upload,
 	UserPlus,
 	Video,
+	X,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -90,6 +92,7 @@ import { queueContentVideoClipRendersAction } from "~/server/actions/content-cli
 import { updateClipSEAction } from "~/server/actions/content-clips/update-content-clip";
 import { clearFinishedContentJobsAction } from "~/server/actions/content-jobs/clear-finished-content-jobs";
 import { updateContentAiSettingsAction } from "~/server/actions/content-settings/update-content-ai-settings";
+import { updateContentTranscriptionSegmentAction } from "~/server/actions/content-transcriptions/update-content-transcription-segment";
 import { createContentVideoDraftAction } from "~/server/actions/content-videos/create-content-video-draft";
 import { createContentVideoUrlSourceAction } from "~/server/actions/content-videos/create-content-video-url-source";
 import { deleteContentVideoAction } from "~/server/actions/content-videos/delete-content-video";
@@ -442,6 +445,11 @@ export function ClipSEWorkspace({
 	const [transcriptSearch, setTranscriptSearch] = useState("");
 	const [transcriptPanelTab, setTranscriptPanelTab] =
 		useState<TranscriptPanelTab>("transcript");
+	const [editingTranscriptSegmentIndex, setEditingTranscriptSegmentIndex] =
+		useState<number | null>(null);
+	const [transcriptEditDraft, setTranscriptEditDraft] = useState("");
+	const [savingTranscriptSegmentIndex, setSavingTranscriptSegmentIndex] =
+		useState<number | null>(null);
 	const [isPending, startTransition] = useTransition();
 	const [isSigningOut, setIsSigningOut] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -500,6 +508,7 @@ export function ClipSEWorkspace({
 		selectedVideo: dashboardQuery.data?.selectedVideo,
 	});
 	const selectedVideoRecord = selectedVideo?.video ?? null;
+	const selectedVideoRecordId = selectedVideoRecord?.id ?? null;
 	const selectedChannel =
 		dashboardDataMatchesSelectedChannel && dashboardQuery.data?.selectedChannel
 			? dashboardQuery.data.selectedChannel
@@ -554,6 +563,19 @@ export function ClipSEWorkspace({
 			document.documentElement.style.overflowX = previousDocumentOverflowX;
 		};
 	}, []);
+
+	useEffect(() => {
+		if (selectedVideoRecordId === null) {
+			setEditingTranscriptSegmentIndex(null);
+			setTranscriptEditDraft("");
+			setSavingTranscriptSegmentIndex(null);
+			return;
+		}
+
+		setEditingTranscriptSegmentIndex(null);
+		setTranscriptEditDraft("");
+		setSavingTranscriptSegmentIndex(null);
+	}, [selectedVideoRecordId]);
 
 	useEffect(() => {
 		const settings = aiSettingsQuery.data;
@@ -1317,6 +1339,52 @@ export function ClipSEWorkspace({
 		link.remove();
 		URL.revokeObjectURL(url);
 		toast.success(t("workspace.toasts.transcriptExported"));
+	}
+
+	function startTranscriptSegmentEdit(input: {
+		readonly segmentIndex: number;
+		readonly text: string;
+	}) {
+		setEditingTranscriptSegmentIndex(input.segmentIndex);
+		setTranscriptEditDraft(input.text);
+	}
+
+	function cancelTranscriptSegmentEdit() {
+		setEditingTranscriptSegmentIndex(null);
+		setTranscriptEditDraft("");
+	}
+
+	async function saveTranscriptSegmentEdit(segmentIndex: number) {
+		if (!selectedVideoRecord) {
+			return;
+		}
+
+		const text = transcriptEditDraft.trim();
+		if (!text) {
+			toast.error(t("workspace.toasts.transcriptSegmentTextRequired"));
+			return;
+		}
+
+		setSavingTranscriptSegmentIndex(segmentIndex);
+		try {
+			const result = await updateContentTranscriptionSegmentAction({
+				videoId: selectedVideoRecord.id,
+				segmentIndex,
+				text,
+			});
+
+			if (!result.success) {
+				toast.error(result.error);
+				return;
+			}
+
+			toast.success(t("workspace.toasts.transcriptSegmentSaved"));
+			setEditingTranscriptSegmentIndex(null);
+			setTranscriptEditDraft("");
+			await refreshDashboard();
+		} finally {
+			setSavingTranscriptSegmentIndex(null);
+		}
 	}
 
 	async function handleRetryVideo(videoId: string) {
@@ -3518,36 +3586,135 @@ export function ClipSEWorkspace({
 																				<AnimatePresence initial={false}>
 																					{filteredTranscriptSegments.length ? (
 																						filteredTranscriptSegments.map(
-																							(segment, index) => (
-																								<motion.div
-																									{...LIST_ITEM_MOTION}
-																									key={`${segment.start}-${segment.end}-${segment.text}`}
-																									transition={{
-																										duration: 0.18,
-																										delay:
-																											Math.min(index, 8) *
-																											0.015,
-																										ease: "easeOut",
-																									}}
-																								>
-																									<button
-																										className="w-full rounded-md border border-white/8 bg-slate-950/45 p-3 text-left transition hover:bg-slate-900/70"
-																										onClick={() =>
-																											seekVideo(segment.start)
-																										}
-																										type="button"
+																							(segment, index) => {
+																								const segmentIndex =
+																									transcriptSegments.indexOf(
+																										segment,
+																									);
+																								const isEditing =
+																									segmentIndex >= 0 &&
+																									editingTranscriptSegmentIndex ===
+																										segmentIndex;
+																								const isSaving =
+																									segmentIndex >= 0 &&
+																									savingTranscriptSegmentIndex ===
+																										segmentIndex;
+
+																								return (
+																									<motion.div
+																										{...LIST_ITEM_MOTION}
+																										key={`${segment.start}-${segment.end}-${segmentIndex}`}
+																										transition={{
+																											duration: 0.18,
+																											delay:
+																												Math.min(index, 8) *
+																												0.015,
+																											ease: "easeOut",
+																										}}
 																									>
-																										<p className="font-medium text-orange-200 text-xs uppercase tracking-[0.18em]">
-																											{formatTimecode(
-																												segment.start,
+																										<div className="group relative rounded-md border border-white/8 bg-slate-950/45 p-3 pr-12 text-left transition hover:bg-slate-900/70">
+																											<div
+																												className={cn(
+																													"absolute top-2 right-2 flex gap-1 transition-opacity",
+																													isEditing
+																														? "opacity-100"
+																														: "pointer-events-none opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100",
+																												)}
+																											>
+																												{isEditing ? (
+																													<>
+																														<Button
+																															aria-label="Save transcript segment"
+																															className="border-emerald-400/20 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 hover:text-emerald-100"
+																															disabled={
+																																isSaving
+																															}
+																															onClick={() =>
+																																saveTranscriptSegmentEdit(
+																																	segmentIndex,
+																																)
+																															}
+																															size="icon-xs"
+																															type="button"
+																															variant="outline"
+																														>
+																															<Check className="h-3 w-3" />
+																														</Button>
+																														<Button
+																															aria-label="Cancel transcript segment edit"
+																															className="border-white/10 bg-slate-900/80 text-slate-300 hover:bg-slate-800 hover:text-white"
+																															disabled={
+																																isSaving
+																															}
+																															onClick={
+																																cancelTranscriptSegmentEdit
+																															}
+																															size="icon-xs"
+																															type="button"
+																															variant="outline"
+																														>
+																															<X className="h-3 w-3" />
+																														</Button>
+																													</>
+																												) : (
+																													<Button
+																														aria-label="Edit transcript segment"
+																														className="border-white/10 bg-slate-900/80 text-slate-400 opacity-80 hover:bg-slate-800 hover:text-white"
+																														disabled={
+																															segmentIndex < 0
+																														}
+																														onClick={() =>
+																															startTranscriptSegmentEdit(
+																																{
+																																	segmentIndex,
+																																	text: segment.text,
+																																},
+																															)
+																														}
+																														size="icon-xs"
+																														type="button"
+																														variant="outline"
+																													>
+																														<Pencil className="h-3 w-3" />
+																													</Button>
+																												)}
+																											</div>
+																											<p className="font-medium text-orange-200 text-xs uppercase tracking-[0.18em]">
+																												{formatTimecode(
+																													segment.start,
+																												)}
+																											</p>
+																											{isEditing ? (
+																												<Textarea
+																													className="mt-2 min-h-24 border-white/10 bg-slate-900/80 pr-2 text-slate-100 text-sm leading-6"
+																													disabled={isSaving}
+																													onChange={(event) =>
+																														setTranscriptEditDraft(
+																															event.target
+																																.value,
+																														)
+																													}
+																													value={
+																														transcriptEditDraft
+																													}
+																												/>
+																											) : (
+																												<button
+																													className="mt-2 block w-full text-left text-slate-200 text-sm leading-6"
+																													onClick={() =>
+																														seekVideo(
+																															segment.start,
+																														)
+																													}
+																													type="button"
+																												>
+																													{segment.text}
+																												</button>
 																											)}
-																										</p>
-																										<p className="mt-2 text-slate-200 text-sm leading-6">
-																											{segment.text}
-																										</p>
-																									</button>
-																								</motion.div>
-																							),
+																										</div>
+																									</motion.div>
+																								);
+																							},
 																						)
 																					) : transcriptSegments.length ? (
 																						<motion.div

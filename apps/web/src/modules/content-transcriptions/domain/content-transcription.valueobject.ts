@@ -50,6 +50,16 @@ export type UpsertContentTranscriptionInput = z.infer<
 	typeof UpsertContentTranscriptionSchema
 >;
 
+export const UpdateContentTranscriptionSegmentSchema = z.object({
+	videoId: z.string().uuid(),
+	segmentIndex: z.number().int().nonnegative(),
+	text: z.string().trim().min(1),
+});
+
+export type UpdateContentTranscriptionSegmentInput = z.infer<
+	typeof UpdateContentTranscriptionSegmentSchema
+>;
+
 export function formatContentTimestamp(totalSeconds: number): string {
 	const hours = Math.floor(totalSeconds / 3600);
 	const minutes = Math.floor((totalSeconds % 3600) / 60);

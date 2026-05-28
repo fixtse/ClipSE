@@ -414,6 +414,9 @@ export const esMessages = {
 			noChaptersToCopy: "Todavía no hay capítulos para copiar.",
 			noTranscriptToExport: "Todavía no hay transcripción para exportar.",
 			transcriptExported: "Transcripción exportada.",
+			transcriptSegmentTextRequired:
+				"El texto de la transcripción no puede estar vacío.",
+			transcriptSegmentSaved: "Se guardó la línea de transcripción.",
 			uploadFailed: "La subida falló",
 			uploadInitializeFailed: "No se pudo inicializar la subida multipart.",
 			uploadStartFailed: "No se pudo inicializar la subida.",
