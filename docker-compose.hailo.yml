@@ -17,6 +17,14 @@ services:
       HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS: ${HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS:-1.0}
       HAILO_VLM_FOCUS_MAX_SAMPLES: ${HAILO_VLM_FOCUS_MAX_SAMPLES:-8}
       HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE: ${HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE:-true}
+      HAILO_VISION_MODEL: ${HAILO_VISION_MODEL:-yolov8n}
+      HAILO_VISION_HEF_PATH: ${HAILO_VISION_HEF_PATH:-}
+      HAILO_SCREEN_OCR_HEF_PATH: ${HAILO_SCREEN_OCR_HEF_PATH:-}
+      HAILO_OBJECT_LABELS: ${HAILO_OBJECT_LABELS:-}
+      HAILO_VISION_SAMPLE_INTERVAL_SECONDS: ${HAILO_VISION_SAMPLE_INTERVAL_SECONDS:-0.35}
+      HAILO_VISION_MAX_SAMPLES: ${HAILO_VISION_MAX_SAMPLES:-24}
+      HAILO_VISION_COMMAND: ${HAILO_VISION_COMMAND:-python /app/hailo_vision_focus_runner.py --video {video} --model {model} --start {start} --end {end} --detection-mode {detection_mode} --sample-interval {sample_interval} --max-samples {max_samples} {hef_arg} {ocr_hef_arg} {object_labels_arg}}
+      HAILO_VISION_FRAME_COMMAND: ${HAILO_VISION_FRAME_COMMAND:-}
       HAILO_COMMAND_TIMEOUT_SECONDS: ${HAILO_COMMAND_TIMEOUT_SECONDS:-900}
       LD_LIBRARY_PATH: /usr/lib/hailo:/usr/local/lib:${LD_LIBRARY_PATH:-}
       PYTHONPATH: /opt/hailo/hailo_platform:/usr/lib/python3/dist-packages:${PYTHONPATH:-}

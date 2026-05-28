@@ -152,13 +152,15 @@ curl -F file=@sample.wav "http://localhost:8000/benchmark?providers=faster-whisp
 
 After the service is healthy, open ClipSE AI Settings and select `Hailo-10H` as the transcription backend. The settings dialog shows the same backend detection state from `/health`.
 
-To use Hailo VLM for vertical short face/person focus detection, set:
+To use Hailo vision detection for vertical short focus detection, set:
 
 ```bash
-CLIPSE_FOCUS_PROVIDER=hailo-vlm
+CLIPSE_FOCUS_PROVIDER=hailo-vision
 ```
 
-The worker will call the Hailo service `POST /focus-detections` before the local YOLO/OpenCV detector. If Hailo is unavailable or returns no detections, ClipSE falls back to the existing local detector. The VLM runner samples frames, converts each image to the model input shape, asks for the primary face/person location, and returns the same focus detection shape used by the crop renderer.
+The worker will call the Hailo service `POST /focus-detections` before the local YOLO/RT-DETR/OpenCV detector. It passes the active short detection mode (`people`, `people_strict`, `product`, `screen`, or `object`) so the Hailo runner can use YOLO-family object detections for people/products/general objects and screen-like object or OCR/text cues for screen focus. If Hailo is unavailable or returns no detections, ClipSE falls back to the existing local detector.
+
+The Hailo image still does not redistribute vendor drivers, firmware, or proprietary HEFs. Mount HailoRT/PyHailoRT from the host as shown above and optionally set `HAILO_VISION_HEF_PATH`, `HAILO_SCREEN_OCR_HEF_PATH`, or `HAILO_VISION_FRAME_COMMAND` for a custom Hailo detector wrapper. `CLIPSE_FOCUS_PROVIDER=hailo-vlm` remains available for the older face/person VLM prompt path.
 
 ### Garage initialization fails
 

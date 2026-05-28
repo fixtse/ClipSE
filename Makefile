@@ -9,7 +9,7 @@ dev: worker-base-dev
 	docker compose -f docker-compose.dev.yml up --build
 
 dev-hailo: worker-base-dev
-	CLIPSE_FOCUS_PROVIDER=hailo-vlm WHISPER_PROVIDER=hailo docker compose -f docker-compose.dev.yml -f docker-compose.hailo.yml up --build
+	CLIPSE_FOCUS_PROVIDER=hailo-vision WHISPER_PROVIDER=hailo docker compose -f docker-compose.dev.yml -f docker-compose.hailo.yml up --build
 
 worker-base-dev:
 	docker build -f apps/worker/Dockerfile.base.dev -t clipse-worker-base:dev .
@@ -21,7 +21,7 @@ prod:
 	docker compose up --build -d
 
 prod-hailo:
-	CLIPSE_FOCUS_PROVIDER=hailo-vlm WHISPER_PROVIDER=hailo docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
+	CLIPSE_FOCUS_PROVIDER=hailo-vision WHISPER_PROVIDER=hailo docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
 
 prod-down:
 	docker compose down

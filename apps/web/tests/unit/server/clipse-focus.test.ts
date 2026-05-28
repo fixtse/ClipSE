@@ -1,7 +1,75 @@
-import { describe, expect, it } from "vitest";
-import { buildFocusPlan } from "~/server/lib/clipse-focus";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { buildFocusPlan, detectFocusRegions } from "~/server/lib/clipse-focus";
+
+const { execFileMock } = vi.hoisted(() => ({
+	execFileMock: vi.fn(),
+}));
+
+vi.mock("node:child_process", () => {
+	const promisifiedExecFile = Symbol.for("nodejs.util.promisify.custom");
+	(
+		execFileMock as typeof execFileMock & {
+			[promisifiedExecFile]: (...params: unknown[]) => Promise<{
+				stdout: string;
+				stderr: string;
+			}>;
+		}
+	)[promisifiedExecFile] = async (...params: unknown[]) =>
+		await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+			execFileMock(
+				...params,
+				(error: Error | null, stdout?: string, stderr?: string) => {
+					if (error) {
+						reject(error);
+						return;
+					}
+					resolve({ stdout: stdout ?? "", stderr: stderr ?? "" });
+				},
+			);
+		});
+	return {
+		execFile: execFileMock,
+	};
+});
+
+function mockLocalFocusDetector() {
+	execFileMock.mockImplementation((...params: unknown[]) => {
+		const callback = params.at(-1) as (
+			error: Error | null,
+			stdout?: string,
+			stderr?: string,
+		) => void;
+		callback(
+			null,
+			JSON.stringify({
+				detections: [
+					{
+						timestampSeconds: 1,
+						x: 100,
+						y: 90,
+						width: 240,
+						height: 360,
+						score: 0.8,
+						source: "person",
+					},
+				],
+				detectorBackend: "yolo-cpu",
+			}),
+			"",
+		);
+	});
+}
 
 describe("buildFocusPlan", () => {
+	afterEach(() => {
+		execFileMock.mockReset();
+		vi.unstubAllEnvs();
+		vi.unstubAllGlobals();
+	});
+
 	it("falls back to the centered crop when no detections are available", () => {
 		expect(
 			buildFocusPlan({
@@ -216,5 +284,120 @@ describe("buildFocusPlan", () => {
 		expect(plan.regions).toHaveLength(2);
 		expect(plan.regions[0]?.centerX).toBeGreaterThanOrEqual(0);
 		expect(plan.regions[1]?.centerX).toBeLessThanOrEqual(1920);
+	});
+
+	it("sends the selected detection mode to Hailo vision focus detection", async () => {
+		vi.stubEnv("CLIPSE_FOCUS_PROVIDER", "hailo-vision");
+		vi.stubEnv("CLIPSE_HAILO_SERVICE_URL", "http://hailo.test");
+		const workspace = await mkdtemp(join(tmpdir(), "clipse-focus-test-"));
+		const inputFilePath = join(workspace, "source.mp4");
+		await writeFile(inputFilePath, Buffer.from("video"));
+		const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+			const body = init?.body as FormData;
+			expect(body.get("detection_mode")).toBe("product");
+			expect(body.get("detector_backend")).toBe("hailo-vision");
+			expect(body.get("start_seconds")).toBe("1.000");
+			expect(body.get("end_seconds")).toBe("2.000");
+			return new Response(
+				JSON.stringify({
+					detections: [
+						{
+							timestampSeconds: 1,
+							x: 80,
+							y: 90,
+							width: 260,
+							height: 220,
+							score: 0.9,
+							source: "product",
+						},
+					],
+					detectorBackend: "hailo-vision",
+				}),
+				{ status: 200 },
+			);
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		await expect(
+			detectFocusRegions({
+				inputFilePath,
+				startSeconds: 1,
+				endSeconds: 2,
+				frameWidth: 1920,
+				frameHeight: 1080,
+				detectionMode: "product",
+			}),
+		).resolves.toMatchObject({
+			fallback: false,
+			detectorBackend: "hailo-vision",
+		});
+		expect(fetchMock).toHaveBeenCalledWith(
+			"http://hailo.test/focus-detections",
+			expect.objectContaining({ method: "POST" }),
+		);
+		expect(execFileMock).not.toHaveBeenCalled();
+	});
+
+	it("falls back to local focus detection when Hailo returns no detections", async () => {
+		vi.stubEnv("CLIPSE_FOCUS_PROVIDER", "hailo-vision");
+		const workspace = await mkdtemp(join(tmpdir(), "clipse-focus-test-"));
+		const inputFilePath = join(workspace, "source.mp4");
+		await writeFile(inputFilePath, Buffer.from("video"));
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(
+				async () =>
+					new Response(
+						JSON.stringify({
+							detections: [],
+							detectorBackend: "hailo-vision",
+						}),
+						{ status: 200 },
+					),
+			),
+		);
+		mockLocalFocusDetector();
+
+		await expect(
+			detectFocusRegions({
+				inputFilePath,
+				startSeconds: 1,
+				endSeconds: 2,
+				frameWidth: 1920,
+				frameHeight: 1080,
+				detectionMode: "people",
+			}),
+		).resolves.toMatchObject({
+			fallback: false,
+			detectorBackend: "yolo-cpu",
+		});
+		expect(execFileMock).toHaveBeenCalled();
+	});
+
+	it("falls back to local focus detection when Hailo returns invalid JSON", async () => {
+		vi.stubEnv("CLIPSE_FOCUS_PROVIDER", "hailo-vision");
+		const workspace = await mkdtemp(join(tmpdir(), "clipse-focus-test-"));
+		const inputFilePath = join(workspace, "source.mp4");
+		await writeFile(inputFilePath, Buffer.from("video"));
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response(JSON.stringify({ detections: [] }))),
+		);
+		mockLocalFocusDetector();
+
+		await expect(
+			detectFocusRegions({
+				inputFilePath,
+				startSeconds: 1,
+				endSeconds: 2,
+				frameWidth: 1920,
+				frameHeight: 1080,
+				detectionMode: "screen",
+			}),
+		).resolves.toMatchObject({
+			fallback: false,
+			detectorBackend: "yolo-cpu",
+		});
+		expect(execFileMock).toHaveBeenCalled();
 	});
 });

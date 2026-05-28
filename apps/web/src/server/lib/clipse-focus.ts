@@ -26,6 +26,7 @@ export interface FocusDetection {
 }
 
 export type DetectorBackend =
+	| "hailo-vision"
 	| "opencv"
 	| "rtdetr-cpu"
 	| "rtdetr-cuda"
@@ -54,7 +55,7 @@ const hailoFocusResponseSchema = z.object({
 			]),
 		}),
 	),
-	detectorBackend: z.literal("hailo-vlm"),
+	detectorBackend: z.enum(["hailo-vlm", "hailo-vision"]),
 });
 
 export interface FocusRegion {
@@ -433,8 +434,12 @@ export async function detectFocusRegions(input: {
 	frameHeight: number;
 	detectionMode?: "people" | "people_strict" | "product" | "screen";
 }): Promise<FocusPlan> {
-	if (readFocusProvider() === "hailo-vlm") {
-		const hailoPlan = await detectHailoVlmFocusRegions(input);
+	const focusProvider = readFocusProvider();
+	if (focusProvider === "hailo-vlm" || focusProvider === "hailo-vision") {
+		const hailoPlan = await detectHailoVlmFocusRegions({
+			...input,
+			provider: focusProvider,
+		});
 		if (hailoPlan && !hailoPlan.fallback) {
 			return hailoPlan;
 		}
@@ -482,6 +487,7 @@ export async function detectFocusRegions(input: {
 				parsed.detectorBackend === "yolo-cpu" ||
 				parsed.detectorBackend === "rtdetr-cuda" ||
 				parsed.detectorBackend === "rtdetr-cpu" ||
+				parsed.detectorBackend === "hailo-vision" ||
 				parsed.detectorBackend === "hailo-vlm"
 					? parsed.detectorBackend
 					: "opencv",
@@ -505,6 +511,8 @@ async function detectHailoVlmFocusRegions(input: {
 	endSeconds: number;
 	frameWidth: number;
 	frameHeight: number;
+	detectionMode?: "people" | "people_strict" | "product" | "screen";
+	provider: "hailo-vlm" | "hailo-vision";
 }): Promise<FocusPlan | null> {
 	try {
 		const formData = new FormData();
@@ -517,6 +525,8 @@ async function detectHailoVlmFocusRegions(input: {
 		);
 		formData.set("start_seconds", input.startSeconds.toFixed(3));
 		formData.set("end_seconds", input.endSeconds.toFixed(3));
+		formData.set("detection_mode", input.detectionMode ?? "people");
+		formData.set("detector_backend", input.provider);
 
 		const response = await fetch(`${readHailoServiceUrl()}/focus-detections`, {
 			method: "POST",
@@ -547,9 +557,13 @@ async function detectHailoVlmFocusRegions(input: {
 	}
 }
 
-function readFocusProvider(): "auto" | "local" | "hailo-vlm" {
+function readFocusProvider(): "auto" | "local" | "hailo-vlm" | "hailo-vision" {
 	const provider = process.env.CLIPSE_FOCUS_PROVIDER;
-	return provider === "hailo-vlm" || provider === "local" ? provider : "auto";
+	return provider === "hailo-vlm" ||
+		provider === "hailo-vision" ||
+		provider === "local"
+		? provider
+		: "auto";
 }
 
 function readHailoServiceUrl(): string {

@@ -26,6 +26,10 @@ HAILO_WHISPER_MODEL = os.environ.get("HAILO_WHISPER_MODEL", "whisper-base")
 HAILO_WHISPER_HEF_PATH = os.environ.get("HAILO_WHISPER_HEF_PATH", "")
 HAILO_VLM_MODEL = os.environ.get("HAILO_VLM_MODEL", "qwen2-vl-2b")
 HAILO_VLM_HEF_PATH = os.environ.get("HAILO_VLM_HEF_PATH", "")
+HAILO_VISION_MODEL = os.environ.get("HAILO_VISION_MODEL", "yolov8n")
+HAILO_VISION_HEF_PATH = os.environ.get("HAILO_VISION_HEF_PATH", "")
+HAILO_SCREEN_OCR_HEF_PATH = os.environ.get("HAILO_SCREEN_OCR_HEF_PATH", "")
+HAILO_OBJECT_LABELS = os.environ.get("HAILO_OBJECT_LABELS", "")
 HAILO_TRANSCRIBE_COMMAND = os.environ.get(
     "HAILO_TRANSCRIBE_COMMAND",
     "python /app/hailo_whisper_runner.py --audio {audio} --model {model} --language {language} {hef_arg}",
@@ -34,11 +38,19 @@ HAILO_VLM_FOCUS_COMMAND = os.environ.get(
     "HAILO_VLM_FOCUS_COMMAND",
     "python /app/hailo_vlm_focus_runner.py --video {video} --model {model} --start {start} --end {end} --sample-interval {sample_interval} --max-samples {max_samples} {hef_arg} {optimize_memory_arg}",
 )
+HAILO_VISION_COMMAND = os.environ.get(
+    "HAILO_VISION_COMMAND",
+    "python /app/hailo_vision_focus_runner.py --video {video} --model {model} --start {start} --end {end} --detection-mode {detection_mode} --sample-interval {sample_interval} --max-samples {max_samples} {hef_arg} {ocr_hef_arg} {object_labels_arg}",
+)
 HAILO_COMMAND_TIMEOUT_SECONDS = int(os.environ.get("HAILO_COMMAND_TIMEOUT_SECONDS", "900"))
 HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS = float(
     os.environ.get("HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS", "1.0")
 )
 HAILO_VLM_FOCUS_MAX_SAMPLES = int(os.environ.get("HAILO_VLM_FOCUS_MAX_SAMPLES", "8"))
+HAILO_VISION_SAMPLE_INTERVAL_SECONDS = float(
+    os.environ.get("HAILO_VISION_SAMPLE_INTERVAL_SECONDS", "0.35")
+)
+HAILO_VISION_MAX_SAMPLES = int(os.environ.get("HAILO_VISION_MAX_SAMPLES", "24"))
 HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE = (
     os.environ.get("HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE", "true").lower()
     in ("1", "true", "yes")
@@ -122,6 +134,13 @@ def detect_hailo_runtime() -> dict[str, Any]:
             "model": HAILO_VLM_MODEL,
             "hefPathConfigured": bool(HAILO_VLM_HEF_PATH),
             "focusCommandConfigured": bool(HAILO_VLM_FOCUS_COMMAND),
+        },
+        "vision": {
+            "model": HAILO_VISION_MODEL,
+            "hefPathConfigured": bool(HAILO_VISION_HEF_PATH),
+            "screenOcrHefPathConfigured": bool(HAILO_SCREEN_OCR_HEF_PATH),
+            "objectLabelsConfigured": bool(HAILO_OBJECT_LABELS),
+            "focusCommandConfigured": bool(HAILO_VISION_COMMAND),
         },
     }
 
@@ -316,17 +335,24 @@ async def focus_detections(
     file: UploadFile = File(...),
     start_seconds: float = Form(default=0),
     end_seconds: float = Form(default=1),
-    model: str = Form(default=HAILO_VLM_MODEL),
-    sample_interval_seconds: float = Form(default=HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS),
-    max_samples: int = Form(default=HAILO_VLM_FOCUS_MAX_SAMPLES),
+    model: str | None = Form(default=None),
+    detection_mode: str = Form(default="people"),
+    detector_backend: str = Form(default="hailo-vision"),
+    sample_interval_seconds: float | None = Form(default=None),
+    max_samples: int | None = Form(default=None),
 ) -> dict:
     runtime = detect_hailo_runtime()
     if not runtime["available"]:
         raise HTTPException(status_code=503, detail="Hailo runtime was not detected")
-    if not HAILO_VLM_FOCUS_COMMAND:
+    normalized_detection_mode = normalize_detection_mode(detection_mode)
+    normalized_detector_backend = normalize_detector_backend(detector_backend)
+    use_hailo_vision = normalized_detector_backend == "hailo-vision" and bool(
+        HAILO_VISION_COMMAND
+    )
+    if not use_hailo_vision and not HAILO_VLM_FOCUS_COMMAND:
         raise HTTPException(
             status_code=503,
-            detail="HAILO_VLM_FOCUS_COMMAND is required for Hailo VLM focus detection",
+            detail="HAILO_VISION_COMMAND or HAILO_VLM_FOCUS_COMMAND is required for Hailo focus detection",
         )
 
     suffix = Path(file.filename or "video.mp4").suffix or ".mp4"
@@ -335,15 +361,49 @@ async def focus_detections(
         temp_path = temp_file.name
 
     try:
-        command = HAILO_VLM_FOCUS_COMMAND.format(
+        command_template = HAILO_VISION_COMMAND if use_hailo_vision else HAILO_VLM_FOCUS_COMMAND
+        effective_sample_interval = (
+            sample_interval_seconds
+            if sample_interval_seconds is not None
+            else HAILO_VISION_SAMPLE_INTERVAL_SECONDS
+            if use_hailo_vision
+            else HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS
+        )
+        effective_max_samples = (
+            max_samples
+            if max_samples is not None
+            else HAILO_VISION_MAX_SAMPLES
+            if use_hailo_vision
+            else HAILO_VLM_FOCUS_MAX_SAMPLES
+        )
+        command = command_template.format(
             video=temp_path,
-            model=model or HAILO_VLM_MODEL,
+            model=model or (HAILO_VISION_MODEL if use_hailo_vision else HAILO_VLM_MODEL),
             start=f"{start_seconds:.3f}",
             end=f"{end_seconds:.3f}",
-            sample_interval=f"{sample_interval_seconds:.3f}",
-            max_samples=max_samples,
-            hef_path=HAILO_VLM_HEF_PATH,
-            hef_arg=f"--hef-path {HAILO_VLM_HEF_PATH}" if HAILO_VLM_HEF_PATH else "",
+            sample_interval=f"{effective_sample_interval:.3f}",
+            max_samples=effective_max_samples,
+            detection_mode=normalized_detection_mode,
+            hef_path=HAILO_VISION_HEF_PATH if use_hailo_vision else HAILO_VLM_HEF_PATH,
+            hef_arg=(
+                f"--hef-path {HAILO_VISION_HEF_PATH}"
+                if use_hailo_vision and HAILO_VISION_HEF_PATH
+                else f"--hef-path {HAILO_VLM_HEF_PATH}"
+                if HAILO_VLM_HEF_PATH
+                else ""
+            ),
+            ocr_hef_path=HAILO_SCREEN_OCR_HEF_PATH,
+            ocr_hef_arg=(
+                f"--ocr-hef-path {HAILO_SCREEN_OCR_HEF_PATH}"
+                if use_hailo_vision and HAILO_SCREEN_OCR_HEF_PATH
+                else ""
+            ),
+            object_labels=HAILO_OBJECT_LABELS,
+            object_labels_arg=(
+                f"--object-labels {HAILO_OBJECT_LABELS}"
+                if use_hailo_vision and HAILO_OBJECT_LABELS
+                else ""
+            ),
             optimize_memory_arg=(
                 "--optimize-memory-on-device" if HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE else ""
             ),
@@ -359,14 +419,14 @@ async def focus_detections(
         if result.returncode != 0:
             raise HTTPException(
                 status_code=503,
-                detail=f"Hailo VLM focus detection failed: {result.stderr.strip() or result.stdout.strip()}",
+                detail=f"Hailo focus detection failed: {result.stderr.strip() or result.stdout.strip()}",
             )
         try:
             payload = json.loads(result.stdout)
         except json.JSONDecodeError as error:
             raise HTTPException(
                 status_code=503,
-                detail="Hailo VLM focus detection returned invalid JSON",
+                detail="Hailo focus detection returned invalid JSON",
             ) from error
         return validate_focus_payload(payload)
     finally:
@@ -384,6 +444,26 @@ def normalize_provider(provider: str) -> str:
             detail=f"Unsupported Whisper provider: {provider_name}",
         )
     return provider_name
+
+
+def normalize_detection_mode(detection_mode: str) -> str:
+    mode = (detection_mode or "people").strip().lower()
+    if mode not in {"people", "people_strict", "product", "screen", "object"}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported focus detection mode: {mode}",
+        )
+    return mode
+
+
+def normalize_detector_backend(detector_backend: str) -> str:
+    backend = (detector_backend or "hailo-vision").strip().lower()
+    if backend not in {"hailo-vlm", "hailo-vision"}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported Hailo focus backend: {backend}",
+        )
+    return backend
 
 
 def transcribe_with_hailo(
@@ -513,5 +593,9 @@ def validate_focus_payload(payload: Any) -> dict:
         )
     return {
         "detections": detections,
-        "detectorBackend": "hailo-vlm",
+        "detectorBackend": (
+            "hailo-vision"
+            if payload.get("detectorBackend") == "hailo-vision"
+            else "hailo-vlm"
+        ),
     }
