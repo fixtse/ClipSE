@@ -678,6 +678,7 @@ async function processRenderJob(
 		captionStyle: aiSettings
 			? {
 					color: aiSettings.subtitleColor,
+					highlightColor: aiSettings.subtitleHighlightColor,
 					fontFamily: aiSettings.subtitleFontFamily,
 				}
 			: undefined,

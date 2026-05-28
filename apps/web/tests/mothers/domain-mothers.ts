@@ -272,6 +272,7 @@ export const ClipSEAiSettingsMother = {
 			whisperChunkingEnabled: false,
 			whisperChunkMinutes: 20,
 			subtitleColor: "#ffffff",
+			subtitleHighlightColor: "#ffe45c",
 			subtitleFontFamily: "Arial",
 			createdAt: date(),
 			updatedAt: date(),

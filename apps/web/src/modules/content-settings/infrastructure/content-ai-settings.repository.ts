@@ -15,6 +15,7 @@ import {
 const SETTINGS_ID = 1;
 const DEFAULT_WHISPER_CHUNK_MINUTES = 20;
 const DEFAULT_SUBTITLE_COLOR = "#ffffff";
+const DEFAULT_SUBTITLE_HIGHLIGHT_COLOR = "#ffe45c";
 const DEFAULT_SUBTITLE_FONT_FAMILY = "Arial";
 
 function normalizeWhisperModel(
@@ -39,6 +40,12 @@ function normalizeSubtitleColor(color: string): string {
 	return /^#[0-9A-Fa-f]{6}$/.test(color)
 		? color.toLowerCase()
 		: DEFAULT_SUBTITLE_COLOR;
+}
+
+function normalizeSubtitleHighlightColor(color: string): string {
+	return /^#[0-9A-Fa-f]{6}$/.test(color)
+		? color.toLowerCase()
+		: DEFAULT_SUBTITLE_HIGHLIGHT_COLOR;
 }
 
 function normalizeSubtitleFontFamily(
@@ -82,6 +89,7 @@ export class ContentAiSettingsRepository
 				whisperChunkingEnabled: false,
 				whisperChunkMinutes: DEFAULT_WHISPER_CHUNK_MINUTES,
 				subtitleColor: DEFAULT_SUBTITLE_COLOR,
+				subtitleHighlightColor: DEFAULT_SUBTITLE_HIGHLIGHT_COLOR,
 				subtitleFontFamily: DEFAULT_SUBTITLE_FONT_FAMILY,
 				createdAt: new Date(),
 				updatedAt: new Date(),
@@ -127,6 +135,9 @@ export class ContentAiSettingsRepository
 				whisperChunkingEnabled: input.whisperChunkingEnabled,
 				whisperChunkMinutes: input.whisperChunkMinutes,
 				subtitleColor: normalizeSubtitleColor(input.subtitleColor),
+				subtitleHighlightColor: normalizeSubtitleHighlightColor(
+					input.subtitleHighlightColor,
+				),
 				subtitleFontFamily: input.subtitleFontFamily,
 				updatedAt: new Date(),
 			})
@@ -158,6 +169,9 @@ export class ContentAiSettingsRepository
 			whisperChunkMinutes:
 				row.whisperChunkMinutes || DEFAULT_WHISPER_CHUNK_MINUTES,
 			subtitleColor: normalizeSubtitleColor(row.subtitleColor),
+			subtitleHighlightColor: normalizeSubtitleHighlightColor(
+				row.subtitleHighlightColor,
+			),
 			subtitleFontFamily: normalizeSubtitleFontFamily(row.subtitleFontFamily),
 			createdAt: row.createdAt,
 			updatedAt: row.updatedAt,

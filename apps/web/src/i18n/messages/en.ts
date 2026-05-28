@@ -133,8 +133,10 @@ export const enMessages = {
 			subtitleAppearanceDescription:
 				"Default style for burned subtitles in rendered clips.",
 			subtitleColor: "Color",
+			subtitleHighlightColor: "Highlight",
 			subtitleFontFamily: "Font",
 			subtitlePreview: "Subtitle preview",
+			subtitleHighlightPreview: "highlight",
 			whisperProviders: {
 				"faster-whisper": {
 					label: "GPU / CPU",
@@ -291,9 +293,17 @@ export const enMessages = {
 		},
 		transcriptPanel: {
 			title: "Transcript / Chapters",
-			description: "Review source text or copy YouTube chapters.",
+			description: "Review source text, export transcripts, or copy chapters.",
 			transcript: "Transcript",
 			chapters: "Chapters",
+			export: "Export",
+			exportFormats: {
+				srt: "SRT subtitles",
+				md: "Markdown",
+				vtt: "WebVTT subtitles",
+				txt: "Plain text",
+				json: "JSON",
+			},
 			searchTranscript: "Search transcript",
 			noTranscriptMatches: "No transcript lines match the search.",
 			transcriptPending:
@@ -396,6 +406,8 @@ export const enMessages = {
 			selectGenerationTargets:
 				"Select clips, shorts, chapters, or a combination.",
 			noChaptersToCopy: "No chapters to copy yet.",
+			noTranscriptToExport: "No transcript to export yet.",
+			transcriptExported: "Transcript exported.",
 			uploadFailed: "Upload failed",
 			uploadInitializeFailed: "Failed to initialize multipart upload.",
 			uploadStartFailed: "Failed to initialize upload.",

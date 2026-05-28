@@ -25,6 +25,7 @@ describe("ClipSE AI settings use cases", () => {
 				whisperChunkingEnabled: true,
 				whisperChunkMinutes: 20,
 				subtitleColor: "#67e8f9",
+				subtitleHighlightColor: "#fdba74",
 				subtitleFontFamily: "Impact",
 			}),
 		).resolves.toMatchObject({
@@ -44,6 +45,7 @@ describe("ClipSE AI settings use cases", () => {
 			whisperChunkingEnabled: true,
 			whisperChunkMinutes: 20,
 			subtitleColor: "#67e8f9",
+			subtitleHighlightColor: "#fdba74",
 			subtitleFontFamily: "Impact",
 		});
 	});
@@ -63,6 +65,7 @@ describe("ClipSE AI settings use cases", () => {
 				whisperChunkingEnabled: false,
 				whisperChunkMinutes: 20,
 				subtitleColor: "#ffffff",
+				subtitleHighlightColor: "#ffe45c",
 				subtitleFontFamily: "Arial",
 			}),
 		).rejects.toThrow();

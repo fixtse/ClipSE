@@ -134,8 +134,10 @@ export const esMessages = {
 			subtitleAppearanceDescription:
 				"Estilo predeterminado para subtitulos incrustados en clips renderizados.",
 			subtitleColor: "Color",
+			subtitleHighlightColor: "Resaltado",
 			subtitleFontFamily: "Fuente",
 			subtitlePreview: "Vista previa",
+			subtitleHighlightPreview: "resaltado",
 			whisperProviders: {
 				"faster-whisper": {
 					label: "GPU / CPU",
@@ -293,9 +295,18 @@ export const esMessages = {
 		},
 		transcriptPanel: {
 			title: "Transcripción / Capítulos",
-			description: "Revisa la transcripción del video",
+			description:
+				"Revisa el texto, exporta transcripciones o copia capítulos.",
 			transcript: "Transcripción",
 			chapters: "Capítulos",
+			export: "Exportar",
+			exportFormats: {
+				srt: "Subtitulos SRT",
+				md: "Markdown",
+				vtt: "Subtitulos WebVTT",
+				txt: "Texto plano",
+				json: "JSON",
+			},
 			searchTranscript: "Buscar en la transcripción",
 			noTranscriptMatches:
 				"Ninguna línea de la transcripción coincide con la búsqueda.",
@@ -401,6 +412,8 @@ export const esMessages = {
 			selectGenerationTargets:
 				"Selecciona clips, shorts, capítulos o una combinación.",
 			noChaptersToCopy: "Todavía no hay capítulos para copiar.",
+			noTranscriptToExport: "Todavía no hay transcripción para exportar.",
+			transcriptExported: "Transcripción exportada.",
 			uploadFailed: "La subida falló",
 			uploadInitializeFailed: "No se pudo inicializar la subida multipart.",
 			uploadStartFailed: "No se pudo inicializar la subida.",

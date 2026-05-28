@@ -1,0 +1,1 @@
+ALTER TABLE "content_ai_settings" ADD COLUMN "subtitle_highlight_color" varchar(7) DEFAULT '#ffe45c' NOT NULL;

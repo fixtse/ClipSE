@@ -22,11 +22,13 @@ const execFileAsync = promisify(execFile);
 
 export interface CaptionStyle {
 	readonly color: string;
+	readonly highlightColor: string;
 	readonly fontFamily: string;
 }
 
 const DEFAULT_CAPTION_STYLE: CaptionStyle = {
 	color: "#ffffff",
+	highlightColor: "#ffe45c",
 	fontFamily: "Arial",
 };
 
@@ -1723,7 +1725,10 @@ function drawCaptionFrame(input: {
 		context.shadowOffsetY = 7;
 		context.strokeText(word, cursorX, y);
 		context.shadowColor = "transparent";
-		context.fillStyle = captionStyle.color;
+		context.fillStyle =
+			index === activeWordIndex
+				? captionStyle.highlightColor
+				: captionStyle.color;
 		context.fillText(word, cursorX, y);
 		cursorX += (wordWidths[index] ?? 0) + gap;
 	}

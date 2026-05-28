@@ -9,6 +9,7 @@ import {
 	Clapperboard,
 	Clipboard,
 	Clock3,
+	Download,
 	Film,
 	Languages,
 	Link,
@@ -72,6 +73,7 @@ import {
 	LIBRARY_VIDEOS_PER_PAGE,
 	paginateLibraryVideos,
 	SELECTED_CHANNEL_STORAGE_KEY,
+	type TranscriptSegment,
 } from "~/modules/content-videos/application/content-clip-dashboard-view";
 import type { ClipSEDashboardVideo } from "~/modules/content-videos/application/get-content-clip-dashboard";
 import { uploadContentVideoFile } from "~/modules/content-videos/application/upload-content-video-file";
@@ -112,6 +114,12 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "../ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Input } from "../ui/input";
 import { Progress } from "../ui/progress";
 import { ScrollArea } from "../ui/scroll-area";
@@ -153,6 +161,8 @@ type IntakeSourceTab = "file" | "url";
 type WhisperModel = ContentAiSettings["whisperModel"];
 type WhisperProvider = ContentAiSettings["whisperProvider"];
 type SubtitleFontFamily = ContentAiSettings["subtitleFontFamily"];
+type TranscriptPanelTab = "transcript" | "chapters";
+type TranscriptExportFormat = "srt" | "md" | "vtt" | "txt" | "json";
 const FASTER_WHISPER_MODELS = ["medium", "large-v3-turbo"] as const;
 const HAILO_WHISPER_MODELS = [
 	"whisper-tiny",
@@ -167,6 +177,126 @@ const SUBTITLE_COLOR_OPTIONS = [
 	{ label: "Pink", value: "#f9a8d4" },
 	{ label: "Orange", value: "#fdba74" },
 ] as const;
+const TRANSCRIPT_EXPORT_FORMATS: ReadonlyArray<{
+	extension: TranscriptExportFormat;
+	labelKey: `workspace.transcriptPanel.exportFormats.${TranscriptExportFormat}`;
+	mimeType: string;
+}> = [
+	{
+		extension: "srt",
+		labelKey: "workspace.transcriptPanel.exportFormats.srt",
+		mimeType: "application/x-subrip;charset=utf-8",
+	},
+	{
+		extension: "md",
+		labelKey: "workspace.transcriptPanel.exportFormats.md",
+		mimeType: "text/markdown;charset=utf-8",
+	},
+	{
+		extension: "vtt",
+		labelKey: "workspace.transcriptPanel.exportFormats.vtt",
+		mimeType: "text/vtt;charset=utf-8",
+	},
+	{
+		extension: "txt",
+		labelKey: "workspace.transcriptPanel.exportFormats.txt",
+		mimeType: "text/plain;charset=utf-8",
+	},
+	{
+		extension: "json",
+		labelKey: "workspace.transcriptPanel.exportFormats.json",
+		mimeType: "application/json;charset=utf-8",
+	},
+];
+const PANEL_MOTION = {
+	animate: { opacity: 1, y: 0 },
+	exit: { opacity: 0, y: -8 },
+	initial: { opacity: 0, y: 10 },
+	transition: { duration: 0.2, ease: "easeOut" },
+} as const;
+const LIST_ITEM_MOTION = {
+	animate: { opacity: 1, y: 0 },
+	exit: { opacity: 0, y: -6 },
+	initial: { opacity: 0, y: 8 },
+} as const;
+
+function formatSubtitleTimestamp(
+	seconds: number,
+	separator: "," | ".",
+): string {
+	const boundedSeconds = Math.max(0, seconds);
+	const totalMilliseconds = Math.round(boundedSeconds * 1000);
+	const milliseconds = totalMilliseconds % 1000;
+	const totalSeconds = Math.floor(totalMilliseconds / 1000);
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	const remainder = totalSeconds % 60;
+
+	return `${[
+		hours.toString().padStart(2, "0"),
+		minutes.toString().padStart(2, "0"),
+		remainder.toString().padStart(2, "0"),
+	].join(":")}${separator}${milliseconds.toString().padStart(3, "0")}`;
+}
+
+function buildTranscriptExport(input: {
+	readonly format: TranscriptExportFormat;
+	readonly segments: readonly TranscriptSegment[];
+	readonly title: string;
+}): string {
+	if (input.format === "srt") {
+		return input.segments
+			.map(
+				(segment, index) =>
+					`${index + 1}\n${formatSubtitleTimestamp(segment.start, ",")} --> ${formatSubtitleTimestamp(segment.end, ",")}\n${segment.text}`,
+			)
+			.join("\n\n");
+	}
+
+	if (input.format === "vtt") {
+		const cues = input.segments
+			.map(
+				(segment) =>
+					`${formatSubtitleTimestamp(segment.start, ".")} --> ${formatSubtitleTimestamp(segment.end, ".")}\n${segment.text}`,
+			)
+			.join("\n\n");
+
+		return `WEBVTT\n\n${cues}`;
+	}
+
+	if (input.format === "md") {
+		const lines = input.segments.map(
+			(segment) => `- **${formatTimecode(segment.start)}** ${segment.text}`,
+		);
+
+		return [`# ${input.title}`, "", ...lines].join("\n");
+	}
+
+	if (input.format === "json") {
+		return JSON.stringify(
+			{
+				title: input.title,
+				segments: input.segments,
+			},
+			null,
+			2,
+		);
+	}
+
+	return input.segments.map((segment) => segment.text).join("\n");
+}
+
+function createDownloadFilename(input: {
+	readonly extension: TranscriptExportFormat;
+	readonly title: string;
+}): string {
+	const normalizedTitle = input.title
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+
+	return `${normalizedTitle || "transcript"}.${input.extension}`;
+}
 
 function isWhisperModelForProvider(
 	provider: WhisperProvider,
@@ -288,6 +418,8 @@ export function ClipSEWorkspace({
 	const [whisperChunkingEnabled, setWhisperChunkingEnabled] = useState(false);
 	const [whisperChunkMinutes, setWhisperChunkMinutes] = useState(20);
 	const [subtitleColor, setSubtitleColor] = useState("#ffffff");
+	const [subtitleHighlightColor, setSubtitleHighlightColor] =
+		useState("#ffe45c");
 	const [subtitleFontFamily, setSubtitleFontFamily] =
 		useState<SubtitleFontFamily>("Arial");
 	const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
@@ -308,6 +440,8 @@ export function ClipSEWorkspace({
 	const [libraryPage, setLibraryPage] = useState(1);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [transcriptSearch, setTranscriptSearch] = useState("");
+	const [transcriptPanelTab, setTranscriptPanelTab] =
+		useState<TranscriptPanelTab>("transcript");
 	const [isPending, startTransition] = useTransition();
 	const [isSigningOut, setIsSigningOut] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -441,6 +575,7 @@ export function ClipSEWorkspace({
 		setWhisperChunkingEnabled(settings.whisperChunkingEnabled);
 		setWhisperChunkMinutes(settings.whisperChunkMinutes);
 		setSubtitleColor(settings.subtitleColor);
+		setSubtitleHighlightColor(settings.subtitleHighlightColor);
 		setSubtitleFontFamily(settings.subtitleFontFamily);
 	}, [aiSettingsQuery.data]);
 
@@ -995,6 +1130,7 @@ export function ClipSEWorkspace({
 			whisperChunkingEnabled,
 			whisperChunkMinutes: boundedWhisperChunkMinutes,
 			subtitleColor,
+			subtitleHighlightColor,
 			subtitleFontFamily,
 		});
 
@@ -1144,6 +1280,43 @@ export function ClipSEWorkspace({
 
 		await navigator.clipboard.writeText(youtubeChapterText);
 		toast.success(t("workspace.toasts.youtubeChaptersCopied"));
+	}
+
+	function exportTranscript(format: TranscriptExportFormat) {
+		if (!transcriptSegments.length) {
+			toast.error(t("workspace.toasts.noTranscriptToExport"));
+			return;
+		}
+
+		const title =
+			selectedVideoRecord?.title ?? t("workspace.transcriptPanel.transcript");
+		const file = new Blob(
+			[
+				buildTranscriptExport({
+					format,
+					segments: transcriptSegments,
+					title,
+				}),
+			],
+			{
+				type:
+					TRANSCRIPT_EXPORT_FORMATS.find(
+						(exportFormat) => exportFormat.extension === format,
+					)?.mimeType ?? "text/plain;charset=utf-8",
+			},
+		);
+		const url = URL.createObjectURL(file);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = createDownloadFilename({
+			extension: format,
+			title,
+		});
+		document.body.append(link);
+		link.click();
+		link.remove();
+		URL.revokeObjectURL(url);
+		toast.success(t("workspace.toasts.transcriptExported"));
 	}
 
 	async function handleRetryVideo(videoId: string) {
@@ -2200,7 +2373,7 @@ export function ClipSEWorkspace({
 													)}
 												</p>
 											</div>
-											<div className="grid gap-4 sm:grid-cols-2">
+											<div className="grid gap-4 sm:grid-cols-3">
 												<div className="space-y-2">
 													<label
 														className="flex items-center gap-2 font-medium text-slate-200 text-sm"
@@ -2216,6 +2389,42 @@ export function ClipSEWorkspace({
 														<SelectTrigger
 															className="border-white/10 bg-slate-900/75 text-white"
 															id="subtitle-color"
+														>
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															{SUBTITLE_COLOR_OPTIONS.map((option) => (
+																<SelectItem
+																	key={option.value}
+																	value={option.value}
+																>
+																	<span className="flex items-center gap-2">
+																		<span
+																			className="h-3 w-3 rounded-full border border-slate-500"
+																			style={{ backgroundColor: option.value }}
+																		/>
+																		{option.label}
+																	</span>
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+												<div className="space-y-2">
+													<label
+														className="flex items-center gap-2 font-medium text-slate-200 text-sm"
+														htmlFor="subtitle-highlight-color"
+													>
+														<Palette className="h-4 w-4 text-slate-400" />
+														{t("workspace.settings.subtitleHighlightColor")}
+													</label>
+													<Select
+														onValueChange={setSubtitleHighlightColor}
+														value={subtitleHighlightColor}
+													>
+														<SelectTrigger
+															className="border-white/10 bg-slate-900/75 text-white"
+															id="subtitle-highlight-color"
 														>
 															<SelectValue />
 														</SelectTrigger>
@@ -2279,7 +2488,10 @@ export function ClipSEWorkspace({
 															WebkitTextStroke: "2px #000",
 														}}
 													>
-														{t("workspace.settings.subtitlePreview")}
+														{t("workspace.settings.subtitlePreview")}{" "}
+														<span style={{ color: subtitleHighlightColor }}>
+															{t("workspace.settings.subtitleHighlightPreview")}
+														</span>
 													</span>
 												</div>
 											</div>
@@ -3187,20 +3399,81 @@ export function ClipSEWorkspace({
 																		{t("workspace.transcriptPanel.description")}
 																	</CardDescription>
 																</div>
-																<Button
-																	className="border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"
-																	disabled={!youtubeChapterText}
-																	onClick={() => void copyYoutubeChapters()}
-																	size="sm"
-																	variant="outline"
-																>
-																	<Clipboard className="h-4 w-4" />
-																	{t("common.copy")}
-																</Button>
+																<AnimatePresence initial={false} mode="wait">
+																	{transcriptPanelTab === "transcript" ? (
+																		<motion.div
+																			{...PANEL_MOTION}
+																			key="transcript-export"
+																		>
+																			<DropdownMenu>
+																				<DropdownMenuTrigger asChild>
+																					<Button
+																						className="border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"
+																						disabled={
+																							!transcriptSegments.length
+																						}
+																						size="sm"
+																						variant="outline"
+																					>
+																						<Download className="h-4 w-4" />
+																						{t(
+																							"workspace.transcriptPanel.export",
+																						)}
+																					</Button>
+																				</DropdownMenuTrigger>
+																				<DropdownMenuContent
+																					align="end"
+																					className="border-white/10 bg-slate-950 text-slate-100"
+																				>
+																					{TRANSCRIPT_EXPORT_FORMATS.map(
+																						(exportFormat) => (
+																							<DropdownMenuItem
+																								className="focus:bg-white/10 focus:text-white"
+																								key={exportFormat.extension}
+																								onSelect={() =>
+																									exportTranscript(
+																										exportFormat.extension,
+																									)
+																								}
+																							>
+																								{t(exportFormat.labelKey)}
+																							</DropdownMenuItem>
+																						),
+																					)}
+																				</DropdownMenuContent>
+																			</DropdownMenu>
+																		</motion.div>
+																	) : (
+																		<motion.div
+																			{...PANEL_MOTION}
+																			key="chapters-copy"
+																		>
+																			<Button
+																				className="border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"
+																				disabled={!youtubeChapterText}
+																				onClick={() =>
+																					void copyYoutubeChapters()
+																				}
+																				size="sm"
+																				variant="outline"
+																			>
+																				<Clipboard className="h-4 w-4" />
+																				{t("common.copy")}
+																			</Button>
+																		</motion.div>
+																	)}
+																</AnimatePresence>
 															</div>
 														</CardHeader>
 														<CardContent className="space-y-3">
-															<Tabs defaultValue="transcript">
+															<Tabs
+																onValueChange={(value) =>
+																	setTranscriptPanelTab(
+																		value as TranscriptPanelTab,
+																	)
+																}
+																value={transcriptPanelTab}
+															>
 																<TabsList className="grid w-full grid-cols-2 border border-white/10 bg-slate-900/80">
 																	<TabsTrigger value="transcript">
 																		{t("workspace.transcriptPanel.transcript")}
@@ -3213,104 +3486,179 @@ export function ClipSEWorkspace({
 																	className="mt-3 space-y-3"
 																	value="transcript"
 																>
-																	<div className="relative">
-																		<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
-																		<Input
-																			className="border-white/10 bg-slate-900/70 pl-9 text-white"
-																			onChange={(event) =>
-																				setTranscriptSearch(event.target.value)
-																			}
-																			placeholder={t(
-																				"workspace.transcriptPanel.searchTranscript",
-																			)}
-																			value={transcriptSearch}
-																		/>
-																	</div>
-																	<ScrollArea className="h-120 pr-3">
-																		<div className="space-y-3">
-																			{filteredTranscriptSegments.length ? (
-																				filteredTranscriptSegments.map(
-																					(segment) => (
-																						<button
-																							className="w-full rounded-md border border-white/8 bg-slate-950/45 p-3 text-left transition hover:bg-slate-900/70"
-																							key={`${segment.start}-${segment.end}-${segment.text}`}
-																							onClick={() =>
-																								seekVideo(segment.start)
-																							}
-																							type="button"
+																	<motion.div
+																		{...PANEL_MOTION}
+																		className="space-y-3"
+																	>
+																		<motion.div
+																			animate={{ opacity: 1, y: 0 }}
+																			className="relative"
+																			initial={{ opacity: 0, y: 6 }}
+																			transition={{
+																				duration: 0.18,
+																				ease: "easeOut",
+																			}}
+																		>
+																			<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
+																			<Input
+																				className="border-white/10 bg-slate-900/70 pl-9 text-white"
+																				onChange={(event) =>
+																					setTranscriptSearch(
+																						event.target.value,
+																					)
+																				}
+																				placeholder={t(
+																					"workspace.transcriptPanel.searchTranscript",
+																				)}
+																				value={transcriptSearch}
+																			/>
+																		</motion.div>
+																		<ScrollArea className="h-120 pr-3">
+																			<motion.div className="space-y-3">
+																				<AnimatePresence initial={false}>
+																					{filteredTranscriptSegments.length ? (
+																						filteredTranscriptSegments.map(
+																							(segment, index) => (
+																								<motion.div
+																									{...LIST_ITEM_MOTION}
+																									key={`${segment.start}-${segment.end}-${segment.text}`}
+																									transition={{
+																										duration: 0.18,
+																										delay:
+																											Math.min(index, 8) *
+																											0.015,
+																										ease: "easeOut",
+																									}}
+																								>
+																									<button
+																										className="w-full rounded-md border border-white/8 bg-slate-950/45 p-3 text-left transition hover:bg-slate-900/70"
+																										onClick={() =>
+																											seekVideo(segment.start)
+																										}
+																										type="button"
+																									>
+																										<p className="font-medium text-orange-200 text-xs uppercase tracking-[0.18em]">
+																											{formatTimecode(
+																												segment.start,
+																											)}
+																										</p>
+																										<p className="mt-2 text-slate-200 text-sm leading-6">
+																											{segment.text}
+																										</p>
+																									</button>
+																								</motion.div>
+																							),
+																						)
+																					) : transcriptSegments.length ? (
+																						<motion.div
+																							{...LIST_ITEM_MOTION}
+																							key="no-transcript-matches"
+																							transition={{
+																								duration: 0.18,
+																								ease: "easeOut",
+																							}}
 																						>
-																							<p className="font-medium text-orange-200 text-xs uppercase tracking-[0.18em]">
-																								{formatTimecode(segment.start)}
+																							<p className="rounded-md border border-white/10 border-dashed bg-slate-950/45 p-4 text-slate-400 text-sm">
+																								{t(
+																									"workspace.transcriptPanel.noTranscriptMatches",
+																								)}
 																							</p>
-																							<p className="mt-2 text-slate-200 text-sm leading-6">
-																								{segment.text}
+																						</motion.div>
+																					) : (
+																						<motion.div
+																							{...LIST_ITEM_MOTION}
+																							key="transcript-pending"
+																							transition={{
+																								duration: 0.18,
+																								ease: "easeOut",
+																							}}
+																						>
+																							<p className="text-slate-400 text-sm">
+																								{t(
+																									"workspace.transcriptPanel.transcriptPending",
+																								)}
 																							</p>
-																						</button>
-																					),
-																				)
-																			) : transcriptSegments.length ? (
-																				<p className="rounded-md border border-white/10 border-dashed bg-slate-950/45 p-4 text-slate-400 text-sm">
-																					{t(
-																						"workspace.transcriptPanel.noTranscriptMatches",
+																						</motion.div>
 																					)}
-																				</p>
-																			) : (
-																				<p className="text-slate-400 text-sm">
-																					{t(
-																						"workspace.transcriptPanel.transcriptPending",
-																					)}
-																				</p>
-																			)}
-																		</div>
-																	</ScrollArea>
+																				</AnimatePresence>
+																			</motion.div>
+																		</ScrollArea>
+																	</motion.div>
 																</TabsContent>
 																<TabsContent className="mt-3" value="chapters">
-																	<ScrollArea className="h-120 pr-3">
-																		<div className="space-y-3">
-																			{selectedVideo.chapters.length ? (
-																				selectedVideo.chapters.map(
-																					(chapter) => (
-																						<button
-																							className="w-full rounded-md border border-white/8 bg-slate-950/45 p-3 text-left transition hover:bg-slate-900/70"
-																							key={chapter.id}
-																							onClick={() =>
-																								seekVideo(chapter.startSeconds)
-																							}
-																							type="button"
+																	<motion.div {...PANEL_MOTION}>
+																		<ScrollArea className="h-120 pr-3">
+																			<motion.div className="space-y-3">
+																				<AnimatePresence initial={false}>
+																					{selectedVideo.chapters.length ? (
+																						selectedVideo.chapters.map(
+																							(chapter, index) => (
+																								<motion.div
+																									{...LIST_ITEM_MOTION}
+																									key={chapter.id}
+																									transition={{
+																										duration: 0.18,
+																										delay:
+																											Math.min(index, 8) *
+																											0.015,
+																										ease: "easeOut",
+																									}}
+																								>
+																									<button
+																										className="w-full rounded-md border border-white/8 bg-slate-950/45 p-3 text-left transition hover:bg-slate-900/70"
+																										onClick={() =>
+																											seekVideo(
+																												chapter.startSeconds,
+																											)
+																										}
+																										type="button"
+																									>
+																										<div className="flex items-center justify-between gap-3">
+																											<p className="font-medium text-orange-200 text-xs uppercase tracking-[0.18em]">
+																												{formatTimecode(
+																													chapter.startSeconds,
+																												)}
+																											</p>
+																											<p className="text-slate-500 text-xs">
+																												{Math.round(
+																													chapter.confidence *
+																														100,
+																												)}
+																												%
+																											</p>
+																										</div>
+																										<p className="mt-2 font-medium text-slate-100 text-sm">
+																											{chapter.title}
+																										</p>
+																										{chapter.summary ? (
+																											<p className="mt-2 text-slate-400 text-xs leading-5">
+																												{chapter.summary}
+																											</p>
+																										) : null}
+																									</button>
+																								</motion.div>
+																							),
+																						)
+																					) : (
+																						<motion.div
+																							{...LIST_ITEM_MOTION}
+																							key="chapters-pending"
+																							transition={{
+																								duration: 0.18,
+																								ease: "easeOut",
+																							}}
 																						>
-																							<div className="flex items-center justify-between gap-3">
-																								<p className="font-medium text-orange-200 text-xs uppercase tracking-[0.18em]">
-																									{formatTimecode(
-																										chapter.startSeconds,
-																									)}
-																								</p>
-																								<p className="text-slate-500 text-xs">
-																									{Math.round(
-																										chapter.confidence * 100,
-																									)}
-																									%
-																								</p>
-																							</div>
-																							<p className="mt-2 font-medium text-slate-100 text-sm">
-																								{chapter.title}
+																							<p className="rounded-md border border-white/10 border-dashed bg-slate-950/45 p-4 text-slate-400 text-sm">
+																								{t(
+																									"workspace.transcriptPanel.chaptersPending",
+																								)}
 																							</p>
-																							{chapter.summary ? (
-																								<p className="mt-2 text-slate-400 text-xs leading-5">
-																									{chapter.summary}
-																								</p>
-																							) : null}
-																						</button>
-																					),
-																				)
-																			) : (
-																				<p className="rounded-md border border-white/10 border-dashed bg-slate-950/45 p-4 text-slate-400 text-sm">
-																					{t(
-																						"workspace.transcriptPanel.chaptersPending",
+																						</motion.div>
 																					)}
-																				</p>
-																			)}
-																		</div>
-																	</ScrollArea>
+																				</AnimatePresence>
+																			</motion.div>
+																		</ScrollArea>
+																	</motion.div>
 																</TabsContent>
 															</Tabs>
 														</CardContent>

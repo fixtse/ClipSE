@@ -202,6 +202,10 @@ export const contentAiSettings = createTable("content_ai_settings", (d) => ({
 		.varchar("subtitle_color", { length: 7 })
 		.notNull()
 		.default("#ffffff"),
+	subtitleHighlightColor: d
+		.varchar("subtitle_highlight_color", { length: 7 })
+		.notNull()
+		.default("#ffe45c"),
 	subtitleFontFamily: d
 		.varchar("subtitle_font_family", { length: 80 })
 		.notNull()
