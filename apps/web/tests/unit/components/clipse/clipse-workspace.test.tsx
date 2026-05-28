@@ -187,6 +187,7 @@ function setDashboardData(input: {
 	withActiveJob?: boolean;
 	emptySelectedVideo?: boolean;
 	failedLibraryVideo?: boolean;
+	withMultipleClips?: boolean;
 }) {
 	mocks.dashboardIsLoading = false;
 	const channel = {
@@ -223,6 +224,10 @@ function setDashboardData(input: {
 		title: "Launch clip",
 		videoId: video.id,
 	});
+	const secondClip = ClipSEMother.create({
+		title: "Follow-up clip",
+		videoId: video.id,
+	});
 	const job = ClipSEJobMother.create({
 		status: "running",
 		progress: 42,
@@ -247,6 +252,16 @@ function setDashboardData(input: {
 									renderJob: null,
 									sourceUrl: null,
 								},
+								...(input.withMultipleClips
+									? [
+											{
+												...secondClip,
+												downloadUrl: null,
+												renderJob: null,
+												sourceUrl: null,
+											},
+										]
+									: []),
 							],
 					introUrl: null,
 					jobs: input.withActiveJob ? [job] : [],
@@ -345,6 +360,20 @@ describe("ClipSEWorkspace", () => {
 		expect(markup).toContain("Launch clip");
 		expect(markup).toContain("Opening hook");
 		expect(markup).toContain("workspace.transcriptPanel.chapters");
+	});
+
+	it("renders one draft clip per page with top pagination controls", () => {
+		setDashboardData({ withMultipleClips: true, withSelectedVideo: true });
+
+		const markup = renderToStaticMarkup(<ClipSEWorkspace />);
+
+		expect(markup).toContain("workspace.clipList.pageStatus:1,2");
+		expect(markup).toContain("workspace.clipList.pageStatus:2,2");
+		expect(markup).toContain('aria-current="page"');
+		expect(markup).toContain(">1</button>");
+		expect(markup).toContain(">2</button>");
+		expect(markup).toContain("Launch clip");
+		expect(markup).not.toContain("Follow-up clip");
 	});
 
 	it("renders floating job status when active jobs exist", () => {

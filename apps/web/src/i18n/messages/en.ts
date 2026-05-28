@@ -320,6 +320,7 @@ export const enMessages = {
 			candidates: "{count} candidates",
 			normalClips: "Clips",
 			shorts: "Shorts",
+			pageStatus: "Clip {page} of {total}",
 			addClip: "Add Clip",
 			exportAll: "Export All",
 			emptyTitle: "Clip candidates will appear here.",

@@ -324,6 +324,7 @@ export const esMessages = {
 			candidates: "{count} candidatos",
 			normalClips: "Clips",
 			shorts: "Shorts",
+			pageStatus: "Clip {page} de {total}",
 			addClip: "Agregar clip",
 			exportAll: "Exportar todo",
 			emptyTitle: "Los candidatos de clips aparecerán aquí.",

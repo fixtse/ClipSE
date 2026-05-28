@@ -580,6 +580,7 @@ export function ClipSEWorkspace({
 	const [libraryVideos, setLibraryVideos] = useState<DashboardVideo[]>([]);
 	const [librarySearch, setLibrarySearch] = useState("");
 	const [libraryPage, setLibraryPage] = useState(1);
+	const [clipListPage, setClipListPage] = useState(1);
 	const [currentTime, setCurrentTime] = useState(0);
 	const [transcriptSearch, setTranscriptSearch] = useState("");
 	const [transcriptPanelTab, setTranscriptPanelTab] =
@@ -838,6 +839,7 @@ export function ClipSEWorkspace({
 			!selectedVideoId &&
 			dashboardQuery.data?.selectedVideo?.video.id
 		) {
+			setClipListPage(1);
 			setSelectedVideoId(dashboardQuery.data.selectedVideo.video.id);
 			setSelectedVideoChannelId(
 				dashboardQuery.data.selectedVideo.video.channelId ?? null,
@@ -859,6 +861,7 @@ export function ClipSEWorkspace({
 			return;
 		}
 		if (!videos.some((video) => video.id === selectedVideoId)) {
+			setClipListPage(1);
 			setSelectedVideoId(videos[0]?.id ?? null);
 			setSelectedVideoChannelId(videos[0]?.channelId ?? null);
 		}
@@ -953,6 +956,7 @@ export function ClipSEWorkspace({
 
 		const handlePopState = () => {
 			const url = new URL(window.location.href);
+			setClipListPage(1);
 			setSelectedVideoId(url.searchParams.get("videoId"));
 			setSelectedVideoChannelId(null);
 			setWorkspaceTab(getWorkspaceTabFromBrowserUrl(window.location.href));
@@ -1194,6 +1198,7 @@ export function ClipSEWorkspace({
 		}
 
 		setSelectedChannelId(result.data.id);
+		setClipListPage(1);
 		setSelectedVideoId(null);
 		setSelectedVideoChannelId(null);
 		clearSelectedBumperFiles();
@@ -1254,6 +1259,7 @@ export function ClipSEWorkspace({
 
 		setUploadMessageKey("workspace.intake.progress.queuedForTranscription");
 		setUploadProgress(100);
+		setClipListPage(1);
 		setSelectedVideoId(draft.data.id);
 		setSelectedVideoChannelId(draft.data.channelId);
 		setUploadFileValue(null);
@@ -1288,6 +1294,7 @@ export function ClipSEWorkspace({
 			return;
 		}
 
+		setClipListPage(1);
 		setSelectedVideoId(result.data.id);
 		setSelectedVideoChannelId(result.data.channelId);
 		setSourceUrl("");
@@ -1580,6 +1587,7 @@ export function ClipSEWorkspace({
 		}
 
 		if (selectedVideoId === videoId) {
+			setClipListPage(1);
 			setSelectedVideoId(null);
 		}
 		setDeleteSourceId(null);
@@ -1760,24 +1768,52 @@ export function ClipSEWorkspace({
 		clipListTab === "short"
 			? (selectedVideo?.shorts ?? [])
 			: (selectedVideo?.clips ?? []);
+	const clipListPageCount = Math.max(1, visibleClips.length);
+	const boundedClipListPage = Math.min(clipListPage, clipListPageCount);
+	const paginatedVisibleClips = visibleClips.slice(
+		boundedClipListPage - 1,
+		boundedClipListPage,
+	);
+	const clipListPages = Array.from(
+		{ length: clipListPageCount },
+		(_, index) => index + 1,
+	);
+	const selectedClipIndex = selectedClipId
+		? visibleClips.findIndex((clip) => clip.id === selectedClipId)
+		: -1;
+	const selectedClipPage =
+		selectedClipIndex >= 0 ? selectedClipIndex + 1 : null;
+	const activeClipListPage = selectedClipPage ?? boundedClipListPage;
 	const renderableClipCount = visibleClips.filter(
 		(clip) => clip.status !== "queued" && clip.status !== "rendering",
 	).length;
+	const goToClipListPage = (page: number) => {
+		const nextPage = Math.min(Math.max(1, page), clipListPageCount);
+		const nextClip = visibleClips[nextPage - 1] ?? null;
+		setClipListPage(nextPage);
+		setSelectedClipId(nextClip?.id ?? null);
+	};
 
 	useEffect(() => {
-		if (
-			!selectedClipId ||
-			!visibleClips.some((clip) => clip.id === selectedClipId)
-		) {
+		if (visibleClips.length === 0 && clipListPage !== 1) {
+			setClipListPage(1);
 			return;
 		}
 
-		window.requestAnimationFrame(() => {
-			document
-				.getElementById(`content-clip-${selectedClipId}`)
-				?.scrollIntoView({ behavior: "smooth", block: "start" });
-		});
-	}, [selectedClipId, visibleClips]);
+		if (clipListPage > clipListPageCount) {
+			setClipListPage(clipListPageCount);
+		}
+	}, [clipListPage, clipListPageCount, visibleClips.length]);
+
+	useEffect(() => {
+		if (!selectedClipId) {
+			return;
+		}
+
+		if (selectedClipPage) {
+			setClipListPage(selectedClipPage);
+		}
+	}, [selectedClipId, selectedClipPage]);
 
 	const modelOptions = aiModelsQuery.data ?? [];
 	const whisperModelOptions = getWhisperModelOptions(t);
@@ -1852,6 +1888,7 @@ export function ClipSEWorkspace({
 			return;
 		}
 
+		setClipListPage(1);
 		setSelectedVideoId(targetVideo.id);
 		setSelectedVideoChannelId(targetVideo.channelId);
 		setWorkspaceTab("media");
@@ -1877,6 +1914,7 @@ export function ClipSEWorkspace({
 			"type" | "clipId" | "payload"
 		>;
 	}) => {
+		setClipListPage(1);
 		setSelectedVideoId(input.video.id);
 		setSelectedVideoChannelId(input.video.channelId);
 		setWorkspaceTab("media");
@@ -2135,6 +2173,7 @@ export function ClipSEWorkspace({
 										return;
 									}
 									setSelectedChannelId(value);
+									setClipListPage(1);
 									setSelectedVideoId(null);
 									setSelectedVideoChannelId(null);
 									setLibraryPage(1);
@@ -3231,6 +3270,7 @@ export function ClipSEWorkspace({
 														}`}
 														key={video.id}
 														onClick={() => {
+															setClipListPage(1);
 															setSelectedVideoId(video.id);
 															setSelectedVideoChannelId(video.channelId);
 														}}
@@ -4003,6 +4043,7 @@ export function ClipSEWorkspace({
 															setClipListTab(
 																value === "short" ? "short" : "standard",
 															);
+															setClipListPage(1);
 															setSelectedClipId(null);
 														}}
 														value={clipListTab}
@@ -4104,42 +4145,93 @@ export function ClipSEWorkspace({
 												</div>
 											</div>
 											{visibleClips.length ? (
-												visibleClips.map((clip) => (
-													<div id={`content-clip-${clip.id}`} key={clip.id}>
-														<ClipEditorCard
-															clip={clip}
-															currentTime={currentTime}
-															frameRate={selectedVideo.video.frameRate}
-															maxDurationSeconds={
-																selectedVideo.video.durationSeconds ??
-																clip.endSeconds
-															}
-															mutationPending={isPending}
-															onAiGenerate={async (input) => {
-																return await handleGenerateClipMetadata(input);
-															}}
-															onDelete={async (clipId) => {
-																await handleDeleteClip(clipId);
-															}}
-															onRender={async (clipId) => {
-																await handleRenderClip(clipId);
-															}}
-															onSave={async (input) => {
-																return await handleSaveClip(input);
-															}}
-															onShortDetectionModeChange={async (
-																clipId,
-																mode,
-															) => {
-																await handleShortDetectionModeChange(
-																	clipId,
-																	mode,
-																);
-															}}
-															sourceUrl={selectedVideo.sourceUrl}
-														/>
+												<>
+													<div className="flex justify-center">
+														<div className="flex max-w-full flex-wrap items-center justify-center gap-2 rounded-md border border-white/10 bg-slate-950/55 px-3 py-2">
+															{clipListPages.map((page) => (
+																<button
+																	aria-current={
+																		page === activeClipListPage
+																			? "page"
+																			: undefined
+																	}
+																	aria-label={t(
+																		"workspace.clipList.pageStatus",
+																		{
+																			page,
+																			total: clipListPageCount,
+																		},
+																	)}
+																	className={cn(
+																		"flex h-8 min-w-8 items-center justify-center rounded-md border px-2 font-medium text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200/60",
+																		page === activeClipListPage
+																			? "border-orange-300/70 bg-orange-400 text-slate-950 shadow-orange-950/30 shadow-sm ring-1 ring-orange-200/40 hover:bg-orange-300"
+																			: "border-white/10 bg-white/6 text-slate-200 hover:bg-white/10",
+																	)}
+																	key={page}
+																	onClick={() => goToClipListPage(page)}
+																	title={t("workspace.clipList.pageStatus", {
+																		page,
+																		total: clipListPageCount,
+																	})}
+																	type="button"
+																>
+																	{page}
+																</button>
+															))}
+														</div>
 													</div>
-												))
+													<AnimatePresence initial={false} mode="wait">
+														{paginatedVisibleClips.map((clip) => (
+															<motion.div
+																animate={{ opacity: 1, x: 0 }}
+																exit={{ opacity: 0, x: -18 }}
+																id={`content-clip-${clip.id}`}
+																initial={{ opacity: 0, x: 18 }}
+																key={clip.id}
+																transition={{
+																	duration: 0.18,
+																	ease: "easeOut",
+																}}
+															>
+																<ClipEditorCard
+																	clip={clip}
+																	currentTime={currentTime}
+																	frameRate={selectedVideo.video.frameRate}
+																	maxDurationSeconds={
+																		selectedVideo.video.durationSeconds ??
+																		clip.endSeconds
+																	}
+																	mutationPending={isPending}
+																	onAiGenerate={async (input) => {
+																		return await handleGenerateClipMetadata(
+																			input,
+																		);
+																	}}
+																	onDelete={async (clipId) => {
+																		await handleDeleteClip(clipId);
+																	}}
+																	onRender={async (clipId) => {
+																		await handleRenderClip(clipId);
+																	}}
+																	onSave={async (input) => {
+																		return await handleSaveClip(input);
+																	}}
+																	onShortDetectionModeChange={async (
+																		clipId,
+																		mode,
+																	) => {
+																		await handleShortDetectionModeChange(
+																			clipId,
+																			mode,
+																		);
+																	}}
+																	sourceUrl={selectedVideo.sourceUrl}
+																/>
+															</motion.div>
+														))}
+													</AnimatePresence>
+												</>
 											) : (
 												<Card className="border-white/10 border-dashed bg-white/4">
 													<CardContent className="py-10 text-center text-slate-400">
