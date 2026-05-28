@@ -32,7 +32,10 @@ export function getClipDraft(clip: ClipItem): ClipDraftState {
 
 export function hasClipDraftChanges(
 	draft: ClipDraftState,
-	clip: ClipItem,
+	clip: Pick<
+		ClipItem,
+		"title" | "hook" | "summary" | "startSeconds" | "endSeconds"
+	>,
 ): boolean {
 	return (
 		draft.title !== clip.title ||

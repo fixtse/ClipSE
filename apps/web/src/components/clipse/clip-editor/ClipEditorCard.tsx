@@ -98,6 +98,7 @@ import {
 	commitStartTimecode,
 	getBoundedClipTime,
 	getBoundedPlayerSeekTime,
+	getClipDraft,
 	getClipPreviewWindow,
 	hasClipDraftChanges,
 	isClipRendering,
@@ -124,7 +125,7 @@ interface ClipEditorCardProps {
 		summary: string;
 		startSeconds: number;
 		endSeconds: number;
-	}) => Promise<void>;
+	}) => Promise<boolean>;
 	onAiGenerate: (input: {
 		clipId: string;
 		startSeconds: number;
@@ -586,6 +587,7 @@ export function ClipEditorCard({
 		formatTimecode(clip.startSeconds),
 	);
 	const [endDraft, setEndDraft] = useState(formatTimecode(clip.endSeconds));
+	const [savedDraft, setSavedDraft] = useState(() => getClipDraft(clip));
 	const [undoStack, setUndoStack] = useState<ClipDraftState[]>([]);
 	const [redoStack, setRedoStack] = useState<ClipDraftState[]>([]);
 	const [localPlayerTime, setLocalPlayerTime] = useState(clip.startSeconds);
@@ -695,6 +697,18 @@ export function ClipEditorCard({
 		});
 	}
 
+	async function saveDraft() {
+		const draftToSave = currentDraft;
+		const saved = await onSave(buildClipSaveInput(clip.id, draftToSave));
+		if (!saved) {
+			return;
+		}
+
+		setSavedDraft(draftToSave);
+		setUndoStack([]);
+		setRedoStack([]);
+	}
+
 	async function copyDraftValue(value: string) {
 		const trimmedValue = value.trim();
 		if (!trimmedValue) {
@@ -753,6 +767,7 @@ export function ClipEditorCard({
 		setEndSeconds(clip.endSeconds);
 		setStartDraft(formatTimecode(clip.startSeconds));
 		setEndDraft(formatTimecode(clip.endSeconds));
+		setSavedDraft(getClipDraft(clip));
 		setLocalPlayerTime(clip.startSeconds);
 		setDownloadedAt(clip.downloadedAt);
 		setUndoStack([]);
@@ -771,7 +786,7 @@ export function ClipEditorCard({
 		setEndDraft(formatTimecode(endSeconds));
 	}, [endSeconds]);
 
-	const hasChanges = hasClipDraftChanges(currentDraft, clip);
+	const hasChanges = hasClipDraftChanges(currentDraft, savedDraft);
 	const isRendering = isClipRendering(clip);
 	const isManualClip = clip.rationale === "Manual clip";
 	const canAiGenerate = canGenerateDraftMetadata({
@@ -921,9 +936,7 @@ export function ClipEditorCard({
 											aria-label={t("workspace.clipEditor.save")}
 											className="h-9 w-9 border-teal-300/20 bg-teal-300/10 p-0 text-teal-100 hover:bg-teal-300/15"
 											disabled={!hasChanges || mutationPending}
-											onClick={() =>
-												void onSave(buildClipSaveInput(clip.id, currentDraft))
-											}
+											onClick={() => void saveDraft()}
 											size="icon"
 											title={t("workspace.clipEditor.save")}
 										>

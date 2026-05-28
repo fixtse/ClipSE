@@ -17,7 +17,7 @@ const handlers = {
 	onAiGenerate: vi.fn(async () => undefined),
 	onDelete: vi.fn(async () => undefined),
 	onRender: vi.fn(async () => undefined),
-	onSave: vi.fn(async () => undefined),
+	onSave: vi.fn(async () => true),
 };
 
 describe("ClipEditorCard", () => {

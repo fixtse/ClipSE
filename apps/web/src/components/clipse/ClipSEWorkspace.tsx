@@ -334,6 +334,7 @@ type RenderOptionsState = {
 	aspectMode: ClipSERenderAspectMode;
 	burnSubtitles: boolean;
 };
+const BURN_SUBTITLES_STORAGE_KEY = "clipse-render-burn-subtitles";
 const BUMPER_POSITIONS = ["intro", "outro"] as const;
 const VERTICAL_BUMPER_POSITIONS = ["verticalIntro", "verticalOutro"] as const;
 type UploadMessageKey =
@@ -455,6 +456,7 @@ export function ClipSEWorkspace({
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const channelLogoInputRef = useRef<HTMLInputElement | null>(null);
 	const bumperPreviewUrlsRef = useRef(bumperPreviewUrls);
+	const renderOptionsStorageInitializedRef = useRef(false);
 	const libraryVideoSignatureRef = useRef("");
 	const videoDraftSourceIdRef = useRef<string | null>(null);
 	const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -608,6 +610,34 @@ export function ClipSEWorkspace({
 
 		setWhisperModel(getDefaultWhisperModel(whisperProvider));
 	}, [whisperModel, whisperProvider]);
+
+	useEffect(() => {
+		if (typeof window === "undefined") {
+			return;
+		}
+
+		setRenderOptions((current) => ({
+			...current,
+			burnSubtitles:
+				window.localStorage.getItem(BURN_SUBTITLES_STORAGE_KEY) === "true",
+		}));
+	}, []);
+
+	useEffect(() => {
+		if (typeof window === "undefined") {
+			return;
+		}
+
+		if (!renderOptionsStorageInitializedRef.current) {
+			renderOptionsStorageInitializedRef.current = true;
+			return;
+		}
+
+		window.localStorage.setItem(
+			BURN_SUBTITLES_STORAGE_KEY,
+			String(renderOptions.burnSubtitles),
+		);
+	}, [renderOptions.burnSubtitles]);
 
 	useEffect(() => {
 		if (!selectedChannelId && dashboardQuery.data?.selectedChannel?.id) {
@@ -1426,15 +1456,16 @@ export function ClipSEWorkspace({
 		summary: string;
 		startSeconds: number;
 		endSeconds: number;
-	}) {
+	}): Promise<boolean> {
 		const result = await updateClipSEAction(input);
 		if (!result.success) {
 			toast.error(result.error);
-			return;
+			return false;
 		}
 
 		toast.success(t("workspace.toasts.clipTimingSaved"));
 		await refreshDashboard();
+		return true;
 	}
 
 	async function handleShortDetectionModeChange(
@@ -3973,7 +4004,7 @@ export function ClipSEWorkspace({
 																await handleRenderClip(clipId);
 															}}
 															onSave={async (input) => {
-																await handleSaveClip(input);
+																return await handleSaveClip(input);
 															}}
 															onShortDetectionModeChange={async (
 																clipId,
