@@ -18,16 +18,24 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { authClient } from "~/lib/auth-client";
+import { enableLocalAnonymousModeAction } from "~/server/actions/auth/enable-local-anonymous-mode";
 
 interface AuthFormProps {
+	allowAnonymousMode?: boolean;
 	mode: "sign-in" | "sign-up";
 	returnTo: string;
 	switchHref?: string;
 }
 
-export function AuthForm({ mode, returnTo, switchHref }: AuthFormProps) {
+export function AuthForm({
+	allowAnonymousMode = false,
+	mode,
+	returnTo,
+	switchHref,
+}: AuthFormProps) {
 	const router = useRouter();
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [isSkippingAuth, setIsSkippingAuth] = useState(false);
 
 	const isSignUp = mode === "sign-up";
 	const title = isSignUp ? "Create local account" : "Sign in";
@@ -68,6 +76,21 @@ export function AuthForm({ mode, returnTo, switchHref }: AuthFormProps) {
 		}
 
 		toast.success(isSignUp ? "Account created" : "Signed in");
+		router.replace(returnTo);
+		router.refresh();
+	}
+
+	async function handleSkipAuth() {
+		setIsSkippingAuth(true);
+
+		const result = await enableLocalAnonymousModeAction();
+		setIsSkippingAuth(false);
+
+		if (!result.success) {
+			toast.error(result.error);
+			return;
+		}
+
 		router.replace(returnTo);
 		router.refresh();
 	}
@@ -128,6 +151,24 @@ export function AuthForm({ mode, returnTo, switchHref }: AuthFormProps) {
 							{submitLabel}
 						</Button>
 					</form>
+					{allowAnonymousMode ? (
+						<Button
+							className="mt-3 w-full border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"
+							disabled={isSubmitting || isSkippingAuth}
+							onClick={() => {
+								void handleSkipAuth();
+							}}
+							type="button"
+							variant="outline"
+						>
+							{isSkippingAuth ? (
+								<Loader2 className="animate-spin" />
+							) : (
+								<LogIn />
+							)}
+							Continue without an account
+						</Button>
+					) : null}
 					{switchHref ? (
 						<p className="mt-5 text-center text-slate-400 text-sm">
 							{switchLabel}{" "}

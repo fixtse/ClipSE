@@ -22,6 +22,7 @@ import {
 	Settings2,
 	Trash2,
 	Upload,
+	UserPlus,
 	Video,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -182,10 +183,14 @@ type UploadMessageKey =
 	| "workspace.intake.progress.queuedForDownload";
 
 interface ClipSEWorkspaceProps {
+	isAuthenticated?: boolean;
 	requestedVideoId?: string | null;
 }
 
-export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
+export function ClipSEWorkspace({
+	isAuthenticated = true,
+	requestedVideoId,
+}: ClipSEWorkspaceProps) {
 	const t = useTranslations();
 	const pathname = usePathname();
 	const router = useRouter();
@@ -610,6 +615,11 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 		const locale = resolveLocaleFromPathname(pathname) ?? "en";
 		router.replace(localizePath(locale, "/sign-in"));
 		router.refresh();
+	}
+
+	function handleCreateAccount() {
+		const locale = resolveLocaleFromPathname(pathname) ?? "en";
+		router.replace(localizePath(locale, "/sign-up"));
 	}
 
 	function selectUploadFile(file: File | null) {
@@ -1624,13 +1634,23 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 		<div className="min-h-screen bg-slate-950 text-white">
 			<div className="mx-auto flex max-w-[1680px] flex-col gap-4 px-4 py-4 sm:px-5">
 				<header className="flex flex-wrap items-center justify-between gap-3 border-white/10 border-b pb-3">
-					<div>
-						<h1 className="font-semibold text-lg text-white">
-							{t("workspace.header.title")}
-						</h1>
-						<p className="text-slate-400 text-sm">
-							{t("workspace.header.subtitle")}
-						</p>
+					<div className="flex min-w-0 items-center gap-3">
+						<span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white p-1 shadow-sm">
+							{/* biome-ignore lint/performance/noImgElement: static app logo from public assets */}
+							<img
+								alt=""
+								className="h-full w-full object-contain"
+								src="/logo.webp"
+							/>
+						</span>
+						<div className="min-w-0">
+							<h1 className="font-semibold text-lg text-white">
+								{t("workspace.header.title")}
+							</h1>
+							<p className="text-slate-400 text-sm">
+								{t("workspace.header.subtitle")}
+							</p>
+						</div>
 					</div>
 					<div className="flex flex-wrap items-center gap-3">
 						<LanguageSwitcher />
@@ -2090,24 +2110,38 @@ export function ClipSEWorkspace({ requestedVideoId }: ClipSEWorkspaceProps) {
 								</div>
 							</DialogContent>
 						</Dialog>
-						<Button
-							aria-label={t("workspace.header.signOut")}
-							className="border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"
-							disabled={isSigningOut}
-							onClick={() => {
-								void handleSignOut();
-							}}
-							size="icon"
-							title={t("workspace.header.signOut")}
-							type="button"
-							variant="outline"
-						>
-							{isSigningOut ? (
-								<LoaderCircle className="h-4 w-4 animate-spin" />
-							) : (
-								<LogOut className="h-4 w-4" />
-							)}
-						</Button>
+						{isAuthenticated ? (
+							<Button
+								aria-label={t("workspace.header.signOut")}
+								className="border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"
+								disabled={isSigningOut}
+								onClick={() => {
+									void handleSignOut();
+								}}
+								size="icon"
+								title={t("workspace.header.signOut")}
+								type="button"
+								variant="outline"
+							>
+								{isSigningOut ? (
+									<LoaderCircle className="h-4 w-4 animate-spin" />
+								) : (
+									<LogOut className="h-4 w-4" />
+								)}
+							</Button>
+						) : (
+							<Button
+								aria-label={t("workspace.header.createAccount")}
+								className="border-white/10 bg-white/6 text-slate-100 hover:bg-white/10"
+								onClick={handleCreateAccount}
+								size="icon"
+								title={t("workspace.header.createAccount")}
+								type="button"
+								variant="outline"
+							>
+								<UserPlus className="h-4 w-4" />
+							</Button>
+						)}
 					</div>
 				</header>
 				<Tabs

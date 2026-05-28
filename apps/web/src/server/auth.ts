@@ -2,7 +2,7 @@ import "server-only";
 
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { env } from "~/env";
 import { db } from "~/server/db";
@@ -11,6 +11,9 @@ import * as schema from "~/server/db/schema";
 const isSkippingEnvValidation = !!process.env.SKIP_ENV_VALIDATION;
 const buildTimeAuthBaseUrl = "http://localhost:3000";
 const buildTimeAuthSecret = "clipse-build-time-secret-not-for-runtime-2026";
+export const localAnonymousModeCookieName = "clipse-local-anonymous-mode";
+export const localAnonymousModeCookieValue = "enabled";
+export const persistentSessionMaxAge = 60 * 60 * 24 * 365;
 
 export const auth = betterAuth({
 	baseURL: isSkippingEnvValidation
@@ -32,6 +35,8 @@ export const auth = betterAuth({
 	},
 	session: {
 		modelName: "session",
+		expiresIn: persistentSessionMaxAge,
+		updateAge: 60 * 60 * 24,
 	},
 	account: {
 		modelName: "account",
@@ -74,6 +79,47 @@ export async function hasExistingUser(): Promise<boolean> {
 	return !!existingUser;
 }
 
+function getCookieValue(
+	cookieHeader: string | null,
+	name: string,
+): string | null {
+	if (!cookieHeader) {
+		return null;
+	}
+
+	for (const cookie of cookieHeader.split(";")) {
+		const [rawName, ...rawValueParts] = cookie.trim().split("=");
+		if (rawName === name) {
+			return decodeURIComponent(rawValueParts.join("="));
+		}
+	}
+
+	return null;
+}
+
+export async function isLocalAnonymousAccessAllowed(
+	requestHeaders?: Headers,
+): Promise<boolean> {
+	if (await hasExistingUser()) {
+		return false;
+	}
+
+	if (requestHeaders) {
+		return (
+			getCookieValue(
+				requestHeaders.get("cookie"),
+				localAnonymousModeCookieName,
+			) === localAnonymousModeCookieValue
+		);
+	}
+
+	const cookieStore = await cookies();
+	return (
+		cookieStore.get(localAnonymousModeCookieName)?.value ===
+		localAnonymousModeCookieValue
+	);
+}
+
 export async function getSessionFromHeaders(
 	requestHeaders: Headers,
 ): Promise<AuthSession> {
@@ -82,11 +128,11 @@ export async function getSessionFromHeaders(
 	});
 }
 
-export async function requireSession(): Promise<NonNullable<AuthSession>> {
+export async function requireSession(): Promise<AuthSession> {
 	const session = await getSession();
-	if (!session?.session) {
-		throw new Error("Authentication required");
+	if (session?.session || (await isLocalAnonymousAccessAllowed())) {
+		return session;
 	}
 
-	return session;
+	throw new Error("Authentication required");
 }

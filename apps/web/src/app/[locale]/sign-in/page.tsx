@@ -27,6 +27,7 @@ export default async function SignInPage({
 
 	return (
 		<AuthForm
+			allowAnonymousMode={canCreateAccount}
 			mode="sign-in"
 			returnTo={returnTo}
 			switchHref={canCreateAccount ? switchHref : undefined}

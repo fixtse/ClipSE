@@ -29,6 +29,11 @@ export default async function SignUpPage({
 	}
 
 	return (
-		<AuthForm mode="sign-up" returnTo={returnTo} switchHref={switchHref} />
+		<AuthForm
+			allowAnonymousMode
+			mode="sign-up"
+			returnTo={returnTo}
+			switchHref={switchHref}
+		/>
 	);
 }

@@ -4,7 +4,7 @@ import { ClipSEWorkspace } from "~/components/clipse/ClipSEWorkspace";
 import { type Locale, locales } from "~/i18n/config";
 import { messages } from "~/i18n/messages";
 import { localizePath } from "~/i18n/path";
-import { getSession } from "~/server/auth";
+import { getSession, isLocalAnonymousAccessAllowed } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
 
 interface LocaleHomePageProps {
@@ -86,8 +86,10 @@ export default async function LocaleHomePage({
 	const requestLocale = locale as Locale;
 	const requestedVideoId = (await searchParams)?.videoId ?? null;
 	const session = await getSession();
+	const hasWorkspaceAccess =
+		!!session?.session || (await isLocalAnonymousAccessAllowed());
 
-	if (!session?.session) {
+	if (!hasWorkspaceAccess) {
 		const returnTo = requestedVideoId
 			? `${localizePath(requestLocale, "/")}?videoId=${encodeURIComponent(requestedVideoId)}`
 			: localizePath(requestLocale, "/");
@@ -102,7 +104,10 @@ export default async function LocaleHomePage({
 
 	return (
 		<HydrateClient>
-			<ClipSEWorkspace requestedVideoId={requestedVideoId} />
+			<ClipSEWorkspace
+				isAuthenticated={!!session?.session}
+				requestedVideoId={requestedVideoId}
+			/>
 		</HydrateClient>
 	);
 }

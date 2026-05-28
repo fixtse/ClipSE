@@ -11,7 +11,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
-import { auth } from "~/server/auth";
+import { auth, isLocalAnonymousAccessAllowed } from "~/server/auth";
 import { db } from "~/server/db";
 
 /**
@@ -30,9 +30,13 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 	const session = await auth.api.getSession({
 		headers: opts.headers,
 	});
+	const isLocalAnonymousAccess = await isLocalAnonymousAccessAllowed(
+		opts.headers,
+	);
 
 	return {
 		db,
+		isLocalAnonymousAccess,
 		session,
 		...opts,
 	};
@@ -113,7 +117,7 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
 export const publicProcedure = t.procedure.use(timingMiddleware);
 
 const requireAuthMiddleware = t.middleware(async ({ ctx, next }) => {
-	if (!ctx.session?.session) {
+	if (!ctx.session?.session && !ctx.isLocalAnonymousAccess) {
 		throw new TRPCError({
 			code: "UNAUTHORIZED",
 			message: "Authentication required",
