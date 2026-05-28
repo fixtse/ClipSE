@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
 	ArrowRight,
+	Check,
 	ChevronLeft,
 	ChevronRight,
 	Clapperboard,
@@ -103,7 +104,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "../ui/card";
-import { Checkbox } from "../ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -180,6 +180,21 @@ function isWhisperModelForProvider(
 
 function getDefaultWhisperModel(provider: WhisperProvider): WhisperModel {
 	return provider === "hailo" ? "whisper-base" : "medium";
+}
+
+function SelectableOptionIndicator({ checked }: { checked: boolean }) {
+	return (
+		<span
+			aria-hidden="true"
+			className={cn(
+				"grid size-4 shrink-0 place-content-center rounded-[4px] border border-input shadow-xs transition-colors dark:bg-input/30",
+				checked &&
+					"border-primary bg-primary text-primary-foreground dark:bg-primary",
+			)}
+		>
+			{checked ? <Check className="size-3.5" /> : null}
+		</span>
+	);
 }
 
 type RenderOptionsState = {
@@ -392,6 +407,19 @@ export function ClipSEWorkspace({
 		videos: paginatedLibraryVideos,
 	} = paginateLibraryVideos(filteredLibraryVideos, libraryPage);
 	const libraryVideoSignature = buildLibraryVideoSignature(dashboardVideos);
+
+	useEffect(() => {
+		const previousBodyOverflowX = document.body.style.overflowX;
+		const previousDocumentOverflowX = document.documentElement.style.overflowX;
+
+		document.body.style.overflowX = "hidden";
+		document.documentElement.style.overflowX = "hidden";
+
+		return () => {
+			document.body.style.overflowX = previousBodyOverflowX;
+			document.documentElement.style.overflowX = previousDocumentOverflowX;
+		};
+	}, []);
 
 	useEffect(() => {
 		const settings = aiSettingsQuery.data;
@@ -2116,18 +2144,15 @@ export function ClipSEWorkspace({
 													</p>
 												</Tabs>
 												<button
+													aria-pressed={whisperChunkingEnabled}
 													className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"
 													onClick={() =>
 														setWhisperChunkingEnabled((value) => !value)
 													}
 													type="button"
 												>
-													<Checkbox
+													<SelectableOptionIndicator
 														checked={whisperChunkingEnabled}
-														onCheckedChange={(checked) =>
-															setWhisperChunkingEnabled(checked === true)
-														}
-														onClick={(event) => event.stopPropagation()}
 													/>
 													<span>
 														<span className="block font-medium text-sm text-white">
@@ -2728,7 +2753,12 @@ export function ClipSEWorkspace({
 					</TabsContent>
 
 					<TabsContent className="mt-0" value="media">
-						<div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
+						<motion.section
+							animate={{ opacity: 1, y: 0 }}
+							className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]"
+							initial={{ opacity: 0, y: 18 }}
+							transition={{ duration: 0.35 }}
+						>
 							<div className="space-y-6">
 								<Card className="border-white/10 bg-slate-950/70">
 									<CardHeader>
@@ -2969,20 +2999,15 @@ export function ClipSEWorkspace({
 																</DialogHeader>
 																<div className="space-y-3">
 																	<button
+																		aria-pressed={generateClips}
 																		className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"
 																		onClick={() =>
 																			setGenerateClips((value) => !value)
 																		}
 																		type="button"
 																	>
-																		<Checkbox
+																		<SelectableOptionIndicator
 																			checked={generateClips}
-																			onCheckedChange={(checked) =>
-																				setGenerateClips(checked === true)
-																			}
-																			onClick={(event) =>
-																				event.stopPropagation()
-																			}
 																		/>
 																		<span>
 																			<span className="block font-medium text-sm text-white">
@@ -2998,20 +3023,15 @@ export function ClipSEWorkspace({
 																		</span>
 																	</button>
 																	<button
+																		aria-pressed={generateShorts}
 																		className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"
 																		onClick={() =>
 																			setGenerateShorts((value) => !value)
 																		}
 																		type="button"
 																	>
-																		<Checkbox
+																		<SelectableOptionIndicator
 																			checked={generateShorts}
-																			onCheckedChange={(checked) =>
-																				setGenerateShorts(checked === true)
-																			}
-																			onClick={(event) =>
-																				event.stopPropagation()
-																			}
 																		/>
 																		<span>
 																			<span className="block font-medium text-sm text-white">
@@ -3027,20 +3047,15 @@ export function ClipSEWorkspace({
 																		</span>
 																	</button>
 																	<button
+																		aria-pressed={generateChapters}
 																		className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"
 																		onClick={() =>
 																			setGenerateChapters((value) => !value)
 																		}
 																		type="button"
 																	>
-																		<Checkbox
+																		<SelectableOptionIndicator
 																			checked={generateChapters}
-																			onCheckedChange={(checked) =>
-																				setGenerateChapters(checked === true)
-																			}
-																			onClick={(event) =>
-																				event.stopPropagation()
-																			}
 																		/>
 																		<span>
 																			<span className="block font-medium text-sm text-white">
@@ -3370,6 +3385,7 @@ export function ClipSEWorkspace({
 														</Badge>
 													)}
 													<button
+														aria-pressed={renderOptions.burnSubtitles}
 														className="flex h-9 items-center gap-2 rounded-md border border-white/10 bg-slate-900/75 px-3 text-slate-200 text-sm transition hover:bg-slate-900"
 														onClick={() =>
 															setRenderOptions((current) => ({
@@ -3379,15 +3395,8 @@ export function ClipSEWorkspace({
 														}
 														type="button"
 													>
-														<Checkbox
+														<SelectableOptionIndicator
 															checked={renderOptions.burnSubtitles}
-															onCheckedChange={(checked) =>
-																setRenderOptions((current) => ({
-																	...current,
-																	burnSubtitles: checked === true,
-																}))
-															}
-															onClick={(event) => event.stopPropagation()}
 														/>
 														{t("workspace.renderOptions.subtitles")}
 													</button>
@@ -3494,7 +3503,7 @@ export function ClipSEWorkspace({
 									</Card>
 								)}
 							</div>
-						</div>
+						</motion.section>
 					</TabsContent>
 				</Tabs>
 				{floatingJobButton}
