@@ -15,6 +15,11 @@ VLM_MODEL_NAMES = {
     "qwen2.5-vl-3b": "qwen2.5-vl-3b",
     "vlm": "vlm",
 }
+HEF_SEARCH_ROOTS = (
+    Path("/models"),
+    Path("/usr/local/hailo/resources"),
+    Path("/opt/hailo-apps"),
+)
 
 
 def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
@@ -25,7 +30,7 @@ def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
         raise FileNotFoundError(f"HEF file does not exist: {hef_path}")
 
     normalized_stem = model.lower().replace("_", "-")
-    for root in (Path("/usr/local/hailo/resources"), Path("/opt/hailo-apps")):
+    for root in HEF_SEARCH_ROOTS:
         if not root.exists():
             continue
         candidates = [
@@ -38,7 +43,7 @@ def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
             return sorted(candidates, key=lambda path: len(str(path)))[0]
 
     raise RuntimeError(
-        "Unable to resolve Hailo VLM HEF. Set HAILO_VLM_HEF_PATH to a local HEF file."
+        "Unable to resolve Hailo VLM HEF. Put a matching HEF under /models or set HAILO_VLM_HEF_PATH."
     )
 
 

@@ -89,6 +89,8 @@ def resolve_model_path(model_name):
     script_path = Path(__file__).resolve()
     candidates = [
         Path.cwd() / model_name,
+        Path("/models") / model_name,
+        Path("/models/yolo") / model_name,
         script_path.parents[3] / model_name if len(script_path.parents) > 3 else None,
         Path("/app") / model_name,
     ]

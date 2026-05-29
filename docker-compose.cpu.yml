@@ -1,0 +1,13 @@
+services:
+  whisper:
+    runtime: runc
+    environment:
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
+      WHISPER_CPU_FALLBACK: "true"
+      NVIDIA_VISIBLE_DEVICES: void
+
+  worker:
+    runtime: runc
+    environment:
+      NVIDIA_VISIBLE_DEVICES: void

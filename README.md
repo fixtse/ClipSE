@@ -37,10 +37,13 @@ Run ClipSE with published images:
 mkdir clipse
 cd clipse
 curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/docker-compose.yml
+curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/docker-compose.cpu.yml
+curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/docker-compose.hailo.yml
 curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/.env.example
 mkdir -p services/garage
 curl -fsSLo services/garage/garage.toml https://raw.githubusercontent.com/fixtse/ClipSE/main/services/garage/garage.toml
 cp .env.example .env
+mkdir -p models
 docker compose up -d
 ```
 
@@ -162,7 +165,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `WHISPER_CPU_FALLBACK` | `false` | Whisper container CPU fallback toggle. |
 | `NVIDIA_VISIBLE_DEVICES` | `all` | GPU devices exposed to CUDA containers. |
 | `NVIDIA_DRIVER_CAPABILITIES` | `compute,utility,video` | NVIDIA container capabilities. |
-| `WHISPER_CACHE_DIR` | `./.clipse-whisper-cache` in dev compose | Host cache path for downloaded Whisper models in development. |
+| `WHISPER_CACHE_DIR` | `./.clipse-whisper-cache` in dev compose | Host cache path for downloaded Whisper models in development. Production Docker stores model files under `./models`. |
 
 ### Hailo-10H
 
@@ -171,15 +174,15 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `CLIPSE_WHISPER_HAILO_IMAGE` | `ghcr.io/fixtse/clipse-whisper-hailo:latest` | Hailo Whisper image. |
 | `HAILO_DEVICE` | `/dev/hailo0` | Hailo accelerator device passed into the container. |
 | `HAILO_WHISPER_MODEL` | `whisper-base` | Hailo transcription model. |
-| `HAILO_WHISPER_HEF_PATH` | empty | Optional explicit Whisper HEF path. |
+| `HAILO_WHISPER_HEF_PATH` | empty | Optional explicit Whisper HEF path. Usually not needed when the matching `.hef` is under `./models`. |
 | `HAILO_VLM_MODEL` | `qwen2-vl-2b` | Hailo VLM focus-detection model. |
-| `HAILO_VLM_HEF_PATH` | empty | Optional explicit VLM HEF path. |
+| `HAILO_VLM_HEF_PATH` | empty | Optional explicit VLM HEF path. Usually not needed when the matching `.hef` is under `./models`. |
 | `HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS` | `1.0` | Frame sampling interval for Hailo VLM focus detection. |
 | `HAILO_VLM_FOCUS_MAX_SAMPLES` | `8` | Maximum sampled frames per focus-detection request. |
 | `HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE` | `true` | Hailo VLM memory optimization toggle. |
 | `HAILO_VISION_MODEL` | `yolov8n` | Hailo YOLO-family model for mode-aware shorts focus detection. |
-| `HAILO_VISION_HEF_PATH` | empty | Optional explicit Hailo vision HEF path. |
-| `HAILO_SCREEN_OCR_HEF_PATH` | empty | Optional OCR/text-detection HEF path for screen-heavy shorts. |
+| `HAILO_VISION_HEF_PATH` | empty | Optional explicit Hailo vision HEF path. Usually not needed when the matching `.hef` is under `./models`. |
+| `HAILO_SCREEN_OCR_HEF_PATH` | empty | Optional OCR/text-detection HEF path for screen-heavy shorts. Usually not needed when the matching `.hef` is under `./models`. |
 | `HAILO_OBJECT_LABELS` | empty | Optional comma-separated COCO class ids or names for general object focus mode. Examples: `67,73` or `cell phone,book`. |
 | `HAILO_VISION_SAMPLE_INTERVAL_SECONDS` | `0.35` | Frame sampling interval for Hailo vision focus detection. |
 | `HAILO_VISION_MAX_SAMPLES` | `24` | Maximum sampled frames per Hailo vision request. |
@@ -191,7 +194,6 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `INSTALL_HAILORT_WHEEL_SECRET` | `false` | Set to `true` to install the wheel from `HAILORT_WHEEL_PATH` during the Hailo image build. |
 | `HAILO_HOST_LIB_DIR` | `/usr/lib/hailo` | Host HailoRT library mount path. |
 | `HAILO_HOST_BIN_DIR` | `/usr/bin` | Host binary mount path for `hailortcli`. |
-| `HAILO_HOST_PYTHON_DIR` | `/opt/hailo/hailo_platform` | Host PyHailoRT package mount path. |
 
 ### Focus Detection
 
@@ -260,7 +262,21 @@ HOST_CODEX_HOME="/mnt/c/Users/<you>/.codex"
 Run with published images:
 
 ```bash
+mkdir -p models
 docker compose up -d
+```
+
+The default stack expects an NVIDIA GPU for CUDA Whisper and local focus detection. Verify the host runtime with:
+
+```bash
+docker run --rm --gpus all nvidia/cuda:12.6.0-base-ubuntu24.04 nvidia-smi
+```
+
+Run without an NVIDIA GPU:
+
+```bash
+mkdir -p models
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
 ```
 
 Build app images locally:
@@ -269,62 +285,47 @@ Build app images locally:
 docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
 
-Run the Hailo-10H Whisper provider:
+Model files live under `./models`, which is mounted into the Whisper and worker containers as `/models`:
+
+```bash
+mkdir -p models/whisper models/yolo models/hailo
+# faster-whisper downloads/cache: ./models/whisper
+# local YOLO/RT-DETR files: ./models/yolo/yolo11n.pt or ./models/yolo/rtdetr-l.pt
+# Hailo HEFs: ./models/hailo/whisper-base.hef, ./models/hailo/yolov8n.hef, etc.
+```
+
+Run Hailo-10H without an NVIDIA GPU:
 
 ```bash
 ./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
-WHISPER_PROVIDER=hailo docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
+sudo reboot
+ls -l /dev/hailo*
+hailortcli scan
+mkdir -p models/hailo
+# Put licensed .hef files in ./models/hailo.
+WHISPER_PROVIDER=hailo \
+CLIPSE_FOCUS_PROVIDER=hailo-vision \
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.hailo.yml up -d
 curl http://localhost:8000/health
 ```
 
-Use Hailo vision detection for vertical-short focus detection:
+Run Hailo-10H on a host that also has an NVIDIA GPU:
 
 ```bash
-CLIPSE_FOCUS_PROVIDER=hailo-vision WHISPER_PROVIDER=hailo docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
-```
-
-`hailo-vision` is the recommended Docker mode for shorts. It sends the short detection mode to the Hailo service so people, product, screen, and object focus requests can use Hailo YOLO-family detections. Screen focus also adds text/edge-density cues, and custom Hailo wrappers can be mounted through `HAILO_VISION_FRAME_COMMAND`. `hailo-vlm` remains available for the older face/person VLM prompt path.
-
-Common Hailo vision overrides:
-
-```bash
-HAILO_VISION_MODEL=yolov8n
-HAILO_VISION_HEF_PATH=/models/yolov8n.hef
-HAILO_SCREEN_OCR_HEF_PATH=/models/text_detection.hef
-HAILO_OBJECT_LABELS="cell phone,book"
-CLIPSE_FOCUS_PROVIDER=hailo-vision WHISPER_PROVIDER=hailo docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
-```
-
-If HailoRT, PyHailoRT, a HEF, or the accelerator device is unavailable, focus detection falls back to the existing local detector path instead of failing the render.
-
-### Hailo model files
-
-Hailo vision and Whisper models run from `.hef` files. A HEF is a Hailo Executable Format binary compiled for a specific Hailo architecture and runtime/compiler generation. ClipSE's public images do not include proprietary HEFs, firmware, or vendor driver packages.
-
-Get HEFs from one of these sources:
-
-| Source | Use when |
-| --- | --- |
-| Hailo Model Explorer / Model Zoo | You want a precompiled supported model such as a YOLO-family detector. Model downloads may require a Hailo account. |
-| Hailo Dataflow Compiler / Model Zoo compile flow | You need to compile a supported ONNX/TFLite/model-zoo network yourself. |
-| Device/vendor package | Your Hailo-10H module vendor provides model resources with the driver/runtime bundle. |
-| Private image or mounted host directory | Your license allows keeping HEFs in your own image/registry or on the host filesystem. |
-
-`HAILO_VISION_HEF_PATH`, `HAILO_SCREEN_OCR_HEF_PATH`, `HAILO_VLM_HEF_PATH`, and `HAILO_WHISPER_HEF_PATH` are optional only when the Hailo resources inside the container already contain a matching HEF. If a path is not set, ClipSE searches known Hailo resource directories such as `/usr/local/hailo/resources` and `/opt/hailo-apps` using the configured model name. If no matching HEF is found, Hailo detection/transcription fails and the shorts focus detector falls back to the local pipeline.
-
-For Docker, mount HEFs into the Hailo service and point ClipSE at them:
-
-```bash
-mkdir -p ./hailo-models
-# Put your licensed HEFs in ./hailo-models, then expose them with a Compose override or bind mount.
-HAILO_VISION_HEF_PATH=/models/yolov8n.hef \
-HAILO_SCREEN_OCR_HEF_PATH=/models/text_detection.hef \
-CLIPSE_FOCUS_PROVIDER=hailo-vision \
 WHISPER_PROVIDER=hailo \
+CLIPSE_FOCUS_PROVIDER=hailo-vision \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
 ```
 
-When using `HAILO_VISION_MODEL` without `HAILO_VISION_HEF_PATH`, make the model name match the HEF filename stem closely enough for auto-resolution. For example, `HAILO_VISION_MODEL=yolov8n` expects a filename containing `yolov8n` under the Hailo resource paths.
+To build a private Hailo image with PyHailoRT installed inside the image, keep the licensed wheel outside the repo and pass its path:
+
+```bash
+HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
+INSTALL_HAILORT_WHEEL_SECRET=true \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+```
+
+Hailo HEFs are auto-discovered under `./models` by filename, so `HAILO_WHISPER_MODEL=whisper-base` can use a file such as `./models/hailo/whisper-base.hef` without setting `HAILO_WHISPER_HEF_PATH`. See [DOCKER.md](DOCKER.md#hailo-10h-whisper-provider) for advanced Hailo licensing, private image builds, WSL notes, and custom HEF path overrides.
 
 Check logs:
 

@@ -17,6 +17,11 @@ HAILO_MODEL_NAMES = {
     "base": "Whisper-Base",
     "small": "Whisper-Small",
 }
+HEF_SEARCH_ROOTS = (
+    Path("/models"),
+    Path("/usr/local/hailo/resources"),
+    Path("/opt/hailo-apps"),
+)
 
 
 def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
@@ -27,7 +32,7 @@ def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
         raise FileNotFoundError(f"HEF file does not exist: {hef_path}")
 
     normalized_stem = model.lower().replace("_", "-")
-    for root in (Path("/usr/local/hailo/resources"), Path("/opt/hailo-apps")):
+    for root in HEF_SEARCH_ROOTS:
         if not root.exists():
             continue
         for hef_path in root.rglob("*.hef"):
@@ -40,7 +45,7 @@ def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
     except Exception as error:
         raise RuntimeError(
             "hailo-apps is required for automatic Whisper HEF resolution. "
-            "Set HAILO_WHISPER_HEF_PATH to use a local HEF file."
+            "Put a matching HEF under /models or set HAILO_WHISPER_HEF_PATH."
         ) from error
 
     resolved = resolve_hailo_apps_hef_path(

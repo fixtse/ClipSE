@@ -7,6 +7,8 @@
 .pnp.js
 /.pnpm-store/
 yolo11n.pt
+/models/*
+!/models/.gitignore
 
 # testing
 /coverage

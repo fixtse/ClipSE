@@ -6,10 +6,19 @@ The default compose file pulls prebuilt images from GitHub Container Registry.
 
 ```bash
 cp .env.example .env
+mkdir -p models
 docker compose up -d
 ```
 
 The app runs at `http://localhost:3000`.
+
+The default stack expects an NVIDIA GPU. On a machine without NVIDIA Docker support, use the CPU override:
+
+```bash
+cp .env.example .env
+mkdir -p models
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+```
 
 ## Services
 
@@ -46,6 +55,24 @@ Use the build override when testing Dockerfile changes:
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
+
+## Model Files
+
+Docker mounts `./models` into the Whisper and worker containers as `/models`.
+
+Use this layout:
+
+```bash
+mkdir -p models/whisper models/yolo models/hailo
+```
+
+| Host path | Container path | Used for |
+| --- | --- | --- |
+| `./models/whisper` | `/models/whisper` | Faster Whisper downloads/cache. |
+| `./models/yolo` | `/models/yolo` | Local YOLO/RT-DETR files such as `yolo11n.pt` or `rtdetr-l.pt`. |
+| `./models/hailo` | `/models/hailo` | Hailo `.hef` files for Whisper, YOLO-family vision, OCR, or VLM models. |
+
+For local focus detection, either keep the default `CLIPSE_YOLO_MODEL=yolo11n.pt` and place the file at `./models/yolo/yolo11n.pt`, or set `CLIPSE_YOLO_MODEL` to another filename under `./models/yolo`.
 
 ## Logs
 
@@ -87,6 +114,12 @@ docker run --rm --gpus all nvidia/cuda:12.6.0-base-ubuntu24.04 nvidia-smi
 
 Typical causes are missing NVIDIA drivers, missing NVIDIA Container Toolkit, or running Docker from an environment without GPU access.
 
+If the host has no NVIDIA GPU, use:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+```
+
 ### Hailo-10H Whisper provider
 
 Hailo support is opt-in because the host must expose HailoRT and the accelerator device to the Whisper container.
@@ -98,7 +131,7 @@ License notes:
 - The Hailo-10H firmware license is separate and allows binary redistribution only under its stated product/use restrictions.
 - The ASUS support package `UGen300_M2_5.3.0_driver_Linux_amd64.zip` should be treated as a vendor package that users download from ASUS support, not something ClipSE redistributes.
 
-The public `clipse-whisper-hailo` image is built in CI and contains ClipSE's runner plus Hailo Apps integration. It does not redistribute the ASUS driver zip or Hailo-10H firmware. If your Hailo/ASUS license permits private redistribution inside your own registry, put these files in `services/whisper/hailo-packages/` and build with `INSTALL_LOCAL_HAILORT=true`:
+The public `clipse-whisper-hailo` image is built in CI and contains ClipSE's runner plus Hailo Apps integration. It does not redistribute the ASUS driver zip, Hailo-10H firmware, or proprietary HEFs. If your Hailo/ASUS license permits private redistribution inside your own registry, put these files in `services/whisper/hailo-packages/` and build with `INSTALL_LOCAL_HAILORT=true`:
 
 - `hailort_<version>_<arch>.deb`
 - `hailort-<version>-cp311-cp311-linux_<arch>.whl`
@@ -111,7 +144,17 @@ INSTALL_HAILORT_WHEEL_SECRET=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 ```
 
-The PCIe driver package is always installed on the host, not inside the container.
+The PCIe driver package is always installed on the host, not inside the container. PyHailoRT is installed into the Hailo Docker image during the private build.
+
+Put Hailo HEFs under `./models/hailo`. The runners search `/models` recursively before Hailo resource directories, so these examples do not require explicit `HAILO_*_HEF_PATH` values:
+
+```bash
+mkdir -p models/hailo
+# Examples:
+# models/hailo/whisper-base.hef
+# models/hailo/yolov8n.hef
+# models/hailo/text_detection.hef
+```
 
 Pure Linux host setup:
 
@@ -124,8 +167,9 @@ ls -l /dev/hailo*
 hailortcli scan
 
 WHISPER_PROVIDER=hailo \
+CLIPSE_FOCUS_PROVIDER=hailo-vision \
 HAILO_DEVICE=/dev/hailo0 \
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.hailo.yml up -d
 ```
 
 WSL setup:
@@ -136,13 +180,23 @@ ls -l /dev/hailo*
 hailortcli scan
 
 WHISPER_PROVIDER=hailo \
+CLIPSE_FOCUS_PROVIDER=hailo-vision \
 HAILO_DEVICE=/dev/hailo0 \
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.hailo.yml up -d
 ```
 
 If `/dev/hailo0` is not visible inside WSL, Docker cannot pass the accelerator through. Install the vendor Windows/WSL driver stack or run ClipSE on pure Linux.
 
-ClipSE's Hailo image runs `services/whisper/hailo_whisper_runner.py` automatically. It converts incoming audio to mono 16 kHz little-endian float32 and calls PyHailoRT `Speech2Text.generate_all_segments`. Set `HAILO_HOST_LIB_DIR`, `HAILO_HOST_PYTHON_DIR`, and `HAILO_HOST_BIN_DIR` if your host HailoRT install uses different paths. For ASUS' amd64 zip, the kernel driver is compiled on the host by the script above; the container still needs HailoRT/PyHailoRT available through host mounts or a private image. Set `HAILO_WHISPER_HEF_PATH` only when you want to use a local HEF file instead of Hailo Apps resource resolution.
+On a host that also has an NVIDIA GPU, omit the CPU override:
+
+```bash
+WHISPER_PROVIDER=hailo \
+CLIPSE_FOCUS_PROVIDER=hailo-vision \
+HAILO_DEVICE=/dev/hailo0 \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
+```
+
+ClipSE's Hailo image runs `services/whisper/hailo_whisper_runner.py` automatically. It converts incoming audio to mono 16 kHz little-endian float32 and calls PyHailoRT `Speech2Text.generate_all_segments`. Set `HAILO_HOST_LIB_DIR` or `HAILO_HOST_BIN_DIR` only if your host HailoRT install uses different library or `hailortcli` paths. For ASUS' amd64 zip, the kernel driver is compiled on the host by the script above; PyHailoRT should be installed into the Docker image through a licensed private build.
 
 Private image build with licensed packages:
 
@@ -176,7 +230,7 @@ CLIPSE_FOCUS_PROVIDER=hailo-vision
 
 The worker will call the Hailo service `POST /focus-detections` before the local YOLO/RT-DETR/OpenCV detector. It passes the active short detection mode (`people`, `people_strict`, `product`, `screen`, or `object`) so the Hailo runner can use YOLO-family object detections for people/products/general objects and screen-like object or OCR/text cues for screen focus. If Hailo is unavailable or returns no detections, ClipSE falls back to the existing local detector.
 
-The Hailo image still does not redistribute vendor drivers, firmware, or proprietary HEFs. Mount HailoRT/PyHailoRT from the host as shown above and optionally set `HAILO_VISION_HEF_PATH`, `HAILO_SCREEN_OCR_HEF_PATH`, or `HAILO_VISION_FRAME_COMMAND` for a custom Hailo detector wrapper. `CLIPSE_FOCUS_PROVIDER=hailo-vlm` remains available for the older face/person VLM prompt path.
+The Hailo image still does not redistribute vendor drivers, firmware, or proprietary HEFs. Store HEFs under `./models/hailo` and name them so they include the configured model name, such as `whisper-base.hef` for `HAILO_WHISPER_MODEL=whisper-base` or `yolov8n.hef` for `HAILO_VISION_MODEL=yolov8n`. Use `HAILO_VISION_HEF_PATH`, `HAILO_SCREEN_OCR_HEF_PATH`, `HAILO_VLM_HEF_PATH`, or `HAILO_WHISPER_HEF_PATH` only when auto-discovery is not enough. `CLIPSE_FOCUS_PROVIDER=hailo-vlm` remains available for the older face/person VLM prompt path.
 
 ### Garage initialization fails
 
