@@ -175,6 +175,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `HAILO_DEVICE` | `/dev/h1x-0` | Hailo accelerator device passed into the container. |
 | `HAILO_WHISPER_MODEL` | `whisper-base` | Hailo transcription model. |
 | `HAILO_WHISPER_HEF_PATH` | empty | Optional explicit Whisper HEF path. Usually not needed when the matching `.hef` is under `./models`. |
+| `HAILO_WHISPER_TIMEOUT_MS` | `60000` | Hailo Whisper generation timeout in milliseconds. Increase for long audio. |
 | `HAILO_VLM_MODEL` | `qwen2-vl-2b` | Hailo VLM focus-detection model. |
 | `HAILO_VLM_HEF_PATH` | empty | Optional explicit VLM HEF path. Usually not needed when the matching `.hef` is under `./models`. |
 | `HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS` | `1.0` | Frame sampling interval for Hailo VLM focus detection. |

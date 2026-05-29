@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import sys
 import subprocess
 import tempfile
@@ -22,6 +23,7 @@ HEF_SEARCH_ROOTS = (
     Path("/usr/local/hailo/resources"),
     Path("/opt/hailo-apps"),
 )
+HAILO_WHISPER_TIMEOUT_MS = int(os.environ.get("HAILO_WHISPER_TIMEOUT_MS", "60000"))
 
 
 def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
@@ -136,7 +138,7 @@ def transcribe(input_audio_path: str, model: str, language: str, hef_path: str |
             audio_data=audio_data,
             task=Speech2TextTask.TRANSCRIBE,
             language=language or "en",
-            timeout_ms=15000,
+            timeout_ms=HAILO_WHISPER_TIMEOUT_MS,
         )
         segment_items = []
         for segment in segments or []:
