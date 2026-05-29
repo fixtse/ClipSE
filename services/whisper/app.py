@@ -1,4 +1,5 @@
 import gc
+import importlib.util
 import json
 import logging
 import os
@@ -63,6 +64,11 @@ HAILO_PYTHON_PACKAGE_HELP = (
     "HAILORT_WHEEL_DIR pointing at the directory that contains the licensed "
     "hailort-*.whl or pyhailort-*.whl file."
 )
+HAILO_NATIVE_LIBRARY_HELP = (
+    "PyHailoRT is installed, but the native HailoRT library is not available in "
+    "the Whisper container. Put hailort_*.deb in HAILORT_WHEEL_DIR and rebuild, "
+    "or set HAILO_HOST_LIB_DIR to the host directory that contains libhailort.so."
+)
 
 
 @contextmanager
@@ -97,16 +103,18 @@ def detect_hailo_runtime() -> dict[str, Any]:
     cli_path = shutil.which("hailortcli") or (
         "/host/usr/bin/hailortcli" if Path("/host/usr/bin/hailortcli").exists() else None
     )
-    python_available = False
-    python_error = None
+    python_package_available = importlib.util.find_spec("hailo_platform") is not None
+    python_import_available = False
+    python_import_error = None
     cli_scan = None
 
-    try:
-        import hailo_platform  # noqa: F401
+    if python_package_available:
+        try:
+            import hailo_platform  # noqa: F401
 
-        python_available = True
-    except Exception as error:
-        python_error = str(error)
+            python_import_available = True
+        except Exception as error:
+            python_import_error = str(error)
 
     if cli_path:
         try:
@@ -125,13 +133,15 @@ def detect_hailo_runtime() -> dict[str, Any]:
         except Exception as error:
             cli_scan = {"error": str(error)}
 
-    available = bool(devices) and python_available
+    available = bool(devices) and python_import_available
     return {
         "available": available,
         "devices": devices,
         "hailortcli": cli_path,
-        "pythonPackageAvailable": python_available,
-        "pythonPackageError": python_error,
+        "pythonPackageAvailable": python_package_available,
+        "pythonPackageError": python_import_error,
+        "pythonImportAvailable": python_import_available,
+        "pythonImportError": python_import_error,
         "scan": cli_scan,
         "transcribeCommandConfigured": bool(HAILO_TRANSCRIBE_COMMAND),
         "model": HAILO_WHISPER_MODEL,
@@ -349,17 +359,7 @@ async def focus_detections(
 ) -> dict:
     runtime = detect_hailo_runtime()
     if not runtime["available"]:
-        if not runtime["pythonPackageAvailable"]:
-            error_detail = runtime["pythonPackageError"]
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    f"{HAILO_PYTHON_PACKAGE_HELP} Import error: {error_detail}"
-                    if error_detail
-                    else HAILO_PYTHON_PACKAGE_HELP
-                ),
-            )
-        raise HTTPException(status_code=503, detail="Hailo runtime was not detected")
+        raise unavailable_hailo_runtime_exception(runtime)
     normalized_detection_mode = normalize_detection_mode(detection_mode)
     normalized_detector_backend = normalize_detector_backend(detector_backend)
     use_hailo_vision = normalized_detector_backend == "hailo-vision" and bool(
@@ -482,6 +482,30 @@ def normalize_detector_backend(detector_backend: str) -> str:
     return backend
 
 
+def unavailable_hailo_runtime_exception(runtime: dict[str, Any]) -> HTTPException:
+    if not runtime["pythonPackageAvailable"]:
+        error_detail = runtime["pythonPackageError"]
+        return HTTPException(
+            status_code=503,
+            detail=(
+                f"{HAILO_PYTHON_PACKAGE_HELP} Import error: {error_detail}"
+                if error_detail
+                else HAILO_PYTHON_PACKAGE_HELP
+            ),
+        )
+    if not runtime.get("pythonImportAvailable", False):
+        error_detail = runtime.get("pythonImportError") or runtime["pythonPackageError"]
+        return HTTPException(
+            status_code=503,
+            detail=(
+                f"{HAILO_NATIVE_LIBRARY_HELP} Import error: {error_detail}"
+                if error_detail
+                else HAILO_NATIVE_LIBRARY_HELP
+            ),
+        )
+    return HTTPException(status_code=503, detail="Hailo runtime was not detected")
+
+
 def transcribe_with_hailo(
     audio_path: str,
     model_name: str,
@@ -489,17 +513,7 @@ def transcribe_with_hailo(
 ) -> dict:
     runtime = detect_hailo_runtime()
     if not runtime["available"]:
-        if not runtime["pythonPackageAvailable"]:
-            error_detail = runtime["pythonPackageError"]
-            raise HTTPException(
-                status_code=503,
-                detail=(
-                    f"{HAILO_PYTHON_PACKAGE_HELP} Import error: {error_detail}"
-                    if error_detail
-                    else HAILO_PYTHON_PACKAGE_HELP
-                ),
-            )
-        raise HTTPException(status_code=503, detail="Hailo runtime was not detected")
+        raise unavailable_hailo_runtime_exception(runtime)
 
     if not HAILO_TRANSCRIBE_COMMAND:
         raise HTTPException(
