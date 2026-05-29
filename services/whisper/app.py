@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from contextlib import contextmanager
@@ -543,7 +544,7 @@ def transcribe_with_hailo(
     )
 
     if HAILO_WHISPER_DEBUG and result.stderr:
-        logger.warning("[hailo-whisper] %s", result.stderr.strip())
+        print(f"[hailo-whisper] {result.stderr.strip()}", file=sys.stderr)
 
     if result.returncode != 0:
         raise HTTPException(
