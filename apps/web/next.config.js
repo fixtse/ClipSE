@@ -14,6 +14,7 @@ const config = {
 		},
 	},
 	transpilePackages: ["@electric-sql/pglite"],
+	allowedDevOrigins: ["127.0.0.1", "localhost"],
 	images: {
 		remotePatterns: [
 			{

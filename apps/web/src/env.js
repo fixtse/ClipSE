@@ -50,6 +50,7 @@ export const env = createEnv({
 		CLIPSE_CODEX_HOME: z.string().optional(),
 		CLIPSE_CODEX_CWD: z.string().default("/app"),
 		CLIPSE_CODEX_TIMEOUT_MS: z.coerce.number().int().min(1000).default(300000),
+		CLIPSE_DISABLE_AUTH: z.enum(["true", "false"]).default("false"),
 	},
 
 	/**
@@ -84,6 +85,7 @@ export const env = createEnv({
 		CLIPSE_CODEX_HOME: process.env.CLIPSE_CODEX_HOME,
 		CLIPSE_CODEX_CWD: process.env.CLIPSE_CODEX_CWD,
 		CLIPSE_CODEX_TIMEOUT_MS: process.env.CLIPSE_CODEX_TIMEOUT_MS,
+		CLIPSE_DISABLE_AUTH: process.env.CLIPSE_DISABLE_AUTH,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

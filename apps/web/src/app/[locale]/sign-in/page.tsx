@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AuthForm } from "~/components/auth/AuthForm";
+import { env } from "~/env";
 import { defaultLocale, type Locale } from "~/i18n/config";
 import { isLocale, localizePath } from "~/i18n/path";
 import { getSession, hasExistingUser } from "~/server/auth";
@@ -19,6 +20,9 @@ export default async function SignInPage({
 	const session = await getSession();
 
 	if (session?.session) {
+		redirect(returnTo);
+	}
+	if (env.CLIPSE_DISABLE_AUTH === "true") {
 		redirect(returnTo);
 	}
 

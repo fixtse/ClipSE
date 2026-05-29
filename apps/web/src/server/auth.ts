@@ -14,6 +14,7 @@ const buildTimeAuthSecret = "clipse-build-time-secret-not-for-runtime-2026";
 export const localAnonymousModeCookieName = "clipse-local-anonymous-mode";
 export const localAnonymousModeCookieValue = "enabled";
 export const persistentSessionMaxAge = 60 * 60 * 24 * 365;
+const isAuthDisabled = env.CLIPSE_DISABLE_AUTH === "true";
 
 export const auth = betterAuth({
 	baseURL: isSkippingEnvValidation
@@ -100,6 +101,10 @@ function getCookieValue(
 export async function isLocalAnonymousAccessAllowed(
 	requestHeaders?: Headers,
 ): Promise<boolean> {
+	if (isAuthDisabled) {
+		return true;
+	}
+
 	if (await hasExistingUser()) {
 		return false;
 	}
@@ -130,7 +135,7 @@ export async function getSessionFromHeaders(
 
 export async function requireSession(): Promise<AuthSession> {
 	const session = await getSession();
-	if (session?.session || (await isLocalAnonymousAccessAllowed())) {
+	if (isAuthDisabled || session?.session || (await isLocalAnonymousAccessAllowed())) {
 		return session;
 	}
 

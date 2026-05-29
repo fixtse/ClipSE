@@ -7,8 +7,8 @@ import { env } from "~/env";
 import type { ContentAiSettings } from "~/modules/content-settings/domain/content-ai-settings.valueobject";
 import { contentAiSettingsRepository } from "~/modules/content-settings/infrastructure/content-ai-settings.repository";
 import {
-	type ContentTranscriptionSegment,
-	ContentTranscriptionSegmentSchema,
+    type ContentTranscriptionSegment,
+    ContentTranscriptionSegmentSchema,
 } from "~/modules/content-transcriptions/domain/content-transcription.valueobject";
 
 const whisperResponseSchema = z.object({
