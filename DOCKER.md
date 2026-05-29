@@ -131,15 +131,16 @@ License notes:
 - The Hailo-10H firmware license is separate and allows binary redistribution only under its stated product/use restrictions.
 - The ASUS support package `UGen300_M2_5.3.0_driver_Linux_amd64.zip` should be treated as a vendor package that users download from ASUS support, not something ClipSE redistributes.
 
-The public `clipse-whisper-hailo` image is built in CI and contains ClipSE's runner plus Hailo Apps integration. It does not redistribute the ASUS driver zip, Hailo-10H firmware, or proprietary HEFs. If your Hailo/ASUS license permits private redistribution inside your own registry, put these files in `services/whisper/hailo-packages/` and build with `INSTALL_LOCAL_HAILORT=true`:
+Hailo requires a private Docker image build. ClipSE does not redistribute a runnable Hailo image with PyHailoRT, the ASUS driver zip, Hailo-10H firmware, or proprietary HEFs. If your Hailo/ASUS license permits keeping licensed packages in your own registry, put these files in `services/whisper/hailo-packages/` and build with `INSTALL_LOCAL_HAILORT=true`:
 
 - `hailort_<version>_<arch>.deb`
 - `hailort-<version>-cp311-cp311-linux_<arch>.whl`
 
-You can also keep the PyHailoRT wheel outside the repository and pass its host path at build time:
+The recommended path is to keep the PyHailoRT wheel outside the repository and pass its host path at build time:
 
 ```bash
-HAILORT_WHEEL_PATH=/path/to/hailort-5.3.0-cp311-cp311-linux_x86_64.whl \
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
 INSTALL_HAILORT_WHEEL_SECRET=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 ```
@@ -166,6 +167,12 @@ sudo reboot
 ls -l /dev/h1x-*
 hailortcli scan
 
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
+INSTALL_HAILORT_WHEEL_SECRET=true \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 HAILO_DEVICE=/dev/h1x-0 \
@@ -179,6 +186,12 @@ WSL setup:
 ls -l /dev/h1x-*
 hailortcli scan
 
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
+INSTALL_HAILORT_WHEEL_SECRET=true \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 HAILO_DEVICE=/dev/h1x-0 \
@@ -190,6 +203,12 @@ If `/dev/h1x-0` is not visible inside WSL, Docker cannot pass the accelerator th
 On a host that also has an NVIDIA GPU, omit the CPU override:
 
 ```bash
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
+INSTALL_HAILORT_WHEEL_SECRET=true \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 HAILO_DEVICE=/dev/h1x-0 \
@@ -198,9 +217,10 @@ docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
 
 ClipSE's Hailo image runs `services/whisper/hailo_whisper_runner.py` automatically. It converts incoming audio to mono 16 kHz little-endian float32 and calls PyHailoRT `Speech2Text.generate_all_segments`. Set `HAILO_HOST_LIB_DIR` or `HAILO_HOST_BIN_DIR` only if your host HailoRT install uses different library or `hailortcli` paths. For ASUS' amd64 zip, the kernel driver is compiled on the host by the script above; PyHailoRT should be installed into the Docker image through a licensed private build.
 
-Private image build with licensed packages:
+Alternative private image build with licensed packages copied into the checkout:
 
 ```bash
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 INSTALL_LOCAL_HAILORT=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 ```
@@ -208,7 +228,8 @@ docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 Private image build with a wheel path outside the repo:
 
 ```bash
-HAILORT_WHEEL_PATH=/path/to/hailort-5.3.0-cp311-cp311-linux_x86_64.whl \
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
 INSTALL_HAILORT_WHEEL_SECRET=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 ```

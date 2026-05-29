@@ -171,7 +171,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `CLIPSE_WHISPER_HAILO_IMAGE` | `ghcr.io/fixtse/clipse-whisper-hailo:latest` | Hailo Whisper image. |
+| `CLIPSE_WHISPER_HAILO_IMAGE` | `clipse-whisper-hailo:local` recommended | Private Hailo image tag. Hailo requires building this image locally with a licensed PyHailoRT wheel. |
 | `HAILO_DEVICE` | `/dev/h1x-0` | Hailo accelerator device passed into the container. |
 | `HAILO_WHISPER_MODEL` | `whisper-base` | Hailo transcription model. |
 | `HAILO_WHISPER_HEF_PATH` | empty | Optional explicit Whisper HEF path. Usually not needed when the matching `.hef` is under `./models`. |
@@ -190,8 +190,8 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `HAILO_VISION_FRAME_COMMAND` | empty | Optional per-frame command returning JSON detections when using a custom Hailo detector wrapper. |
 | `HAILO_COMMAND_TIMEOUT_SECONDS` | `900` | Timeout for Hailo helper commands. |
 | `HAILO_APPS_REF` | `main` | Hailo Apps git ref used when building the Hailo image. |
-| `HAILORT_WHEEL_PATH` | `/dev/null` | Optional host path to a licensed `hailort-*-cp311-cp311-linux_*.whl` for private Hailo image builds. |
-| `INSTALL_HAILORT_WHEEL_SECRET` | `false` | Set to `true` to install the wheel from `HAILORT_WHEEL_PATH` during the Hailo image build. |
+| `HAILORT_WHEEL_PATH` | `/dev/null` | Required for Hailo: host path to a licensed `hailort-*-cp311-cp311-linux_*.whl` used during the private image build. |
+| `INSTALL_HAILORT_WHEEL_SECRET` | `false` | Must be `true` for Hailo so the wheel from `HAILORT_WHEEL_PATH` is installed into the image. |
 | `HAILO_HOST_LIB_DIR` | `/usr/lib/hailo` | Host HailoRT library mount path. |
 | `HAILO_HOST_BIN_DIR` | `/usr/bin` | Host binary mount path for `hailortcli`. |
 
@@ -294,7 +294,9 @@ mkdir -p models/whisper models/yolo models/hailo
 # Hailo HEFs: ./models/hailo/whisper-base.hef, ./models/hailo/yolov8n.hef, etc.
 ```
 
-Run Hailo-10H without an NVIDIA GPU:
+Hailo requires a cloned checkout because the Hailo image must be built privately with your licensed PyHailoRT wheel. Put the wheel anywhere outside the repo, for example `$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl`, and put licensed HEFs under `./models/hailo`.
+
+Build the required private Hailo image:
 
 ```bash
 ./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
@@ -303,6 +305,16 @@ ls -l /dev/h1x-*
 hailortcli scan
 mkdir -p models/hailo
 # Put licensed .hef files in ./models/hailo.
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
+INSTALL_HAILORT_WHEEL_SECRET=true \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+```
+
+Run Hailo-10H without an NVIDIA GPU:
+
+```bash
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.hailo.yml up -d
@@ -312,17 +324,10 @@ curl http://localhost:8000/health
 Run Hailo-10H on a host that also has an NVIDIA GPU:
 
 ```bash
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
-```
-
-To build a private Hailo image with PyHailoRT installed inside the image, keep the licensed wheel outside the repo and pass its path:
-
-```bash
-HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
-INSTALL_HAILORT_WHEEL_SECRET=true \
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 ```
 
 Hailo HEFs are auto-discovered under `./models` by filename, so `HAILO_WHISPER_MODEL=whisper-base` can use a file such as `./models/hailo/whisper-base.hef` without setting `HAILO_WHISPER_HEF_PATH`. See [DOCKER.md](DOCKER.md#hailo-10h-whisper-provider) for advanced Hailo licensing, private image builds, WSL notes, and custom HEF path overrides.

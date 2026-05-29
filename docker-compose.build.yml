@@ -10,7 +10,7 @@ services:
       dockerfile: Dockerfile
 
   whisper-hailo:
-    image: ${CLIPSE_WHISPER_HAILO_IMAGE:-ghcr.io/fixtse/clipse-whisper-hailo:latest}
+    image: ${CLIPSE_WHISPER_HAILO_IMAGE:-clipse-whisper-hailo:local}
     build:
       context: ./services/whisper
       dockerfile: Dockerfile.hailo
