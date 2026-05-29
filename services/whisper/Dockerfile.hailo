@@ -4,7 +4,6 @@ FROM python:3.11-slim
 
 ARG HAILO_APPS_REF=main
 ARG INSTALL_LOCAL_HAILORT=false
-ARG INSTALL_HAILORT_WHEEL_CONTEXT=false
 
 RUN apt-get update && apt-get install -y \
     ffmpeg \
@@ -21,22 +20,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY hailo-packages/ /tmp/hailo-packages/
 RUN --mount=type=bind,from=hailort_wheel_dir,source=.,target=/tmp/hailort-wheel-dir,readonly \
     set -eux; \
-    if [ "${INSTALL_HAILORT_WHEEL_CONTEXT}" = "true" ]; then \
-        wheel_path="$(find /tmp/hailort-wheel-dir -maxdepth 1 -type f -name 'hailort-*.whl' | head -n 1)"; \
-        if [ -z "${wheel_path}" ]; then \
-            echo "INSTALL_HAILORT_WHEEL_CONTEXT=true requires HAILORT_WHEEL_DIR to contain hailort-*.whl" >&2; \
-            exit 1; \
-        fi; \
-        pip install --no-cache-dir "${wheel_path}"; \
+    wheel_path="$(find /tmp/hailort-wheel-dir -maxdepth 1 -type f \( -name 'hailort-*.whl' -o -name 'pyhailort-*.whl' \) | head -n 1)"; \
+    if [ -z "${wheel_path}" ]; then \
+        echo "The Hailo image requires HAILORT_WHEEL_DIR to contain hailort-*.whl or pyhailort-*.whl" >&2; \
+        exit 1; \
     fi; \
+    pip install --no-cache-dir "${wheel_path}"; \
     if [ "${INSTALL_LOCAL_HAILORT}" = "true" ] && ls /tmp/hailo-packages/hailort_*.deb >/dev/null 2>&1; then \
         apt-get update; \
         apt-get install -y /tmp/hailo-packages/hailort_*.deb; \
         rm -rf /var/lib/apt/lists/*; \
     fi; \
-    if [ "${INSTALL_LOCAL_HAILORT}" = "true" ] && ls /tmp/hailo-packages/hailort-*.whl >/dev/null 2>&1; then \
-        pip install --no-cache-dir /tmp/hailo-packages/hailort-*.whl; \
-    fi
+    python -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('hailo_platform') else 1)"
 
 RUN git clone --depth 1 --branch "${HAILO_APPS_REF}" https://github.com/hailo-ai/hailo-apps.git /opt/hailo-apps
 

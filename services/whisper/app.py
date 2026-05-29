@@ -58,6 +58,11 @@ HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE = (
 MODEL_LOCK = Lock()
 MODEL_CACHE: dict[str, WhisperModel] = {}
 SUPPORTED_PROVIDERS = {"faster-whisper", "hailo"}
+HAILO_PYTHON_PACKAGE_HELP = (
+    "PyHailoRT is missing from the Whisper image. Rebuild the Hailo image with "
+    "HAILORT_WHEEL_DIR pointing at the directory that contains the licensed "
+    "hailort-*.whl or pyhailort-*.whl file."
+)
 
 
 @contextmanager
@@ -87,7 +92,8 @@ def loaded_whisper_model(model_name: str, unload_after: bool) -> WhisperModel:
 
 
 def detect_hailo_runtime() -> dict[str, Any]:
-    devices = sorted(str(path) for path in Path("/dev").glob("hailo*"))
+    device_paths = [*Path("/dev").glob("hailo*"), *Path("/dev").glob("h1x-*")]
+    devices = sorted(str(path) for path in device_paths)
     cli_path = shutil.which("hailortcli") or (
         "/host/usr/bin/hailortcli" if Path("/host/usr/bin/hailortcli").exists() else None
     )
@@ -119,7 +125,7 @@ def detect_hailo_runtime() -> dict[str, Any]:
         except Exception as error:
             cli_scan = {"error": str(error)}
 
-    available = bool(devices) or python_available or bool(cli_path)
+    available = bool(devices) and python_available
     return {
         "available": available,
         "devices": devices,
@@ -343,6 +349,16 @@ async def focus_detections(
 ) -> dict:
     runtime = detect_hailo_runtime()
     if not runtime["available"]:
+        if not runtime["pythonPackageAvailable"]:
+            error_detail = runtime["pythonPackageError"]
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    f"{HAILO_PYTHON_PACKAGE_HELP} Import error: {error_detail}"
+                    if error_detail
+                    else HAILO_PYTHON_PACKAGE_HELP
+                ),
+            )
         raise HTTPException(status_code=503, detail="Hailo runtime was not detected")
     normalized_detection_mode = normalize_detection_mode(detection_mode)
     normalized_detector_backend = normalize_detector_backend(detector_backend)
@@ -473,6 +489,16 @@ def transcribe_with_hailo(
 ) -> dict:
     runtime = detect_hailo_runtime()
     if not runtime["available"]:
+        if not runtime["pythonPackageAvailable"]:
+            error_detail = runtime["pythonPackageError"]
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    f"{HAILO_PYTHON_PACKAGE_HELP} Import error: {error_detail}"
+                    if error_detail
+                    else HAILO_PYTHON_PACKAGE_HELP
+                ),
+            )
         raise HTTPException(status_code=503, detail="Hailo runtime was not detected")
 
     if not HAILO_TRANSCRIBE_COMMAND:
