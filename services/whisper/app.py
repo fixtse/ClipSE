@@ -542,6 +542,9 @@ def transcribe_with_hailo(
         timeout=HAILO_COMMAND_TIMEOUT_SECONDS,
     )
 
+    if HAILO_WHISPER_DEBUG and result.stderr:
+        logger.warning("[hailo-whisper] %s", result.stderr.strip())
+
     if result.returncode != 0:
         raise HTTPException(
             status_code=503,
