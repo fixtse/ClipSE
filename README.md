@@ -187,6 +187,8 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `HAILO_VISION_FRAME_COMMAND` | empty | Optional per-frame command returning JSON detections when using a custom Hailo detector wrapper. |
 | `HAILO_COMMAND_TIMEOUT_SECONDS` | `900` | Timeout for Hailo helper commands. |
 | `HAILO_APPS_REF` | `main` | Hailo Apps git ref used when building the Hailo image. |
+| `HAILORT_WHEEL_PATH` | `/dev/null` | Optional host path to a licensed `hailort-*-cp311-cp311-linux_*.whl` for private Hailo image builds. |
+| `INSTALL_HAILORT_WHEEL_SECRET` | `false` | Set to `true` to install the wheel from `HAILORT_WHEEL_PATH` during the Hailo image build. |
 | `HAILO_HOST_LIB_DIR` | `/usr/lib/hailo` | Host HailoRT library mount path. |
 | `HAILO_HOST_BIN_DIR` | `/usr/bin` | Host binary mount path for `hailortcli`. |
 | `HAILO_HOST_PYTHON_DIR` | `/opt/hailo/hailo_platform` | Host PyHailoRT package mount path. |

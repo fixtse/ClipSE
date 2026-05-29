@@ -8,6 +8,9 @@ services:
       args:
         HAILO_APPS_REF: ${HAILO_APPS_REF:-main}
         INSTALL_LOCAL_HAILORT: ${INSTALL_LOCAL_HAILORT:-false}
+        INSTALL_HAILORT_WHEEL_SECRET: ${INSTALL_HAILORT_WHEEL_SECRET:-false}
+      secrets:
+        - hailort_wheel
     environment:
       WHISPER_PROVIDER: ${WHISPER_PROVIDER:-hailo}
       HAILO_WHISPER_MODEL: ${HAILO_WHISPER_MODEL:-whisper-base}
@@ -34,3 +37,7 @@ services:
       - ${HAILO_HOST_LIB_DIR:-/usr/lib/hailo}:/usr/lib/hailo:ro
       - ${HAILO_HOST_BIN_DIR:-/usr/bin}:/host/usr/bin:ro
       - ${HAILO_HOST_PYTHON_DIR:-/opt/hailo/hailo_platform}:/opt/hailo/hailo_platform:ro
+
+secrets:
+  hailort_wheel:
+    file: ${HAILORT_WHEEL_PATH:-/dev/null}

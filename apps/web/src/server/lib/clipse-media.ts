@@ -1618,8 +1618,29 @@ function getGoogleFontCssUrl(fontFamily: string): string {
 }
 
 function parseGoogleFontUrl(css: string): string | null {
-	const match = css.match(/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/);
-	return match?.[1] ?? null;
+	const matches = Array.from(
+		css.matchAll(
+			/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)\s*format\(['"]?([^'")]+)['"]?\)/g,
+		),
+	);
+	if (matches.length === 0) {
+		const fallback = css.match(
+			/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/,
+		);
+		return fallback?.[1] ?? null;
+	}
+
+	const preferredFormats = ["truetype", "opentype", "woff", "woff2"] as const;
+	for (const format of preferredFormats) {
+		const match = matches.find(
+			(entry) => entry[2]?.toLowerCase() === format,
+		);
+		if (match?.[1]) {
+			return match[1];
+		}
+	}
+
+	return matches[0]?.[1] ?? null;
 }
 
 async function downloadAndRegisterGoogleFont(
@@ -1631,7 +1652,9 @@ async function downloadAndRegisterGoogleFont(
 
 	const cssResponse = await fetch(getGoogleFontCssUrl(fontFamily), {
 		headers: {
-			"User-Agent": "Mozilla/5.0 AppleWebKit/537.36 Chrome/120.0 Safari/537.36",
+			// Prefer legacy formats (woff/ttf) that the font loader can handle reliably.
+			"User-Agent":
+				"Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0",
 		},
 	});
 

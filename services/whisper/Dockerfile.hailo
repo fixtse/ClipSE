@@ -1,7 +1,10 @@
+# syntax=docker/dockerfile:1.7
+
 FROM python:3.11-slim
 
 ARG HAILO_APPS_REF=main
 ARG INSTALL_LOCAL_HAILORT=false
+ARG INSTALL_HAILORT_WHEEL_SECRET=false
 
 RUN apt-get update && apt-get install -y \
     ffmpeg \
@@ -16,7 +19,15 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY hailo-packages/ /tmp/hailo-packages/
-RUN set -eux; \
+RUN --mount=type=secret,id=hailort_wheel,target=/tmp/hailort-wheel.whl,required=false \
+    set -eux; \
+    if [ "${INSTALL_HAILORT_WHEEL_SECRET}" = "true" ]; then \
+        if [ ! -s /tmp/hailort-wheel.whl ]; then \
+            echo "INSTALL_HAILORT_WHEEL_SECRET=true requires HAILORT_WHEEL_PATH to point to a readable wheel file" >&2; \
+            exit 1; \
+        fi; \
+        pip install --no-cache-dir /tmp/hailort-wheel.whl; \
+    fi; \
     if [ "${INSTALL_LOCAL_HAILORT}" = "true" ] && ls /tmp/hailo-packages/hailort_*.deb >/dev/null 2>&1; then \
         apt-get update; \
         apt-get install -y /tmp/hailo-packages/hailort_*.deb; \

@@ -103,6 +103,14 @@ The public `clipse-whisper-hailo` image is built in CI and contains ClipSE's run
 - `hailort_<version>_<arch>.deb`
 - `hailort-<version>-cp311-cp311-linux_<arch>.whl`
 
+You can also keep the PyHailoRT wheel outside the repository and pass its host path at build time:
+
+```bash
+HAILORT_WHEEL_PATH=/path/to/hailort-5.3.0-cp311-cp311-linux_x86_64.whl \
+INSTALL_HAILORT_WHEEL_SECRET=true \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+```
+
 The PCIe driver package is always installed on the host, not inside the container.
 
 Pure Linux host setup:
@@ -140,6 +148,14 @@ Private image build with licensed packages:
 
 ```bash
 INSTALL_LOCAL_HAILORT=true \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+```
+
+Private image build with a wheel path outside the repo:
+
+```bash
+HAILORT_WHEEL_PATH=/path/to/hailort-5.3.0-cp311-cp311-linux_x86_64.whl \
+INSTALL_HAILORT_WHEEL_SECRET=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 ```
 
