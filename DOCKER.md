@@ -136,12 +136,14 @@ Hailo requires a private Docker image build. ClipSE does not redistribute a runn
 - `hailort_<version>_<arch>.deb`
 - `hailort-<version>-cp311-cp311-linux_<arch>.whl`
 
-The recommended path is to keep the PyHailoRT wheel outside the repository and pass its host path at build time:
+The recommended path is to keep the PyHailoRT wheel outside the repository and pass the containing directory as a build context. Put exactly one `hailort-*.whl` in that directory:
 
 ```bash
+mkdir -p "$HOME/Downloads/hailort"
+# Put hailort-5.3.0-cp311-cp311-linux_x86_64.whl in $HOME/Downloads/hailort.
 CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
-HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
-INSTALL_HAILORT_WHEEL_SECRET=true \
+HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
+INSTALL_HAILORT_WHEEL_CONTEXT=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 ```
 
@@ -168,8 +170,8 @@ ls -l /dev/h1x-*
 hailortcli scan
 
 CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
-HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
-INSTALL_HAILORT_WHEEL_SECRET=true \
+HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
+INSTALL_HAILORT_WHEEL_CONTEXT=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 
 CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
@@ -187,8 +189,8 @@ ls -l /dev/h1x-*
 hailortcli scan
 
 CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
-HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
-INSTALL_HAILORT_WHEEL_SECRET=true \
+HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
+INSTALL_HAILORT_WHEEL_CONTEXT=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 
 CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
@@ -204,8 +206,8 @@ On a host that also has an NVIDIA GPU, omit the CPU override:
 
 ```bash
 CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
-HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
-INSTALL_HAILORT_WHEEL_SECRET=true \
+HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
+INSTALL_HAILORT_WHEEL_CONTEXT=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 
 CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
@@ -225,12 +227,12 @@ INSTALL_LOCAL_HAILORT=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 ```
 
-Private image build with a wheel path outside the repo:
+Private image build with a wheel directory outside the repo:
 
 ```bash
 CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
-HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
-INSTALL_HAILORT_WHEEL_SECRET=true \
+HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
+INSTALL_HAILORT_WHEEL_CONTEXT=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 ```
 

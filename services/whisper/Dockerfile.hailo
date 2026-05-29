@@ -4,7 +4,7 @@ FROM python:3.11-slim
 
 ARG HAILO_APPS_REF=main
 ARG INSTALL_LOCAL_HAILORT=false
-ARG INSTALL_HAILORT_WHEEL_SECRET=false
+ARG INSTALL_HAILORT_WHEEL_CONTEXT=false
 
 RUN apt-get update && apt-get install -y \
     ffmpeg \
@@ -19,14 +19,15 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY hailo-packages/ /tmp/hailo-packages/
-RUN --mount=type=secret,id=hailort_wheel,target=/tmp/hailort-wheel.whl,required=false \
+RUN --mount=type=bind,from=hailort_wheel_dir,source=.,target=/tmp/hailort-wheel-dir,readonly \
     set -eux; \
-    if [ "${INSTALL_HAILORT_WHEEL_SECRET}" = "true" ]; then \
-        if [ ! -s /tmp/hailort-wheel.whl ]; then \
-            echo "INSTALL_HAILORT_WHEEL_SECRET=true requires HAILORT_WHEEL_PATH to point to a readable wheel file" >&2; \
+    if [ "${INSTALL_HAILORT_WHEEL_CONTEXT}" = "true" ]; then \
+        wheel_path="$(find /tmp/hailort-wheel-dir -maxdepth 1 -type f -name 'hailort-*.whl' | head -n 1)"; \
+        if [ -z "${wheel_path}" ]; then \
+            echo "INSTALL_HAILORT_WHEEL_CONTEXT=true requires HAILORT_WHEEL_DIR to contain hailort-*.whl" >&2; \
             exit 1; \
         fi; \
-        pip install --no-cache-dir /tmp/hailort-wheel.whl; \
+        pip install --no-cache-dir "${wheel_path}"; \
     fi; \
     if [ "${INSTALL_LOCAL_HAILORT}" = "true" ] && ls /tmp/hailo-packages/hailort_*.deb >/dev/null 2>&1; then \
         apt-get update; \

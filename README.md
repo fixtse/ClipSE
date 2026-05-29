@@ -190,8 +190,8 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `HAILO_VISION_FRAME_COMMAND` | empty | Optional per-frame command returning JSON detections when using a custom Hailo detector wrapper. |
 | `HAILO_COMMAND_TIMEOUT_SECONDS` | `900` | Timeout for Hailo helper commands. |
 | `HAILO_APPS_REF` | `main` | Hailo Apps git ref used when building the Hailo image. |
-| `HAILORT_WHEEL_PATH` | `/dev/null` | Required for Hailo: host path to a licensed `hailort-*-cp311-cp311-linux_*.whl` used during the private image build. |
-| `INSTALL_HAILORT_WHEEL_SECRET` | `false` | Must be `true` for Hailo so the wheel from `HAILORT_WHEEL_PATH` is installed into the image. |
+| `HAILORT_WHEEL_DIR` | `./services/whisper/hailo-packages` | Required for Hailo: directory containing one licensed `hailort-*.whl` used during the private image build. |
+| `INSTALL_HAILORT_WHEEL_CONTEXT` | `false` | Must be `true` for Hailo so the wheel from `HAILORT_WHEEL_DIR` is installed into the image. |
 | `HAILO_HOST_LIB_DIR` | `/usr/lib/hailo` | Host HailoRT library mount path. |
 | `HAILO_HOST_BIN_DIR` | `/usr/bin` | Host binary mount path for `hailortcli`. |
 
@@ -294,7 +294,7 @@ mkdir -p models/whisper models/yolo models/hailo
 # Hailo HEFs: ./models/hailo/whisper-base.hef, ./models/hailo/yolov8n.hef, etc.
 ```
 
-Hailo requires a cloned checkout because the Hailo image must be built privately with your licensed PyHailoRT wheel. Put the wheel anywhere outside the repo, for example `$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl`, and put licensed HEFs under `./models/hailo`.
+Hailo requires a cloned checkout because the Hailo image must be built privately with your licensed PyHailoRT wheel. Put the wheel in a directory outside the repo, for example `$HOME/Downloads/hailort`, and put licensed HEFs under `./models/hailo`.
 
 Build the required private Hailo image:
 
@@ -306,8 +306,8 @@ hailortcli scan
 mkdir -p models/hailo
 # Put licensed .hef files in ./models/hailo.
 CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
-HAILORT_WHEEL_PATH="$HOME/Downloads/hailort-5.3.0-cp311-cp311-linux_x86_64.whl" \
-INSTALL_HAILORT_WHEEL_SECRET=true \
+HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
+INSTALL_HAILORT_WHEEL_CONTEXT=true \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
 ```
 
