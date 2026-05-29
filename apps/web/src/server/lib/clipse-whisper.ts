@@ -18,6 +18,11 @@ const whisperResponseSchema = z.object({
 	segments: z.array(ContentTranscriptionSegmentSchema),
 	provider: z.string().optional(),
 	elapsedSeconds: z.number().optional(),
+	debug: z
+		.object({
+			runnerStderr: z.string().optional(),
+		})
+		.optional(),
 });
 const whisperBenchmarkResponseSchema = z.object({
 	results: z.array(
