@@ -60,8 +60,8 @@ def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
     return Path(resolved)
 
 
-def convert_audio_to_pcm_f32le(audio_path: str) -> tuple[np.ndarray, float]:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".f32le") as temp_file:
+def convert_audio_to_wav_s16le(audio_path: str) -> tuple[np.ndarray, float]:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
         temp_path = temp_file.name
 
     try:
@@ -76,18 +76,15 @@ def convert_audio_to_pcm_f32le(audio_path: str) -> tuple[np.ndarray, float]:
                 "1",
                 "-ar",
                 "16000",
-                "-f",
-                "f32le",
-                "-acodec",
-                "pcm_f32le",
+                "-c:a",
+                "pcm_s16le",
                 temp_path,
             ],
             check=True,
             capture_output=True,
             text=True,
         )
-        audio_data = np.fromfile(temp_path, dtype="<f4")
-        return audio_data.copy(), len(audio_data) / 16000
+        return read_wav_as_float32(temp_path)
     finally:
         Path(temp_path).unlink(missing_ok=True)
 
@@ -125,7 +122,7 @@ def transcribe(input_audio_path: str, model: str, language: str, hef_path: str |
     try:
         audio_data, duration = read_wav_as_float32(input_audio_path)
     except Exception:
-        audio_data, duration = convert_audio_to_pcm_f32le(input_audio_path)
+        audio_data, duration = convert_audio_to_wav_s16le(input_audio_path)
     params = VDevice.create_params()
     params.group_id = SHARED_VDEVICE_GROUP_ID
     vdevice = None
