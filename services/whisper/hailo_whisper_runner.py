@@ -24,6 +24,47 @@ HEF_SEARCH_ROOTS = (
     Path("/opt/hailo-apps"),
 )
 HAILO_WHISPER_TIMEOUT_MS = int(os.environ.get("HAILO_WHISPER_TIMEOUT_MS", "60000"))
+HAILO_WHISPER_DEBUG = os.environ.get("HAILO_WHISPER_DEBUG", "false").lower() in (
+    "1",
+    "true",
+    "yes",
+)
+HAILO_WHISPER_GAIN_DB = float(os.environ.get("HAILO_WHISPER_GAIN_DB", "0"))
+
+
+def log_debug(message: str) -> None:
+    if HAILO_WHISPER_DEBUG:
+        print(f"[hailo-whisper] {message}", file=sys.stderr)
+
+
+def summarize_waveform(audio_data: np.ndarray, sample_rate: int) -> dict:
+    if audio_data.size == 0:
+        return {
+            "samples": 0,
+            "durationSeconds": 0.0,
+            "min": 0.0,
+            "max": 0.0,
+            "mean": 0.0,
+            "rms": 0.0,
+        }
+    audio = audio_data.astype(np.float32)
+    rms = float(np.sqrt(np.mean(np.square(audio))))
+    return {
+        "samples": int(audio.size),
+        "durationSeconds": float(audio.size) / float(sample_rate),
+        "min": float(np.min(audio)),
+        "max": float(np.max(audio)),
+        "mean": float(np.mean(audio)),
+        "rms": rms,
+    }
+
+
+def apply_gain(audio_data: np.ndarray, gain_db: float) -> np.ndarray:
+    if gain_db == 0:
+        return audio_data
+    gain = 10 ** (gain_db / 20.0)
+    adjusted = audio_data * gain
+    return np.clip(adjusted, -1.0, 1.0).astype(audio_data.dtype)
 
 
 def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
@@ -65,6 +106,7 @@ def convert_audio_to_wav_s16le(audio_path: str) -> tuple[np.ndarray, float]:
         temp_path = temp_file.name
 
     try:
+        log_debug(f"Converting audio to 16 kHz mono s16le WAV: {audio_path}")
         subprocess.run(
             [
                 "ffmpeg",
@@ -97,6 +139,11 @@ def read_wav_as_float32(audio_path: str) -> tuple[np.ndarray, float]:
         sample_width = wav_file.getsampwidth()
         raw_audio = wav_file.readframes(frames)
 
+    log_debug(
+        "Loaded WAV metadata: "
+        f"frames={frames} sample_rate={sample_rate} channels={channels} sample_width={sample_width}"
+    )
+
     if sample_width != 2:
         raise ValueError("Hailo Whisper expects 16-bit PCM WAV audio")
     if channels != 1:
@@ -123,6 +170,14 @@ def transcribe(input_audio_path: str, model: str, language: str, hef_path: str |
         audio_data, duration = read_wav_as_float32(input_audio_path)
     except Exception:
         audio_data, duration = convert_audio_to_wav_s16le(input_audio_path)
+    log_debug(f"Audio duration seconds (pre-gain): {duration:.3f}")
+    log_debug(f"Waveform stats (pre-gain): {summarize_waveform(audio_data, 16000)}")
+    if HAILO_WHISPER_GAIN_DB != 0:
+        log_debug(f"Applying gain normalization: {HAILO_WHISPER_GAIN_DB} dB")
+        audio_data = apply_gain(audio_data, HAILO_WHISPER_GAIN_DB)
+        log_debug(f"Waveform stats (post-gain): {summarize_waveform(audio_data, 16000)}")
+    log_debug(f"Using HEF: {resolved_hef_path}")
+    log_debug(f"Using model: {model} language: {language or 'auto'}")
     params = VDevice.create_params()
     params.group_id = SHARED_VDEVICE_GROUP_ID
     vdevice = None
@@ -137,6 +192,7 @@ def transcribe(input_audio_path: str, model: str, language: str, hef_path: str |
             language=language or "en",
             timeout_ms=HAILO_WHISPER_TIMEOUT_MS,
         )
+        log_debug(f"Segments returned: {len(segments or [])}")
         segment_items = []
         for segment in segments or []:
             text = getattr(segment, "text", "").strip()
