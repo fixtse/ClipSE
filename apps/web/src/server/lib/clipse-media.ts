@@ -1624,17 +1624,13 @@ function parseGoogleFontUrl(css: string): string | null {
 		),
 	);
 	if (matches.length === 0) {
-		const fallback = css.match(
-			/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/,
-		);
+		const fallback = css.match(/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/);
 		return fallback?.[1] ?? null;
 	}
 
 	const preferredFormats = ["truetype", "opentype", "woff", "woff2"] as const;
 	for (const format of preferredFormats) {
-		const match = matches.find(
-			(entry) => entry[2]?.toLowerCase() === format,
-		);
+		const match = matches.find((entry) => entry[2]?.toLowerCase() === format);
 		if (match?.[1]) {
 			return match[1];
 		}
