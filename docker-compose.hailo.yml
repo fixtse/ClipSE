@@ -31,7 +31,7 @@ services:
       HAILO_COMMAND_TIMEOUT_SECONDS: ${HAILO_COMMAND_TIMEOUT_SECONDS:-900}
       LD_LIBRARY_PATH: /usr/lib/hailo:/usr/local/lib:${LD_LIBRARY_PATH:-}
     devices:
-      - ${HAILO_DEVICE:-/dev/hailo0}:${HAILO_DEVICE:-/dev/hailo0}
+      - ${HAILO_DEVICE:-/dev/h1x-0}:${HAILO_DEVICE:-/dev/h1x-0}
     volumes:
       - ${HAILO_HOST_LIB_DIR:-/usr/lib/hailo}:/usr/lib/hailo:ro
       - ${HAILO_HOST_BIN_DIR:-/usr/bin}:/host/usr/bin:ro

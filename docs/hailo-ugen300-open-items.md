@@ -33,7 +33,7 @@ Notes:
 
 ## Runtime Validation Checklist
 
-- `ls -l /dev/hailo*`
+- `ls -l /dev/h1x-*`
 - `hailortcli scan`
 - `curl http://localhost:8000/health`
 - `curl -F file=@sample.wav "http://localhost:8000/benchmark?providers=faster-whisper&providers=hailo"`

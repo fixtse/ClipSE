@@ -172,7 +172,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | Variable | Default | Description |
 | --- | --- | --- |
 | `CLIPSE_WHISPER_HAILO_IMAGE` | `ghcr.io/fixtse/clipse-whisper-hailo:latest` | Hailo Whisper image. |
-| `HAILO_DEVICE` | `/dev/hailo0` | Hailo accelerator device passed into the container. |
+| `HAILO_DEVICE` | `/dev/h1x-0` | Hailo accelerator device passed into the container. |
 | `HAILO_WHISPER_MODEL` | `whisper-base` | Hailo transcription model. |
 | `HAILO_WHISPER_HEF_PATH` | empty | Optional explicit Whisper HEF path. Usually not needed when the matching `.hef` is under `./models`. |
 | `HAILO_VLM_MODEL` | `qwen2-vl-2b` | Hailo VLM focus-detection model. |
@@ -299,7 +299,7 @@ Run Hailo-10H without an NVIDIA GPU:
 ```bash
 ./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
 sudo reboot
-ls -l /dev/hailo*
+ls -l /dev/h1x-*
 hailortcli scan
 mkdir -p models/hailo
 # Put licensed .hef files in ./models/hailo.
