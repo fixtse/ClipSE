@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { ClipSEWorkspace } from "~/components/clipse/ClipSEWorkspace";
 import { type Locale, locales } from "~/i18n/config";
 import { messages } from "~/i18n/messages";
-import { localizePath } from "~/i18n/path";
+import { isLocale, localizePath } from "~/i18n/path";
 import { getSession, isLocalAnonymousAccessAllowed } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
 
@@ -18,6 +18,9 @@ export async function generateMetadata({
 	params,
 }: LocaleHomePageProps): Promise<Metadata> {
 	const { locale } = await params;
+	if (!isLocale(locale)) {
+		return {};
+	}
 	const requestLocale = locale as Locale;
 	const dictionary = messages[requestLocale];
 	const title = dictionary.metadata.title;
@@ -83,6 +86,9 @@ export default async function LocaleHomePage({
 	searchParams,
 }: LocaleHomePageProps) {
 	const { locale } = await params;
+	if (!isLocale(locale)) {
+		redirect(localizePath("en", "/"));
+	}
 	const requestLocale = locale as Locale;
 	const requestedVideoId = (await searchParams)?.videoId ?? null;
 	const session = await getSession();
