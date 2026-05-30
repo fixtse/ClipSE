@@ -135,7 +135,11 @@ export async function getSessionFromHeaders(
 
 export async function requireSession(): Promise<AuthSession> {
 	const session = await getSession();
-	if (isAuthDisabled || session?.session || (await isLocalAnonymousAccessAllowed())) {
+	if (
+		isAuthDisabled ||
+		session?.session ||
+		(await isLocalAnonymousAccessAllowed())
+	) {
 		return session;
 	}
 

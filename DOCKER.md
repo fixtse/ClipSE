@@ -238,6 +238,15 @@ curl http://localhost:8000/health
 curl -F file=@sample.wav "http://localhost:8000/benchmark?providers=faster-whisper&providers=hailo"
 ```
 
+Enable Hailo Whisper debug logs when diagnosing audio extraction or empty transcription issues:
+
+```bash
+HAILO_WHISPER_DEBUG=true \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d whisper
+
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml logs -f whisper
+```
+
 After the service is healthy, open ClipSE AI Settings and select `Hailo-10H` as the transcription backend. The settings dialog shows the same backend detection state from `/health`.
 
 To use Hailo vision detection for vertical short focus detection, set:

@@ -10,7 +10,7 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from threading import Lock
+from threading import Lock, Thread
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
@@ -534,17 +534,18 @@ def transcribe_with_hailo(
         hef_path=HAILO_WHISPER_HEF_PATH,
         hef_arg=f"--hef-path {HAILO_WHISPER_HEF_PATH}" if HAILO_WHISPER_HEF_PATH else "",
     )
-    result = subprocess.run(
-        command,
-        shell=True,
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=HAILO_COMMAND_TIMEOUT_SECONDS,
-    )
-
-    if HAILO_WHISPER_DEBUG and result.stderr:
-        print(f"[hailo-whisper] {result.stderr.strip()}", file=sys.stderr)
+    if HAILO_WHISPER_DEBUG:
+        print(f"[hailo-whisper] Running command: {command}", file=sys.stderr, flush=True)
+        result = run_hailo_debug_command(command)
+    else:
+        result = subprocess.run(
+            command,
+            shell=True,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=HAILO_COMMAND_TIMEOUT_SECONDS,
+        )
 
     if result.returncode != 0:
         raise HTTPException(
@@ -571,6 +572,59 @@ def transcribe_with_hailo(
         }
 
     return validate_transcription_payload(parsed)
+
+
+def run_hailo_debug_command(command: str) -> subprocess.CompletedProcess[str]:
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    stdout_parts: list[str] = []
+    stderr_parts: list[str] = []
+
+    def collect_stdout() -> None:
+        if process.stdout is None:
+            return
+        for line in process.stdout:
+            stdout_parts.append(line)
+
+    def forward_stderr() -> None:
+        if process.stderr is None:
+            return
+        for line in process.stderr:
+            stderr_parts.append(line)
+            print(f"[hailo-whisper] {line.rstrip()}", file=sys.stderr, flush=True)
+
+    stdout_thread = Thread(target=collect_stdout, daemon=True)
+    stderr_thread = Thread(target=forward_stderr, daemon=True)
+    stdout_thread.start()
+    stderr_thread.start()
+
+    try:
+        returncode = process.wait(timeout=HAILO_COMMAND_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+        stdout_thread.join(timeout=1)
+        stderr_thread.join(timeout=1)
+        raise subprocess.TimeoutExpired(
+            cmd=command,
+            timeout=HAILO_COMMAND_TIMEOUT_SECONDS,
+            output="".join(stdout_parts),
+            stderr="".join(stderr_parts),
+        )
+
+    stdout_thread.join(timeout=1)
+    stderr_thread.join(timeout=1)
+    return subprocess.CompletedProcess(
+        args=command,
+        returncode=returncode,
+        stdout="".join(stdout_parts),
+        stderr="".join(stderr_parts),
+    )
 
 
 def normalize_transcription_response(segments: Any, language: str, duration: float | None) -> dict:
