@@ -596,7 +596,7 @@ def run_hailo_debug_command(command: str) -> subprocess.CompletedProcess[str]:
             return
         for line in process.stderr:
             stderr_parts.append(line)
-            print(f"[hailo-whisper] {line.rstrip()}", file=sys.stderr, flush=True)
+            print(line.rstrip(), file=sys.stderr, flush=True)
 
     stdout_thread = Thread(target=collect_stdout, daemon=True)
     stderr_thread = Thread(target=forward_stderr, daemon=True)

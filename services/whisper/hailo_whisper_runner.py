@@ -67,6 +67,28 @@ def apply_gain(audio_data: np.ndarray, gain_db: float) -> np.ndarray:
     return np.clip(adjusted, -1.0, 1.0).astype(audio_data.dtype)
 
 
+def describe_segment(segment: object) -> dict:
+    candidate_names = (
+        "text",
+        "start_sec",
+        "end_sec",
+        "start",
+        "end",
+        "tokens",
+        "words",
+    )
+    values = {}
+    for name in candidate_names:
+        if hasattr(segment, name):
+            value = getattr(segment, name)
+            values[name] = repr(value)
+    return {
+        "type": type(segment).__name__,
+        "repr": repr(segment),
+        "attrs": values,
+    }
+
+
 def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
     if explicit_hef_path:
         hef_path = Path(explicit_hef_path)
@@ -193,6 +215,9 @@ def transcribe(input_audio_path: str, model: str, language: str, hef_path: str |
             timeout_ms=HAILO_WHISPER_TIMEOUT_MS,
         )
         log_debug(f"Segments returned: {len(segments or [])}")
+        if HAILO_WHISPER_DEBUG:
+            for index, segment in enumerate((segments or [])[:5]):
+                log_debug(f"Segment {index}: {describe_segment(segment)}")
         segment_items = []
         for segment in segments or []:
             text = getattr(segment, "text", "").strip()
@@ -205,7 +230,6 @@ def transcribe(input_audio_path: str, model: str, language: str, hef_path: str |
                     "start": round(float(start), 3),
                     "end": round(float(end), 3),
                     "text": text,
-                    "words": [],
                 }
             )
         text = " ".join(segment["text"] for segment in segment_items).strip()

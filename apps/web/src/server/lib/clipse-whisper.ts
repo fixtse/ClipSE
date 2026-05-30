@@ -447,7 +447,11 @@ function offsetSegmentTimestamps(input: {
 	const minimumStartSeconds = input.offsetSeconds + input.trimBeforeSeconds;
 	const start = offsetTimestamp(input.segment.start, input.offsetSeconds);
 	const end = offsetTimestamp(input.segment.end, input.offsetSeconds);
-	const words = input.segment.words
+	const sourceWords =
+		input.segment.words && input.segment.words.length > 0
+			? input.segment.words
+			: undefined;
+	const words = sourceWords
 		?.map((word) => ({
 			...word,
 			start: offsetTimestamp(word.start, input.offsetSeconds),
