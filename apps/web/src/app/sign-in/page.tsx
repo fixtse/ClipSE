@@ -11,5 +11,7 @@ export default async function SignInRedirectPage({
 }: SignInRedirectPageProps) {
 	const returnTo = (await searchParams)?.returnTo;
 	const target = localizePath(defaultLocale, "/sign-in");
-	redirect(returnTo ? `${target}?returnTo=${encodeURIComponent(returnTo)}` : target);
+	redirect(
+		returnTo ? `${target}?returnTo=${encodeURIComponent(returnTo)}` : target,
+	);
 }
