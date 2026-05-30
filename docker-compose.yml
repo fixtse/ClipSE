@@ -79,6 +79,7 @@ services:
       HUGGINGFACE_HUB_CACHE: /models/whisper/hub
       NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
       NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility,video}
+      WHISPER_DEBUG: ${WHISPER_DEBUG:-false}
     ports:
       - "8000:8000"
     volumes:

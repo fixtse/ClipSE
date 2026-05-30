@@ -77,6 +77,7 @@ services:
     container_name: clipse-whisper-dev
     runtime: nvidia
     environment:
+      WHISPER_DEBUG: ${WHISPER_DEBUG:-false}
       WHISPER_DEVICE: cuda
       WHISPER_COMPUTE_TYPE: float16
       WHISPER_CPU_FALLBACK: "false"

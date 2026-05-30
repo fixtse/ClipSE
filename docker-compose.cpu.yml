@@ -6,6 +6,7 @@ services:
       WHISPER_COMPUTE_TYPE: int8
       WHISPER_CPU_FALLBACK: "true"
       NVIDIA_VISIBLE_DEVICES: void
+      WHISPER_DEBUG: ${WHISPER_DEBUG:-false}
 
   worker:
     runtime: runc

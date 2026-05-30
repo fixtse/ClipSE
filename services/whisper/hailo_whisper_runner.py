@@ -24,17 +24,17 @@ HEF_SEARCH_ROOTS = (
     Path("/opt/hailo-apps"),
 )
 HAILO_WHISPER_TIMEOUT_MS = int(os.environ.get("HAILO_WHISPER_TIMEOUT_MS", "60000"))
-HAILO_WHISPER_DEBUG = os.environ.get("HAILO_WHISPER_DEBUG", "false").lower() in (
+WHISPER_DEBUG = os.environ.get("WHISPER_DEBUG", "false").lower() in (
     "1",
     "true",
     "yes",
 )
-HAILO_WHISPER_GAIN_DB = float(os.environ.get("HAILO_WHISPER_GAIN_DB", "0"))
+WHISPER_GAIN_DB = float(os.environ.get("WHISPER_GAIN_DB", "0"))
 
 
 def log_debug(message: str) -> None:
-    if HAILO_WHISPER_DEBUG:
-        print(f"[hailo-whisper] {message}", file=sys.stderr)
+    if WHISPER_DEBUG:
+        print(f"[whisper] {message}", file=sys.stderr)
 
 
 def summarize_waveform(audio_data: np.ndarray, sample_rate: int) -> dict:
@@ -65,28 +65,6 @@ def apply_gain(audio_data: np.ndarray, gain_db: float) -> np.ndarray:
     gain = 10 ** (gain_db / 20.0)
     adjusted = audio_data * gain
     return np.clip(adjusted, -1.0, 1.0).astype(audio_data.dtype)
-
-
-def describe_segment(segment: object) -> dict:
-    candidate_names = (
-        "text",
-        "start_sec",
-        "end_sec",
-        "start",
-        "end",
-        "tokens",
-        "words",
-    )
-    values = {}
-    for name in candidate_names:
-        if hasattr(segment, name):
-            value = getattr(segment, name)
-            values[name] = repr(value)
-    return {
-        "type": type(segment).__name__,
-        "repr": repr(segment),
-        "attrs": values,
-    }
 
 
 def resolve_hef_path(model: str, explicit_hef_path: str | None) -> Path:
@@ -194,9 +172,9 @@ def transcribe(input_audio_path: str, model: str, language: str, hef_path: str |
         audio_data, duration = convert_audio_to_wav_s16le(input_audio_path)
     log_debug(f"Audio duration seconds (pre-gain): {duration:.3f}")
     log_debug(f"Waveform stats (pre-gain): {summarize_waveform(audio_data, 16000)}")
-    if HAILO_WHISPER_GAIN_DB != 0:
-        log_debug(f"Applying gain normalization: {HAILO_WHISPER_GAIN_DB} dB")
-        audio_data = apply_gain(audio_data, HAILO_WHISPER_GAIN_DB)
+    if WHISPER_GAIN_DB != 0:
+        log_debug(f"Applying gain normalization: {WHISPER_GAIN_DB} dB")
+        audio_data = apply_gain(audio_data, WHISPER_GAIN_DB)
         log_debug(f"Waveform stats (post-gain): {summarize_waveform(audio_data, 16000)}")
     log_debug(f"Using HEF: {resolved_hef_path}")
     log_debug(f"Using model: {model} language: {language or 'auto'}")
@@ -215,9 +193,6 @@ def transcribe(input_audio_path: str, model: str, language: str, hef_path: str |
             timeout_ms=HAILO_WHISPER_TIMEOUT_MS,
         )
         log_debug(f"Segments returned: {len(segments or [])}")
-        if HAILO_WHISPER_DEBUG:
-            for index, segment in enumerate((segments or [])[:5]):
-                log_debug(f"Segment {index}: {describe_segment(segment)}")
         segment_items = []
         for segment in segments or []:
             text = getattr(segment, "text", "").strip()

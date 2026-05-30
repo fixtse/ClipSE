@@ -12,9 +12,9 @@ services:
         hailort_wheel_dir: ${HAILORT_WHEEL_DIR:-./services/whisper/hailo-packages}
     environment:
       WHISPER_PROVIDER: ${WHISPER_PROVIDER:-hailo}
+      WHISPER_DEBUG: ${WHISPER_DEBUG:-false}
       HAILO_WHISPER_MODEL: ${HAILO_WHISPER_MODEL:-whisper-base}
       HAILO_WHISPER_HEF_PATH: ${HAILO_WHISPER_HEF_PATH:-}
-      HAILO_WHISPER_DEBUG: ${HAILO_WHISPER_DEBUG:-false}
       HAILO_WHISPER_TIMEOUT_MS: ${HAILO_WHISPER_TIMEOUT_MS:-60000}
       HAILO_VLM_MODEL: ${HAILO_VLM_MODEL:-qwen2-vl-2b}
       HAILO_VLM_HEF_PATH: ${HAILO_VLM_HEF_PATH:-}

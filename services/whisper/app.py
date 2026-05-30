@@ -24,13 +24,13 @@ DEFAULT_MODEL_NAME = os.environ.get("WHISPER_MODEL", "medium")
 DEFAULT_PROVIDER = os.environ.get("WHISPER_PROVIDER", "faster-whisper")
 MODEL_DEVICE = os.environ.get("WHISPER_DEVICE", "cuda")
 MODEL_COMPUTE_TYPE = os.environ.get("WHISPER_COMPUTE_TYPE", "float16")
-HAILO_WHISPER_MODEL = os.environ.get("HAILO_WHISPER_MODEL", "whisper-base")
-HAILO_WHISPER_HEF_PATH = os.environ.get("HAILO_WHISPER_HEF_PATH", "")
-HAILO_WHISPER_DEBUG = os.environ.get("HAILO_WHISPER_DEBUG", "false").lower() in (
+WHISPER_DEBUG = os.environ.get("WHISPER_DEBUG", "false").lower() in (
     "1",
     "true",
     "yes",
 )
+HAILO_WHISPER_MODEL = os.environ.get("HAILO_WHISPER_MODEL", "whisper-base")
+HAILO_WHISPER_HEF_PATH = os.environ.get("HAILO_WHISPER_HEF_PATH", "")
 HAILO_VLM_MODEL = os.environ.get("HAILO_VLM_MODEL", "qwen2-vl-2b")
 HAILO_VLM_HEF_PATH = os.environ.get("HAILO_VLM_HEF_PATH", "")
 HAILO_VISION_MODEL = os.environ.get("HAILO_VISION_MODEL", "yolov8n")
@@ -534,9 +534,9 @@ def transcribe_with_hailo(
         hef_path=HAILO_WHISPER_HEF_PATH,
         hef_arg=f"--hef-path {HAILO_WHISPER_HEF_PATH}" if HAILO_WHISPER_HEF_PATH else "",
     )
-    if HAILO_WHISPER_DEBUG:
-        print(f"[hailo-whisper] Running command: {command}", file=sys.stderr, flush=True)
-        result = run_hailo_debug_command(command)
+    if WHISPER_DEBUG:
+        print(f"[whisper] Running command: {command}", file=sys.stderr, flush=True)
+        result = run_debug_command(command)
     else:
         result = subprocess.run(
             command,
@@ -566,15 +566,10 @@ def transcribe_with_hailo(
             "segments": [{"start": 0, "end": 0, "text": text, "words": []}],
         }
 
-    if HAILO_WHISPER_DEBUG and result.stderr:
-        parsed["debug"] = {
-            "runnerStderr": result.stderr.strip(),
-        }
-
     return validate_transcription_payload(parsed)
 
 
-def run_hailo_debug_command(command: str) -> subprocess.CompletedProcess[str]:
+def run_debug_command(command: str) -> subprocess.CompletedProcess[str]:
     process = subprocess.Popen(
         command,
         shell=True,
