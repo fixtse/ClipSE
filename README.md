@@ -135,6 +135,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5433/clipse` | PostgreSQL connection string for local tooling. Compose overrides this inside containers. |
 | `BETTER_AUTH_SECRET` | local development secret | Cookie/session signing secret. Replace for any shared or public deployment. |
 | `BETTER_AUTH_BASE_URL` | `http://localhost:3000` | Browser-facing app URL. |
+| `CLIPSE_DISABLE_AUTH` | `false` | Set to `true` to bypass sign-in and allow local anonymous access. Use only in trusted local deployments. |
 
 ### Limits
 
