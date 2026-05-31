@@ -16,7 +16,7 @@ services:
       - ${CLIPSE_RENDER_GID:-109}
     environment:
       NVIDIA_VISIBLE_DEVICES: void
-      LIBVA_DRIVER_NAME: ${CLIPSE_INTEL_LIBVA_DRIVER_NAME:-iHD}
+      LIBVA_DRIVER_NAME: iHD
 
   worker:
     runtime: runc
@@ -27,5 +27,5 @@ services:
       - ${CLIPSE_RENDER_GID:-109}
     environment:
       NVIDIA_VISIBLE_DEVICES: void
-      LIBVA_DRIVER_NAME: ${CLIPSE_INTEL_LIBVA_DRIVER_NAME:-iHD}
+      LIBVA_DRIVER_NAME: iHD
       CLIPSE_LOCAL_DETECTOR_DEVICE: ${CLIPSE_LOCAL_DETECTOR_DEVICE:-intel:gpu}

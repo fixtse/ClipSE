@@ -146,14 +146,12 @@ ls -l /dev/dri/renderD128
 docker compose -f docker-compose.yml -f docker-compose.intel.yml up -d
 ```
 
-The Intel override passes `/dev/dri/renderD128` to the app and worker containers, adds the host video/render group IDs, disables the inherited NVIDIA runtime, runs Whisper on CPU, and sets `CLIPSE_LOCAL_DETECTOR_DEVICE=intel:gpu` so local YOLO/RT-DETR focus detection uses OpenVINO on Intel GPU when available. If your host group IDs differ from the defaults, set:
+The Intel override passes `/dev/dri/renderD128` to the app and worker containers, adds the host video/render group IDs, uses the Intel media driver (`iHD`) for QSV, disables the inherited NVIDIA runtime, runs Whisper on CPU, and sets `CLIPSE_LOCAL_DETECTOR_DEVICE=intel:gpu` so local YOLO/RT-DETR focus detection uses OpenVINO on Intel GPU when available. If your host group IDs differ from the defaults, set:
 
 ```bash
 export CLIPSE_VIDEO_GID="$(getent group video | cut -d: -f3)"
 export CLIPSE_RENDER_GID="$(getent group render | cut -d: -f3)"
 ```
-
-Set `CLIPSE_INTEL_LIBVA_DRIVER_NAME` if the host needs a driver other than `iHD`.
 
 To diagnose Intel driver access from the worker container:
 
@@ -168,7 +166,6 @@ ffmpeg -hide_banner -v error -init_hw_device qsv=hw:/dev/dri/renderD128 -f lavfi
 '
 ```
 
-If `vainfo` or the `-init_hw_device qsv=...` probe fails with `va_openDriver() returns -1`, rebuild the worker image so it includes the Intel media VA drivers, or set `CLIPSE_INTEL_LIBVA_DRIVER_NAME=i965` for older Intel GPUs.
 
 ### Hailo-10H Whisper provider
 
