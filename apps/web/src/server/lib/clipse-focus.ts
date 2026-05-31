@@ -548,7 +548,7 @@ async function detectHailoVlmFocusRegions(input: {
 		});
 		if (!response.ok) {
 			console.warn(
-				`Hailo VLM focus detection failed with ${response.status}: ${await response.text()}`,
+				`Hailo focus detection failed with ${response.status}: ${await response.text()}`,
 			);
 			return null;
 		}
