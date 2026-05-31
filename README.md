@@ -109,7 +109,7 @@ Configure these inside the app settings after sign-in.
 
 | Provider | Models | Notes |
 | --- | --- | --- |
-| `faster-whisper` | `medium`, `large-v3-turbo` | Default provider. The default AI Docker service uses CUDA. |
+| `faster-whisper` | `small`, `medium`, `large-v3-turbo` | Default provider. The default AI Docker service uses CUDA. |
 | `hailo` | `whisper-tiny`, `whisper-base`, `whisper-small` | Hailo-10H inference backend through `docker-compose.hailo.yml`. |
 
 Transcription chunking can be enabled in settings. The chunk length accepts `1` to `120` minutes and defaults to `20` minutes when enabled.

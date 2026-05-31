@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CONTENT_AI_PROVIDERS } from "./content-ai-models";
 
 export const WHISPER_MODELS = [
+	"small",
 	"medium",
 	"large-v3-turbo",
 	"whisper-tiny",

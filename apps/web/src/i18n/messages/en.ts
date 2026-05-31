@@ -153,6 +153,11 @@ export const enMessages = {
 				},
 			},
 			whisperModels: {
+				small: {
+					label: "Small",
+					description:
+						"Faster GPU / CPU model for shorter jobs or lower-memory systems.",
+				},
 				medium: {
 					label: "Medium",
 					description:

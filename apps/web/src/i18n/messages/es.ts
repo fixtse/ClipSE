@@ -153,6 +153,11 @@ export const esMessages = {
 				},
 			},
 			whisperModels: {
+				small: {
+					label: "Small",
+					description:
+						"Modelo GPU / CPU mas rapido para trabajos cortos o equipos con menos memoria.",
+				},
 				medium: {
 					label: "Medium",
 					description:

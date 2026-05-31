@@ -23,6 +23,12 @@ describe("ClipSE AI settings form helpers", () => {
 	it("builds whisper model options from the supported model list", () => {
 		expect(getWhisperModelOptions(translate)).toEqual([
 			{
+				value: "small",
+				label: "translated:workspace.settings.whisperModels.small.label",
+				description:
+					"translated:workspace.settings.whisperModels.small.description",
+			},
+			{
 				value: "medium",
 				label: "translated:workspace.settings.whisperModels.medium.label",
 				description:

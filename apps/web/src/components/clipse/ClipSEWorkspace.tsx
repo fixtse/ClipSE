@@ -176,7 +176,7 @@ type WhisperProvider = ContentAiSettings["whisperProvider"];
 type SubtitleFontFamily = ContentAiSettings["subtitleFontFamily"];
 type TranscriptPanelTab = "transcript" | "chapters";
 type TranscriptExportFormat = "srt" | "md" | "vtt" | "txt" | "json";
-const FASTER_WHISPER_MODELS = ["medium", "large-v3-turbo"] as const;
+const FASTER_WHISPER_MODELS = ["small", "medium", "large-v3-turbo"] as const;
 const HAILO_WHISPER_MODELS = [
 	"whisper-tiny",
 	"whisper-base",
@@ -2576,7 +2576,7 @@ export function ClipSEWorkspace({
 															"grid h-auto min-h-9 w-full border border-white/10 bg-slate-900/75",
 															whisperProvider === "hailo"
 																? "grid-cols-1 sm:grid-cols-3"
-																: "grid-cols-2",
+																: "grid-cols-1 sm:grid-cols-3",
 														)}
 													>
 														{providerWhisperModelOptions.map((option) => (
