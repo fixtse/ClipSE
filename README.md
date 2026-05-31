@@ -176,7 +176,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `HAILO_WHISPER_MODEL` | `whisper-base` | Hailo transcription model. |
 | `HAILO_WHISPER_HEF_PATH` | empty | Optional explicit Whisper HEF path. Usually not needed when the matching `.hef` is under `./models`. |
 | `HAILO_WHISPER_TIMEOUT_MS` | `60000` | Hailo Whisper generation timeout in milliseconds. Increase for long audio. |
-| `HAILO_VLM_MODEL` | `qwen2-vl-2b` | Hailo VLM focus-detection model. |
+| `HAILO_VLM_MODEL` | `qwen2-vl-2b` | Hailo VLM focus-detection model. Supported aliases include `qwen2-vl-2b`, `qwen2.5-vl-3b`, and `qwen3-vl-2b-instruct`. |
 | `HAILO_VLM_HEF_PATH` | empty | Optional explicit VLM HEF path. Usually not needed when the matching `.hef` is under `./models`. |
 | `HAILO_VLM_FOCUS_SAMPLE_INTERVAL_SECONDS` | `1.0` | Frame sampling interval for Hailo VLM focus detection. |
 | `HAILO_VLM_FOCUS_MAX_SAMPLES` | `8` | Maximum sampled frames per focus-detection request. |
@@ -189,6 +189,8 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `HAILO_VISION_MAX_SAMPLES` | `24` | Maximum sampled frames per Hailo vision request. |
 | `HAILO_VISION_COMMAND` | runner command | Override for the Hailo vision helper command. |
 | `HAILO_VISION_FRAME_COMMAND` | empty | Optional per-frame command returning JSON detections when using a custom Hailo detector wrapper. |
+| `HAILO_FOCUS_DEBUG` | `WHISPER_DEBUG` value in Docker | Enables Hailo focus command logs in the Whisper/Hailo service. |
+| `CLIPSE_FOCUS_DEBUG` | `WHISPER_DEBUG` value in Docker | Enables web/worker logs showing Hailo focus use and local detector fallback. |
 | `HAILO_COMMAND_TIMEOUT_SECONDS` | `900` | Timeout for Hailo helper commands. |
 | `HAILO_APPS_REF` | `main` | Hailo Apps git ref used when building the Hailo image. |
 | `HAILORT_WHEEL_DIR` | `./services/whisper/hailo-packages` | Required for Hailo: directory containing one licensed `hailort-*.whl` or `pyhailort-*.whl`. If the directory also contains `hailort_*.deb`, it is installed into the private image for `libhailort`. |

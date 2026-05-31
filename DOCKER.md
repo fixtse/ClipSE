@@ -247,6 +247,16 @@ docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d whisper
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml logs -f whisper
 ```
 
+Enable focus debug logs when checking whether focus detection used Hailo or fell back to the local detector:
+
+```bash
+CLIPSE_FOCUS_DEBUG=true \
+HAILO_FOCUS_DEBUG=true \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d web worker whisper
+
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml logs -f web worker whisper
+```
+
 After the service is healthy, open ClipSE AI Settings and select `Hailo-10H` as the transcription backend. The settings dialog shows the same backend detection state from `/health`.
 
 To use Hailo vision detection for vertical short focus detection, set:
@@ -257,7 +267,7 @@ CLIPSE_FOCUS_PROVIDER=hailo-vision
 
 The worker will call the Hailo service `POST /focus-detections` before the local YOLO/RT-DETR/OpenCV detector. It passes the active short detection mode (`people`, `people_strict`, `product`, `screen`, or `object`) so the Hailo runner can use YOLO-family object detections for people/products/general objects and screen-like object or OCR/text cues for screen focus. If Hailo is unavailable or returns no detections, ClipSE falls back to the existing local detector.
 
-The Hailo image still does not redistribute vendor drivers, firmware, or proprietary HEFs. Store HEFs under `./models/hailo` and name them so they include the configured model name, such as `whisper-base.hef` for `HAILO_WHISPER_MODEL=whisper-base` or `yolov8n.hef` for `HAILO_VISION_MODEL=yolov8n`. Use `HAILO_VISION_HEF_PATH`, `HAILO_SCREEN_OCR_HEF_PATH`, `HAILO_VLM_HEF_PATH`, or `HAILO_WHISPER_HEF_PATH` only when auto-discovery is not enough. `CLIPSE_FOCUS_PROVIDER=hailo-vlm` remains available for the older face/person VLM prompt path.
+The Hailo image still does not redistribute vendor drivers, firmware, or proprietary HEFs. Store HEFs under `./models/hailo` and name them so they include the configured model name, such as `whisper-base.hef` for `HAILO_WHISPER_MODEL=whisper-base`, `yolov8n.hef` for `HAILO_VISION_MODEL=yolov8n`, or `Qwen3-VL-2B-Instruct.hef` for `HAILO_VLM_MODEL=qwen3-vl-2b-instruct`. Use `HAILO_VISION_HEF_PATH`, `HAILO_SCREEN_OCR_HEF_PATH`, `HAILO_VLM_HEF_PATH`, or `HAILO_WHISPER_HEF_PATH` only when auto-discovery is not enough. `CLIPSE_FOCUS_PROVIDER=hailo-vlm` remains available for the older face/person VLM prompt path.
 
 ### Garage initialization fails
 

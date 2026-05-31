@@ -13,6 +13,9 @@ import numpy as np
 VLM_MODEL_NAMES = {
     "qwen2-vl-2b": "qwen2-vl-2b",
     "qwen2.5-vl-3b": "qwen2.5-vl-3b",
+    "qwen3-vl-2b-instruct": "qwen3-vl-2b-instruct",
+    "qwen3-vl-2b": "qwen3-vl-2b-instruct",
+    "qwen3": "qwen3-vl-2b-instruct",
     "vlm": "vlm",
 }
 HEF_SEARCH_ROOTS = (

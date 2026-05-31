@@ -29,6 +29,10 @@ WHISPER_DEBUG = os.environ.get("WHISPER_DEBUG", "false").lower() in (
     "true",
     "yes",
 )
+HAILO_FOCUS_DEBUG = os.environ.get(
+    "HAILO_FOCUS_DEBUG",
+    os.environ.get("WHISPER_DEBUG", "false"),
+).lower() in ("1", "true", "yes")
 HAILO_WHISPER_MODEL = os.environ.get("HAILO_WHISPER_MODEL", "whisper-base")
 HAILO_WHISPER_HEF_PATH = os.environ.get("HAILO_WHISPER_HEF_PATH", "")
 HAILO_VLM_MODEL = os.environ.get("HAILO_VLM_MODEL", "qwen2-vl-2b")
@@ -430,14 +434,25 @@ async def focus_detections(
                 "--optimize-memory-on-device" if HAILO_VLM_OPTIMIZE_MEMORY_ON_DEVICE else ""
             ),
         )
-        result = subprocess.run(
-            command,
-            shell=True,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=HAILO_COMMAND_TIMEOUT_SECONDS,
-        )
+        if HAILO_FOCUS_DEBUG:
+            print(
+                "[focus] Running Hailo focus command: "
+                f"backend={normalized_detector_backend} mode={normalized_detection_mode} "
+                f"model={model or (HAILO_VISION_MODEL if use_hailo_vision else HAILO_VLM_MODEL)} "
+                f"command={command}",
+                file=sys.stderr,
+                flush=True,
+            )
+            result = run_debug_command(command)
+        else:
+            result = subprocess.run(
+                command,
+                shell=True,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=HAILO_COMMAND_TIMEOUT_SECONDS,
+            )
         if result.returncode != 0:
             raise HTTPException(
                 status_code=503,
@@ -450,7 +465,16 @@ async def focus_detections(
                 status_code=503,
                 detail="Hailo focus detection returned invalid JSON",
             ) from error
-        return validate_focus_payload(payload)
+        validated_payload = validate_focus_payload(payload)
+        if HAILO_FOCUS_DEBUG:
+            print(
+                "[focus] Hailo focus completed: "
+                f"backend={validated_payload['detectorBackend']} "
+                f"detections={len(validated_payload['detections'])}",
+                file=sys.stderr,
+                flush=True,
+            )
+        return validated_payload
     finally:
         try:
             os.unlink(temp_path)

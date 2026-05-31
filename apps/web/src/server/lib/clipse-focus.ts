@@ -6,6 +6,7 @@ import { z } from "zod";
 
 const execFileAsync = promisify(execFile);
 const DEFAULT_HAILO_SERVICE_URL = "http://whisper:8000";
+const FOCUS_DEBUG_VALUES = new Set(["1", "true", "yes"]);
 
 export interface FocusDetection {
 	timestampSeconds: number;
@@ -436,13 +437,22 @@ export async function detectFocusRegions(input: {
 }): Promise<FocusPlan> {
 	const focusProvider = readFocusProvider();
 	if (focusProvider === "hailo-vlm" || focusProvider === "hailo-vision") {
+		logFocusDebug(
+			`Attempting Hailo focus detection: provider=${focusProvider} mode=${input.detectionMode ?? "people"} start=${input.startSeconds.toFixed(3)} end=${input.endSeconds.toFixed(3)}`,
+		);
 		const hailoPlan = await detectHailoVlmFocusRegions({
 			...input,
 			provider: focusProvider,
 		});
 		if (hailoPlan && !hailoPlan.fallback) {
+			logFocusDebug(
+				`Using Hailo focus detection: backend=${hailoPlan.detectorBackend} regions=${hailoPlan.regions.length}`,
+			);
 			return hailoPlan;
 		}
+		logFocusDebug(
+			"Hailo focus detection returned no usable plan; falling back to local detector",
+		);
 	}
 
 	const scriptPath = join(
@@ -476,7 +486,7 @@ export async function detectFocusRegions(input: {
 		if (stderr) {
 			console.info(stderr.trim());
 		}
-		return buildFocusPlan({
+		const localPlan = buildFocusPlan({
 			detections: parsed.detections ?? [],
 			frameWidth: input.frameWidth,
 			frameHeight: input.frameHeight,
@@ -492,6 +502,10 @@ export async function detectFocusRegions(input: {
 					? parsed.detectorBackend
 					: "opencv",
 		});
+		logFocusDebug(
+			`Using local focus detection: backend=${localPlan.detectorBackend} fallback=${localPlan.fallback} regions=${localPlan.regions.length}`,
+		);
+		return localPlan;
 	} catch (error) {
 		console.warn("Focus detection failed; using centered crop:", error);
 		return buildFocusPlan({
@@ -541,6 +555,9 @@ async function detectHailoVlmFocusRegions(input: {
 
 		const parsed = hailoFocusResponseSchema.parse(await response.json());
 		if (parsed.detections.length === 0) {
+			logFocusDebug(
+				`Hailo focus detection produced zero detections: provider=${input.provider}`,
+			);
 			return null;
 		}
 		return buildFocusPlan({
@@ -552,7 +569,7 @@ async function detectHailoVlmFocusRegions(input: {
 			detectorBackend: parsed.detectorBackend,
 		});
 	} catch (error) {
-		console.warn("Hailo VLM focus detection failed; falling back:", error);
+		console.warn("Hailo focus detection failed; falling back:", error);
 		return null;
 	}
 }
@@ -568,4 +585,18 @@ function readFocusProvider(): "auto" | "local" | "hailo-vlm" | "hailo-vision" {
 
 function readHailoServiceUrl(): string {
 	return process.env.CLIPSE_HAILO_SERVICE_URL || DEFAULT_HAILO_SERVICE_URL;
+}
+
+function logFocusDebug(message: string): void {
+	if (
+		FOCUS_DEBUG_VALUES.has(
+			(
+				process.env.CLIPSE_FOCUS_DEBUG ||
+				process.env.WHISPER_DEBUG ||
+				""
+			).toLowerCase(),
+		)
+	) {
+		console.info(`[focus] ${message}`);
+	}
 }
