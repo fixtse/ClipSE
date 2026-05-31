@@ -81,14 +81,14 @@ services:
       WHISPER_DEVICE: cuda
       WHISPER_COMPUTE_TYPE: float16
       WHISPER_CPU_FALLBACK: "false"
-      HF_HOME: /models
-      HUGGINGFACE_HUB_CACHE: /models/hub
+      HF_HOME: /models/whisper
+      HUGGINGFACE_HUB_CACHE: /models/whisper/hub
       NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
       NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility,video}
     ports:
       - "8000:8000"
     volumes:
-      - ${WHISPER_CACHE_DIR:-./.clipse-ai-cache}:/models
+      - ${WHISPER_CACHE_DIR:-./models/whisper}:/models/whisper
     healthcheck:
       test:
         [
@@ -199,6 +199,7 @@ services:
       - worker_node_modules:/app/node_modules
       - worker_pnpm_store:/pnpm/store
       - worker_yolo_config:/clipse-yolo
+      - ./models:/models
       - ${HOST_CODEX_HOME:-${HOME}/.codex}:/root/.codex
     command: sh -c "pnpm install --store-dir /pnpm/store --no-frozen-lockfile && pnpm worker:dev"
 

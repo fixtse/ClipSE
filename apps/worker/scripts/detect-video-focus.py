@@ -84,7 +84,18 @@ def resolve_rtdetr_model_path():
 
 def resolve_model_path(model_name):
     model_path = Path(model_name)
-    if model_path.is_absolute() or model_path.exists():
+    if model_path.is_absolute():
+        return str(model_path)
+
+    if len(model_path.parts) == 1:
+        models_dir = Path(os.environ.get("CLIPSE_MODEL_CACHE_DIR", "/models/yolo"))
+        try:
+            models_dir.mkdir(parents=True, exist_ok=True)
+            return str(models_dir / model_name)
+        except Exception as error:
+            log_warning(f"Unable to prepare model cache directory {models_dir}: {error}")
+
+    if model_path.exists():
         return str(model_path)
 
     script_path = Path(__file__).resolve()

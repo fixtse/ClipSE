@@ -6,7 +6,7 @@ The default compose file pulls prebuilt images from GitHub Container Registry.
 
 ```bash
 cp .env.example .env
-mkdir -p models
+mkdir -p models/whisper models/yolo models/hailo
 docker compose up -d
 ```
 
@@ -16,7 +16,7 @@ The default stack expects an NVIDIA GPU. On a machine without NVIDIA Docker supp
 
 ```bash
 cp .env.example .env
-mkdir -p models
+mkdir -p models/whisper models/yolo models/hailo
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
 ```
 
@@ -25,7 +25,7 @@ On a machine with an Intel GPU, use the Intel override for ffmpeg QSV accelerati
 ```bash
 cp .env.example .env
 sudo apt install -y vainfo intel-media-va-driver libva-drm2 libva2
-mkdir -p models
+mkdir -p models/whisper models/yolo models/hailo
 ls -l /dev/dri/renderD128
 docker compose -f docker-compose.yml -f docker-compose.intel.yml up -d
 ```

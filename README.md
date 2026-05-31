@@ -44,7 +44,7 @@ curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/.env.example
 mkdir -p services/garage
 curl -fsSLo services/garage/garage.toml https://raw.githubusercontent.com/fixtse/ClipSE/main/services/garage/garage.toml
 cp .env.example .env
-mkdir -p models
+mkdir -p models/whisper models/yolo models/hailo
 docker compose up -d
 ```
 
@@ -167,7 +167,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `WHISPER_CPU_FALLBACK` | `false` | AI container CPU fallback toggle for faster-whisper. |
 | `NVIDIA_VISIBLE_DEVICES` | `all` | GPU devices exposed to CUDA containers. |
 | `NVIDIA_DRIVER_CAPABILITIES` | `compute,utility,video` | NVIDIA container capabilities. |
-| `WHISPER_CACHE_DIR` | `./.clipse-ai-cache` in dev compose | Host cache path for downloaded Whisper models in development. Production Docker stores model files under `./models`. |
+| `WHISPER_CACHE_DIR` | `./models/whisper` in dev compose | Host cache path for downloaded Whisper models in development. Production Docker stores model files under `./models/whisper`. |
 
 ### Hailo-10H
 
@@ -270,7 +270,7 @@ The legacy `CLIPSE_WHISPER_IMAGE` and `CLIPSE_WHISPER_HAILO_IMAGE` variables are
 Run with published images:
 
 ```bash
-mkdir -p models
+mkdir -p models/whisper models/yolo models/hailo
 docker compose up -d
 ```
 
@@ -283,7 +283,7 @@ docker run --rm --gpus all nvidia/cuda:12.6.0-base-ubuntu24.04 nvidia-smi
 Run without an NVIDIA GPU:
 
 ```bash
-mkdir -p models
+mkdir -p models/whisper models/yolo models/hailo
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
 ```
 
@@ -292,7 +292,7 @@ Run with Intel GPU ffmpeg acceleration and CPU Whisper:
 ```bash
 sudo apt install -y vainfo intel-media-va-driver libva-drm2 libva2
 ls -l /dev/dri/renderD128
-mkdir -p models
+mkdir -p models/whisper models/yolo models/hailo
 docker compose -f docker-compose.yml -f docker-compose.intel.yml up -d
 ```
 
