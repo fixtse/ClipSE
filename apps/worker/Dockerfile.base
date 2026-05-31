@@ -5,6 +5,9 @@ FROM node:24-trixie-slim
 ENV PIP_DEFAULT_TIMEOUT=300
 ENV PIP_RETRIES=10
 
+RUN sed -i 's/Components: main/Components: main contrib non-free non-free-firmware/g' /etc/apt/sources.list.d/debian.sources || \
+    sed -i 's/main/main contrib non-free non-free-firmware/g' /etc/apt/sources.list
+	
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
