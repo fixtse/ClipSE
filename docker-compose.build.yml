@@ -20,6 +20,12 @@ services:
       additional_contexts:
         hailort_wheel_dir: ${HAILORT_WHEEL_DIR:-./services/whisper/hailo-packages}
 
+  worker-base:
+    image: ${CLIPSE_WORKER_BASE_IMAGE:-clipse-worker-base:local}
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile.base
+
   app:
     build:
       context: .
@@ -32,5 +38,9 @@ services:
 
   worker:
     build:
+      args:
+        CLIPSE_WORKER_BASE_IMAGE: ${CLIPSE_WORKER_BASE_IMAGE:-clipse-worker-base:local}
       context: .
       dockerfile: apps/worker/Dockerfile
+    depends_on:
+      - worker-base

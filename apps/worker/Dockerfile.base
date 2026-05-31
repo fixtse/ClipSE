@@ -9,9 +9,9 @@ RUN apt-get update \
 	&& apt-get install -y --no-install-recommends ffmpeg ca-certificates openssl yt-dlp python3-pip python3-opencv intel-media-va-driver i965-va-driver vainfo \
 	&& rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --break-system-packages --no-cache-dir --upgrade "numpy<2" typing-extensions
+RUN python3 -m pip install --break-system-packages --no-cache-dir --upgrade typing-extensions
 
 RUN python3 -m pip install --break-system-packages --no-cache-dir torch==2.7.1+cu128 torchvision==0.22.1+cu128 --index-url https://download.pytorch.org/whl/cu128
 
-RUN python3 -m pip install --break-system-packages --no-cache-dir --upgrade "numpy<2" yt-dlp matplotlib pillow pyyaml requests scipy psutil polars openvino \
+RUN python3 -m pip install --break-system-packages --no-cache-dir yt-dlp matplotlib pillow pyyaml requests scipy psutil polars openvino \
 	&& python3 -m pip install --break-system-packages --no-cache-dir --no-deps --upgrade ultralytics-thop ultralytics
