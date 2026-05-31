@@ -15,6 +15,11 @@ export const localAnonymousModeCookieName = "clipse-local-anonymous-mode";
 export const localAnonymousModeCookieValue = "enabled";
 export const persistentSessionMaxAge = 60 * 60 * 24 * 365;
 const isAuthDisabled = env.CLIPSE_DISABLE_AUTH === "true";
+const localTrustedOrigins = [
+	"http://localhost:*",
+	"http://127.0.0.1:*",
+	"http://[::1]:*",
+];
 
 export const auth = betterAuth({
 	baseURL: isSkippingEnvValidation
@@ -23,6 +28,7 @@ export const auth = betterAuth({
 	secret: isSkippingEnvValidation
 		? (process.env.BETTER_AUTH_SECRET ?? buildTimeAuthSecret)
 		: env.BETTER_AUTH_SECRET,
+	trustedOrigins: localTrustedOrigins,
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema,

@@ -52,32 +52,37 @@ export function AuthForm({
 		event.preventDefault();
 		setIsSubmitting(true);
 
-		const formData = new FormData(event.currentTarget);
-		const email = String(formData.get("email") ?? "").trim();
-		const password = String(formData.get("password") ?? "");
-		const name = String(formData.get("name") ?? "").trim();
+		try {
+			const formData = new FormData(event.currentTarget);
+			const email = String(formData.get("email") ?? "").trim();
+			const password = String(formData.get("password") ?? "");
+			const name = String(formData.get("name") ?? "").trim();
 
-		const result = isSignUp
-			? await authClient.signUp.email({
-					email,
-					password,
-					name: name || email,
-				})
-			: await authClient.signIn.email({
-					email,
-					password,
-				});
+			const result = isSignUp
+				? await authClient.signUp.email({
+						email,
+						password,
+						name: name || email,
+					})
+				: await authClient.signIn.email({
+						email,
+						password,
+					});
 
-		setIsSubmitting(false);
+			if (result.error) {
+				toast.error(result.error.message ?? "Authentication failed");
+				return;
+			}
 
-		if (result.error) {
-			toast.error(result.error.message ?? "Authentication failed");
-			return;
+			toast.success(isSignUp ? "Account created" : "Signed in");
+			router.replace(returnTo);
+			router.refresh();
+		} catch (error) {
+			console.error("Authentication request failed", error);
+			toast.error("Authentication failed");
+		} finally {
+			setIsSubmitting(false);
 		}
-
-		toast.success(isSignUp ? "Account created" : "Signed in");
-		router.replace(returnTo);
-		router.refresh();
 	}
 
 	async function handleSkipAuth() {
@@ -106,7 +111,7 @@ export function AuthForm({
 					<CardDescription>{description}</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<form className="space-y-4" onSubmit={onSubmit}>
+					<form className="space-y-4" method="post" onSubmit={onSubmit}>
 						{isSignUp ? (
 							<div className="space-y-2">
 								<Label htmlFor="name">Name</Label>
