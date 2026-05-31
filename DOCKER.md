@@ -174,29 +174,22 @@ ffmpeg -hide_banner -v error -init_hw_device qsv=hw:/dev/dri/renderD128 -f lavfi
 ```
 
 
-### Hailo-10H Whisper provider
+### Hailo-10H AI Provider
 
-Hailo support is opt-in because the host must expose HailoRT and the accelerator device to the AI container.
+Hailo-10H is a supported AI inference backend for transcription and focus detection. It requires the matching host runtime and device access before the AI container can use it.
 
 License notes:
 
 - HailoRT's public repository states that `libhailort`, `pyhailort`, and `hailortcli` are MIT licensed, while `hailonet` is LGPL 2.1.
 - The public PCIe driver repository is GPLv2.
 - The Hailo-10H firmware license is separate and allows binary redistribution only under its stated product/use restrictions.
-- The ASUS support package `UGen300_M2_5.3.0_driver_Linux_amd64.zip` should be treated as a vendor package that users download from ASUS support, not something ClipSE redistributes.
+- The ASUS support package `UGen300_M2_5.3.0_driver_Linux_amd64.zip` should be treated as a vendor package that users download from ASUS support.
 
 The default Hailo compose override pulls `ghcr.io/fixtse/clipse-ai-hailo:latest`, which targets HailoRT 5.3. The host PCIe driver must be the same HailoRT version as the runtime in the image. If you need a newer HailoRT release, build a local/private Hailo image with matching `hailort_*.deb` and `hailort-*.whl` packages, then install the matching PCIe driver on the host.
 
-ClipSE does not redistribute the ASUS driver zip, Hailo-10H firmware, or proprietary HEFs. If your Hailo/ASUS license permits keeping licensed packages in your own registry, put these files in `services/whisper/hailo-packages/` and build a local/private image with `INSTALL_LOCAL_HAILORT=true`:
-
-- `hailort_<version>_<arch>.deb`
-- `hailort-<version>-cp311-cp311-linux_<arch>.whl`
-
-The recommended path is to keep the PyHailoRT wheel outside the repository and pass the containing directory as a build context. Put exactly one `hailort-*.whl` or `pyhailort-*.whl` in that directory:
-
 ```bash
 mkdir -p "$HOME/Downloads/hailort"
-# Put hailort-5.3.0-cp311-cp311-linux_x86_64.whl in $HOME/Downloads/hailort.
+# Put hailort-5.3.0-cp311-cp311-linux_x86_64.whl and hailort_5.3.0_amd64.deb in $HOME/Downloads/hailort.
 CLIPSE_AI_HAILO_IMAGE=clipse-ai-hailo:local \
 HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build ai
@@ -326,7 +319,8 @@ CLIPSE_FOCUS_PROVIDER=hailo-vision
 
 The worker will call the Hailo service `POST /focus-detections` before the local YOLO/RT-DETR/OpenCV detector. It passes the active short detection mode (`people`, `people_strict`, `product`, `screen`, or `object`) so the Hailo runner can use YOLO-family object detections for people/products/general objects and screen-like object or OCR/text cues for screen focus. If Hailo is unavailable or returns no detections, ClipSE falls back to the existing local detector.
 
-The Hailo image still does not redistribute vendor drivers, firmware, or proprietary HEFs. Store HEFs under `./models/hailo` and name them so they include the configured model name, such as `whisper-base.hef` for `HAILO_WHISPER_MODEL=whisper-base`, `yolov8n.hef` for `HAILO_VISION_MODEL=yolov8n`, or `Qwen3-VL-2B-Instruct.hef` for `HAILO_VLM_MODEL=qwen3-vl-2b-instruct`. Use `HAILO_VISION_HEF_PATH`, `HAILO_SCREEN_OCR_HEF_PATH`, `HAILO_VLM_HEF_PATH`, or `HAILO_WHISPER_HEF_PATH` only when auto-discovery is not enough. `CLIPSE_FOCUS_PROVIDER=hailo-vlm` remains available for the older face/person VLM prompt path.
+Store HEFs under `./models/hailo` and name them so they include the configured model name, such as `whisper-base.hef` for `HAILO_WHISPER_MODEL=whisper-base`, `yolov8n.hef` for `HAILO_VISION_MODEL=yolov8n`, or `Qwen3-VL-2B-Instruct.hef` for `HAILO_VLM_MODEL=qwen3-vl-2b-instruct`. Use `HAILO_VISION_HEF_PATH`, `HAILO_SCREEN_OCR_HEF_PATH`, `HAILO_VLM_HEF_PATH`, or `HAILO_WHISPER_HEF_PATH` only when auto-discovery is not enough. 
+`CLIPSE_FOCUS_PROVIDER=hailo-vlm` remains available for the face/person VLM prompt path, not recommended as it is resource intensive and VISION offers better performance and accuracy.
 
 ### Garage initialization fails
 

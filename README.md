@@ -22,10 +22,10 @@ The default deployment is Docker Compose and includes the web app, worker, Postg
 
 - Local account sign-up with Better Auth.
 - Video upload and URL intake through yt-dlp.
-- Whisper transcription through `faster-whisper` or optional Hailo-10H.
+- Whisper transcription through `faster-whisper` or Hailo-10H.
 - AI clip analysis through OpenAI, Gemini, OpenRouter, or Codex CLI.
 - Browser review flow with transcript context, clip timing, and render controls.
-- Vertical-short focus detection with local detectors or optional Hailo-10H vision/VLM backends.
+- Vertical-short focus detection with local detectors or Hailo-10H vision/VLM backends.
 - S3-compatible media storage using Garage by default.
 - Published GHCR images plus local build overrides.
 
@@ -110,7 +110,7 @@ Configure these inside the app settings after sign-in.
 | Provider | Models | Notes |
 | --- | --- | --- |
 | `faster-whisper` | `medium`, `large-v3-turbo` | Default provider. The default AI Docker service uses CUDA. |
-| `hailo` | `whisper-tiny`, `whisper-base`, `whisper-small` | Optional Hailo-10H provider through `docker-compose.hailo.yml`. |
+| `hailo` | `whisper-tiny`, `whisper-base`, `whisper-small` | Hailo-10H inference backend through `docker-compose.hailo.yml`. |
 
 Transcription chunking can be enabled in settings. The chunk length accepts `1` to `120` minutes and defaults to `20` minutes when enabled.
 
@@ -335,7 +335,7 @@ mkdir -p models/whisper models/yolo models/hailo
 
 The default Hailo compose override pulls `ghcr.io/fixtse/clipse-ai-hailo:latest`, which targets HailoRT 5.3. The host PCIe driver must be the same HailoRT version as the runtime in the image. If you need a newer HailoRT release, build a local Hailo image with matching `hailort_*.deb` and `hailort-*.whl` packages, then install the matching PCIe driver on the host. Put licensed HEFs under `./models/hailo`.
 
-Optional: build the Hailo image locally with a wheel directory outside the repo:
+For a custom HailoRT version, build the Hailo image locally with a wheel directory outside the repo:
 
 ```bash
 # Install the host PCIe driver package that matches the HailoRT version in your image.
@@ -379,7 +379,7 @@ CLIPSE_FOCUS_PROVIDER=hailo-vision \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
 ```
 
-Hailo HEFs are auto-discovered under `./models` by filename, so `HAILO_WHISPER_MODEL=whisper-base` can use a file such as `./models/hailo/whisper-base.hef` without setting `HAILO_WHISPER_HEF_PATH`. See [DOCKER.md](DOCKER.md#hailo-10h-whisper-provider) for advanced Hailo licensing, private image builds, WSL notes, and custom HEF path overrides.
+Hailo HEFs are auto-discovered under `./models` by filename, so `HAILO_WHISPER_MODEL=whisper-base` can use a file such as `./models/hailo/whisper-base.hef` without setting `HAILO_WHISPER_HEF_PATH`. See [DOCKER.md](DOCKER.md#hailo-10h-ai-provider) for advanced Hailo licensing, private image builds, WSL notes, and custom HEF path overrides.
 
 Check logs:
 
@@ -441,8 +441,8 @@ pnpm db:generate
 - tRPC and TanStack Query.
 - Drizzle ORM and PostgreSQL.
 - S3-compatible object storage.
-- FFmpeg and yt-dlp.
-- Whisper, faster-whisper, optional Hailo-10H.
+- FFmpeg (nvapi, intel-qsv, cpu) and yt-dlp.
+- Whisper, YOLO, OpenCV (CUDA, Hailo-10H, and CPU).
 - OpenAI-compatible AI SDK providers, Gemini, OpenRouter, and Codex CLI.
 - Tailwind CSS, shadcn/ui, and Framer Motion.
 
