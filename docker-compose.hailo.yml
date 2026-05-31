@@ -1,6 +1,6 @@
 services:
-  whisper:
-    image: ${CLIPSE_WHISPER_HAILO_IMAGE:-ghcr.io/fixtse/clipse-whisper-hailo:latest}
+  ai:
+    image: ${CLIPSE_AI_HAILO_IMAGE:-${CLIPSE_WHISPER_HAILO_IMAGE:-ghcr.io/fixtse/clipse-ai-hailo:latest}}
     runtime: runc
     environment:
       WHISPER_PROVIDER: ${WHISPER_PROVIDER:-hailo}

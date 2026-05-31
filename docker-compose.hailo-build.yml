@@ -1,6 +1,6 @@
 services:
-  whisper:
-    image: ${CLIPSE_WHISPER_HAILO_IMAGE:-clipse-whisper-hailo:local}
+  ai:
+    image: ${CLIPSE_AI_HAILO_IMAGE:-${CLIPSE_WHISPER_HAILO_IMAGE:-clipse-ai-hailo:local}}
     build:
       context: ./services/whisper
       dockerfile: Dockerfile.hailo

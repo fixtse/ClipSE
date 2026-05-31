@@ -45,7 +45,7 @@ docker compose -f docker-compose.yml -f docker-compose.intel.yml -f docker-compo
 
 - `app` - Next.js web app
 - `worker` - background transcription, analysis, and rendering worker
-- `whisper` - Whisper API service
+- `ai` - AI API service for transcription and Hailo focus detection
 - `postgres` - PostgreSQL
 - `garage` - S3-compatible object storage
 - `garage-init` - local Garage bucket/key initialization
@@ -55,8 +55,8 @@ docker compose -f docker-compose.yml -f docker-compose.intel.yml -f docker-compo
 - `ghcr.io/fixtse/clipse-app`
 - `ghcr.io/fixtse/clipse-worker`
 - `ghcr.io/fixtse/clipse-migrate`
-- `ghcr.io/fixtse/clipse-whisper`
-- `ghcr.io/fixtse/clipse-whisper-hailo`
+- `ghcr.io/fixtse/clipse-ai`
+- `ghcr.io/fixtse/clipse-ai-hailo`
 - `ghcr.io/fixtse/clipse-garage-init`
 
 Override images with:
@@ -65,11 +65,13 @@ Override images with:
 CLIPSE_APP_IMAGE=ghcr.io/example/clipse-app:sha-...
 CLIPSE_WORKER_IMAGE=ghcr.io/example/clipse-worker:sha-...
 CLIPSE_MIGRATE_IMAGE=ghcr.io/example/clipse-migrate:sha-...
-CLIPSE_WHISPER_IMAGE=ghcr.io/example/clipse-whisper:sha-...
-CLIPSE_WHISPER_HAILO_IMAGE=ghcr.io/example/clipse-whisper-hailo:sha-...
+CLIPSE_AI_IMAGE=ghcr.io/example/clipse-ai:sha-...
+CLIPSE_AI_HAILO_IMAGE=ghcr.io/example/clipse-ai-hailo:sha-...
 CLIPSE_GARAGE_INIT_IMAGE=ghcr.io/example/clipse-garage-init:sha-...
 docker compose up -d
 ```
+
+The legacy `CLIPSE_WHISPER_IMAGE` and `CLIPSE_WHISPER_HAILO_IMAGE` variables are still accepted as fallbacks, but new deployments should use the `CLIPSE_AI_*` names.
 
 ## Build Locally
 
@@ -81,7 +83,7 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 
 ## Model Files
 
-Docker mounts `./models` into the Whisper and worker containers as `/models`.
+Docker mounts `./models` into the AI and worker containers as `/models`.
 
 Use this layout:
 
@@ -103,7 +105,7 @@ For local focus detection, either keep the default `CLIPSE_YOLO_MODEL=yolo11n.pt
 docker compose ps
 docker compose logs -f app
 docker compose logs -f worker
-docker compose logs -f whisper
+docker compose logs -f ai
 ```
 
 ## Startup Checks
@@ -113,7 +115,7 @@ Compose starts the app and worker only after:
 - PostgreSQL passes `pg_isready`
 - database migrations finish successfully
 - Garage bucket/key initialization exits successfully
-- Whisper answers `GET /health`
+- AI service answers `GET /health`
 
 If `app` or `worker` is missing from `docker compose ps`, inspect the dependency that did not finish:
 
@@ -121,17 +123,17 @@ If `app` or `worker` is missing from `docker compose ps`, inspect the dependency
 docker compose ps -a
 docker compose logs db-migrate
 docker compose logs garage-init
-docker compose logs whisper
+docker compose logs ai
 ```
 
 ## Troubleshooting
 
-### Whisper is unhealthy or does not start
+### AI service is unhealthy or does not start
 
-The default Whisper service requires NVIDIA Docker support. Check the service logs and GPU runtime:
+The default AI service runs faster-whisper with CUDA and requires NVIDIA Docker support. Check the service logs and GPU runtime:
 
 ```bash
-docker compose logs whisper
+docker compose logs ai
 docker run --rm --gpus all nvidia/cuda:12.6.0-base-ubuntu24.04 nvidia-smi
 ```
 
@@ -174,7 +176,7 @@ ffmpeg -hide_banner -v error -init_hw_device qsv=hw:/dev/dri/renderD128 -f lavfi
 
 ### Hailo-10H Whisper provider
 
-Hailo support is opt-in because the host must expose HailoRT and the accelerator device to the Whisper container.
+Hailo support is opt-in because the host must expose HailoRT and the accelerator device to the AI container.
 
 License notes:
 
@@ -183,7 +185,7 @@ License notes:
 - The Hailo-10H firmware license is separate and allows binary redistribution only under its stated product/use restrictions.
 - The ASUS support package `UGen300_M2_5.3.0_driver_Linux_amd64.zip` should be treated as a vendor package that users download from ASUS support, not something ClipSE redistributes.
 
-The default Hailo compose override pulls `ghcr.io/fixtse/clipse-whisper-hailo:latest`, which targets HailoRT 5.3. The host PCIe driver must be the same HailoRT version as the runtime in the image. If you need a newer HailoRT release, build a local/private Hailo image with matching `hailort_*.deb` and `hailort-*.whl` packages, then install the matching PCIe driver on the host.
+The default Hailo compose override pulls `ghcr.io/fixtse/clipse-ai-hailo:latest`, which targets HailoRT 5.3. The host PCIe driver must be the same HailoRT version as the runtime in the image. If you need a newer HailoRT release, build a local/private Hailo image with matching `hailort_*.deb` and `hailort-*.whl` packages, then install the matching PCIe driver on the host.
 
 ClipSE does not redistribute the ASUS driver zip, Hailo-10H firmware, or proprietary HEFs. If your Hailo/ASUS license permits keeping licensed packages in your own registry, put these files in `services/whisper/hailo-packages/` and build a local/private image with `INSTALL_LOCAL_HAILORT=true`:
 
@@ -195,12 +197,12 @@ The recommended path is to keep the PyHailoRT wheel outside the repository and p
 ```bash
 mkdir -p "$HOME/Downloads/hailort"
 # Put hailort-5.3.0-cp311-cp311-linux_x86_64.whl in $HOME/Downloads/hailort.
-CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+CLIPSE_AI_HAILO_IMAGE=clipse-ai-hailo:local \
 HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build whisper
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build ai
 ```
 
-When running that local image, keep `CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local` in the environment for the `up` command.
+When running that local image, keep `CLIPSE_AI_HAILO_IMAGE=clipse-ai-hailo:local` in the environment for the `up` command.
 
 The PCIe driver package is always installed on the host, not inside the container. PyHailoRT is installed into the Hailo Docker image during the private build.
 
@@ -275,17 +277,17 @@ ClipSE's Hailo image runs `services/whisper/hailo_whisper_runner.py` automatical
 Alternative private image build with licensed packages copied into the checkout:
 
 ```bash
-CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+CLIPSE_AI_HAILO_IMAGE=clipse-ai-hailo:local \
 INSTALL_LOCAL_HAILORT=true \
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build whisper
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build ai
 ```
 
 Private image build with a wheel directory outside the repo:
 
 ```bash
-CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+CLIPSE_AI_HAILO_IMAGE=clipse-ai-hailo:local \
 HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build whisper
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build ai
 ```
 
 Health and benchmark checks:
@@ -299,9 +301,9 @@ Enable Whisper debug logs when diagnosing audio extraction or empty transcriptio
 
 ```bash
 WHISPER_DEBUG=true \
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d whisper
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d ai
 
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml logs -f whisper
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml logs -f ai
 ```
 
 Enable focus debug logs when checking whether focus detection used Hailo or fell back to the local detector:
@@ -309,9 +311,9 @@ Enable focus debug logs when checking whether focus detection used Hailo or fell
 ```bash
 CLIPSE_FOCUS_DEBUG=true \
 HAILO_FOCUS_DEBUG=true \
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d web worker whisper
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d app worker ai
 
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml logs -f web worker whisper
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml logs -f app worker ai
 ```
 
 After the service is healthy, open ClipSE AI Settings and select `Hailo-10H` as the transcription backend. The settings dialog shows the same backend detection state from `/health`.
@@ -362,7 +364,7 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 The default published ports are:
 
 - `3000` for the web app
-- `8000` for Whisper
+- `8000` for the AI service
 - `3900` and `3903` for Garage
 
 If one is already in use, stop the conflicting process or change the port mapping in `docker-compose.yml`.
@@ -415,7 +417,7 @@ HOST_CODEX_HOME="/mnt/c/Users/<you>/.codex"
 
 ## GPU Notes
 
-The default Whisper service uses NVIDIA CUDA:
+The default AI service uses NVIDIA CUDA for faster-whisper:
 
 - `WHISPER_DEVICE=cuda`
 - `WHISPER_COMPUTE_TYPE=float16`

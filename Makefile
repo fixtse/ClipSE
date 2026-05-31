@@ -3,13 +3,13 @@ SHELL := /bin/sh
 HAILO_DRIVER_ZIP ?=
 HAILO_SAMPLE_AUDIO ?= sample.wav
 
-.PHONY: dev dev-hailo dev-down worker-base-dev prod prod-hailo prod-down logs app-logs worker-logs whisper-logs hailo-logs hailo-build hailo-driver-install hailo-health hailo-benchmark db-generate db-migrate typecheck test
+.PHONY: dev dev-hailo dev-down worker-base-dev prod prod-hailo prod-down logs app-logs worker-logs ai-logs whisper-logs hailo-logs hailo-build hailo-driver-install hailo-health hailo-benchmark db-generate db-migrate typecheck test
 
 dev: worker-base-dev
 	docker compose -f docker-compose.dev.yml up --build
 
 dev-hailo: worker-base-dev
-	CLIPSE_FOCUS_PROVIDER=hailo-vision WHISPER_PROVIDER=hailo docker compose -f docker-compose.dev.yml -f docker-compose.hailo.yml up --build
+	CLIPSE_FOCUS_PROVIDER=hailo-vision WHISPER_PROVIDER=hailo docker compose -f docker-compose.dev.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml up --build
 
 worker-base-dev:
 	docker build -f apps/worker/Dockerfile.base.dev -t clipse-worker-base:dev .
@@ -35,14 +35,16 @@ app-logs:
 worker-logs:
 	docker compose -f docker-compose.dev.yml logs -f worker
 
-whisper-logs:
-	docker compose -f docker-compose.dev.yml logs -f whisper
+ai-logs:
+	docker compose -f docker-compose.dev.yml logs -f ai
+
+whisper-logs: ai-logs
 
 hailo-logs:
-	docker compose -f docker-compose.yml -f docker-compose.hailo.yml logs -f whisper
+	docker compose -f docker-compose.yml -f docker-compose.hailo.yml logs -f ai
 
 hailo-build:
-	docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+	docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build ai
 
 hailo-driver-install:
 	test -n "$(HAILO_DRIVER_ZIP)" || (echo "Set HAILO_DRIVER_ZIP=/path/to/UGen300_M2_5.3.0_driver_Linux_amd64.zip" >&2; exit 2)

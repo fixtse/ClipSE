@@ -66,9 +66,9 @@ services:
         /garage bucket allow --read --write --owner clipse --key clipse;
         echo "[garage-init] Garage bucket initialization complete."
 
-  whisper:
-    image: ${CLIPSE_WHISPER_IMAGE:-ghcr.io/fixtse/clipse-whisper:latest}
-    container_name: clipse-whisper
+  ai:
+    image: ${CLIPSE_AI_IMAGE:-${CLIPSE_WHISPER_IMAGE:-ghcr.io/fixtse/clipse-ai:latest}}
+    container_name: clipse-ai
     runtime: nvidia
     restart: unless-stopped
     environment:
@@ -121,8 +121,8 @@ services:
       CLIPSE_S3_ACCESS_KEY_ID: ${CLIPSE_S3_ACCESS_KEY_ID:-GK000000000000000000000000}
       CLIPSE_S3_SECRET_ACCESS_KEY: ${CLIPSE_S3_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
       CLIPSE_S3_FORCE_PATH_STYLE: ${CLIPSE_S3_FORCE_PATH_STYLE:-true}
-      WHISPER_SERVICE_URL: http://whisper:8000
-      CLIPSE_HAILO_SERVICE_URL: http://whisper:8000
+      WHISPER_SERVICE_URL: http://ai:8000
+      CLIPSE_HAILO_SERVICE_URL: http://ai:8000
       CLIPSE_FOCUS_PROVIDER: ${CLIPSE_FOCUS_PROVIDER:-auto}
       CLIPSE_FOCUS_DEBUG: ${CLIPSE_FOCUS_DEBUG:-${WHISPER_DEBUG:-false}}
       CLIPSE_YTDLP_COOKIES_FILE: ${CLIPSE_YTDLP_COOKIES_FILE:-}
@@ -138,7 +138,7 @@ services:
         condition: service_completed_successfully
       garage-init:
         condition: service_completed_successfully
-      whisper:
+      ai:
         condition: service_healthy
     ports:
       - "3000:3000"
@@ -161,8 +161,8 @@ services:
       CLIPSE_S3_ACCESS_KEY_ID: ${CLIPSE_S3_ACCESS_KEY_ID:-GK000000000000000000000000}
       CLIPSE_S3_SECRET_ACCESS_KEY: ${CLIPSE_S3_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
       CLIPSE_S3_FORCE_PATH_STYLE: ${CLIPSE_S3_FORCE_PATH_STYLE:-true}
-      WHISPER_SERVICE_URL: http://whisper:8000
-      CLIPSE_HAILO_SERVICE_URL: http://whisper:8000
+      WHISPER_SERVICE_URL: http://ai:8000
+      CLIPSE_HAILO_SERVICE_URL: http://ai:8000
       CLIPSE_FOCUS_PROVIDER: ${CLIPSE_FOCUS_PROVIDER:-auto}
       CLIPSE_FOCUS_DEBUG: ${CLIPSE_FOCUS_DEBUG:-${WHISPER_DEBUG:-false}}
       CLIPSE_YTDLP_COOKIES_FILE: ${CLIPSE_YTDLP_COOKIES_FILE:-}
@@ -182,7 +182,7 @@ services:
         condition: service_completed_successfully
       garage-init:
         condition: service_completed_successfully
-      whisper:
+      ai:
         condition: service_healthy
     volumes:
       - worker_yolo_config:/clipse-yolo

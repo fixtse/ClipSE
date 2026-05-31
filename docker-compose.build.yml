@@ -4,21 +4,10 @@ services:
       context: .
       dockerfile: services/garage/Dockerfile.init
 
-  whisper:
+  ai:
     build:
       context: ./services/whisper
       dockerfile: Dockerfile
-
-  whisper-hailo:
-    image: ${CLIPSE_WHISPER_HAILO_IMAGE:-clipse-whisper-hailo:local}
-    build:
-      context: ./services/whisper
-      dockerfile: Dockerfile.hailo
-      args:
-        HAILO_APPS_REF: ${HAILO_APPS_REF:-main}
-        INSTALL_LOCAL_HAILORT: ${INSTALL_LOCAL_HAILORT:-false}
-      additional_contexts:
-        hailort_wheel_dir: ${HAILORT_WHEEL_DIR:-./services/whisper/hailo-packages}
 
   worker-base:
     image: ${CLIPSE_WORKER_BASE_IMAGE:-clipse-worker-base:local}

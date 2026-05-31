@@ -70,11 +70,11 @@ services:
         /garage bucket allow --read --write --owner clipse --key clipse;
         echo "[garage-init] Garage bucket initialization complete."
 
-  whisper:
+  ai:
     build:
       context: ./services/whisper
       dockerfile: Dockerfile
-    container_name: clipse-whisper-dev
+    container_name: clipse-ai-dev
     runtime: nvidia
     environment:
       WHISPER_DEBUG: ${WHISPER_DEBUG:-false}
@@ -88,7 +88,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ${WHISPER_CACHE_DIR:-./.clipse-whisper-cache}:/models
+      - ${WHISPER_CACHE_DIR:-./.clipse-ai-cache}:/models
     healthcheck:
       test:
         [
@@ -128,8 +128,8 @@ services:
       CLIPSE_S3_ACCESS_KEY_ID: ${CLIPSE_S3_ACCESS_KEY_ID:-GK000000000000000000000000}
       CLIPSE_S3_SECRET_ACCESS_KEY: ${CLIPSE_S3_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
       CLIPSE_S3_FORCE_PATH_STYLE: ${CLIPSE_S3_FORCE_PATH_STYLE:-true}
-      WHISPER_SERVICE_URL: http://whisper:8000
-      CLIPSE_HAILO_SERVICE_URL: http://whisper:8000
+      WHISPER_SERVICE_URL: http://ai:8000
+      CLIPSE_HAILO_SERVICE_URL: http://ai:8000
       CLIPSE_FOCUS_PROVIDER: ${CLIPSE_FOCUS_PROVIDER:-auto}
       CLIPSE_FOCUS_DEBUG: ${CLIPSE_FOCUS_DEBUG:-${WHISPER_DEBUG:-false}}
       CLIPSE_YTDLP_COOKIES_FILE: ${CLIPSE_YTDLP_COOKIES_FILE:-}
@@ -144,7 +144,7 @@ services:
         condition: service_completed_successfully
       garage-init:
         condition: service_completed_successfully
-      whisper:
+      ai:
         condition: service_healthy
     ports:
       - "3000:3000"
@@ -172,8 +172,8 @@ services:
       CLIPSE_S3_ACCESS_KEY_ID: ${CLIPSE_S3_ACCESS_KEY_ID:-GK000000000000000000000000}
       CLIPSE_S3_SECRET_ACCESS_KEY: ${CLIPSE_S3_SECRET_ACCESS_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
       CLIPSE_S3_FORCE_PATH_STYLE: ${CLIPSE_S3_FORCE_PATH_STYLE:-true}
-      WHISPER_SERVICE_URL: http://whisper:8000
-      CLIPSE_HAILO_SERVICE_URL: http://whisper:8000
+      WHISPER_SERVICE_URL: http://ai:8000
+      CLIPSE_HAILO_SERVICE_URL: http://ai:8000
       CLIPSE_FOCUS_PROVIDER: ${CLIPSE_FOCUS_PROVIDER:-auto}
       CLIPSE_FOCUS_DEBUG: ${CLIPSE_FOCUS_DEBUG:-${WHISPER_DEBUG:-false}}
       CLIPSE_YTDLP_COOKIES_FILE: ${CLIPSE_YTDLP_COOKIES_FILE:-}
@@ -192,7 +192,7 @@ services:
         condition: service_completed_successfully
       garage-init:
         condition: service_completed_successfully
-      whisper:
+      ai:
         condition: service_healthy
     volumes:
       - .:/app

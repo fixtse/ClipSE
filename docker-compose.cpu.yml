@@ -1,5 +1,5 @@
 services:
-  whisper:
+  ai:
     runtime: runc
     environment:
       WHISPER_DEVICE: cpu

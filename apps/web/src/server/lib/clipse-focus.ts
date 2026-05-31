@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 
 const execFileAsync = promisify(execFile);
-const DEFAULT_HAILO_SERVICE_URL = "http://whisper:8000";
+const DEFAULT_HAILO_SERVICE_URL = "http://ai:8000";
 const FOCUS_DEBUG_VALUES = new Set(["1", "true", "yes"]);
 
 export interface FocusDetection {

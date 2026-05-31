@@ -14,10 +14,10 @@ Questions to confirm:
 
 Current implementation stance:
 
-- Public CI does not build or publish `clipse-whisper-hailo`; it must be built locally as a private image with licensed Hailo packages.
+- Public CI builds and publishes `clipse-ai-hailo` with the HailoRT packages present in `services/whisper/hailo-packages`.
 - Public images do not bake in ASUS support zips or Hailo-10H firmware.
 - Users install the host PCIe driver from the ASUS zip with `scripts/install-hailo-ugen300-driver.sh`.
-- Users provide HailoRT/PyHailoRT through host mounts or a private image built with their licensed packages.
+- Users who need a HailoRT version newer than 5.3 build a private `clipse-ai-hailo` image with matching HailoRT/PyHailoRT packages and install the matching host PCIe driver.
 
 ## ASUS Linux amd64 Driver Package
 

@@ -17,6 +17,8 @@ yarn-error.log*
 **/.clipse-media-cache
 .clipse-whisper-cache
 **/.clipse-whisper-cache
+.clipse-ai-cache
+**/.clipse-ai-cache
 models
 **/models
 coverage

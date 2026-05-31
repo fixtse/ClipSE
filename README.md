@@ -109,7 +109,7 @@ Configure these inside the app settings after sign-in.
 
 | Provider | Models | Notes |
 | --- | --- | --- |
-| `faster-whisper` | `medium`, `large-v3-turbo` | Default provider. The default Docker service uses CUDA. |
+| `faster-whisper` | `medium`, `large-v3-turbo` | Default provider. The default AI Docker service uses CUDA. |
 | `hailo` | `whisper-tiny`, `whisper-base`, `whisper-small` | Optional Hailo-10H provider through `docker-compose.hailo.yml`. |
 
 Transcription chunking can be enabled in settings. The chunk length accepts `1` to `120` minutes and defaults to `20` minutes when enabled.
@@ -160,20 +160,20 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `WHISPER_SERVICE_URL` | `http://localhost:8000` | Whisper API URL for local tooling. Compose sets this to `http://whisper:8000` inside containers. |
-| `WHISPER_PROVIDER` | `faster-whisper` | Whisper service default provider. Use `hailo` with the Hailo override. |
+| `WHISPER_SERVICE_URL` | `http://localhost:8000` | AI service transcription API URL for local tooling. Compose sets this to `http://ai:8000` inside containers. |
+| `WHISPER_PROVIDER` | `faster-whisper` | AI service default transcription provider. Use `hailo` with the Hailo override. |
 | `WHISPER_DEVICE` | `cuda` | `faster-whisper` device. Use `cpu` only with a compatible compute type and enough patience. |
 | `WHISPER_COMPUTE_TYPE` | `float16` | `faster-whisper` compute type. |
-| `WHISPER_CPU_FALLBACK` | `false` | Whisper container CPU fallback toggle. |
+| `WHISPER_CPU_FALLBACK` | `false` | AI container CPU fallback toggle for faster-whisper. |
 | `NVIDIA_VISIBLE_DEVICES` | `all` | GPU devices exposed to CUDA containers. |
 | `NVIDIA_DRIVER_CAPABILITIES` | `compute,utility,video` | NVIDIA container capabilities. |
-| `WHISPER_CACHE_DIR` | `./.clipse-whisper-cache` in dev compose | Host cache path for downloaded Whisper models in development. Production Docker stores model files under `./models`. |
+| `WHISPER_CACHE_DIR` | `./.clipse-ai-cache` in dev compose | Host cache path for downloaded Whisper models in development. Production Docker stores model files under `./models`. |
 
 ### Hailo-10H
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `CLIPSE_WHISPER_HAILO_IMAGE` | `ghcr.io/fixtse/clipse-whisper-hailo:latest` | Hailo Whisper image. Override this for a private/local Hailo image. |
+| `CLIPSE_AI_HAILO_IMAGE` | `ghcr.io/fixtse/clipse-ai-hailo:latest` | Hailo AI image. Override this for a private/local Hailo image. |
 | `HAILO_DEVICE` | `/dev/h1x-0` | Hailo accelerator device passed into the container. |
 | `HAILO_WHISPER_MODEL` | `whisper-base` | Hailo transcription model. |
 | `HAILO_WHISPER_HEF_PATH` | empty | Optional explicit Whisper HEF path. Usually not needed when the matching `.hef` is under `./models`. |
@@ -191,7 +191,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `HAILO_VISION_MAX_SAMPLES` | `0` | Maximum sampled frames per Hailo vision request. Use `0` to sample until the clip end. |
 | `HAILO_VISION_COMMAND` | runner command | Override for the Hailo vision helper command. |
 | `HAILO_VISION_FRAME_COMMAND` | empty | Optional per-frame command returning JSON detections when using a custom Hailo detector wrapper. |
-| `HAILO_FOCUS_DEBUG` | `WHISPER_DEBUG` value in Docker | Enables Hailo focus command logs in the Whisper/Hailo service. |
+| `HAILO_FOCUS_DEBUG` | `WHISPER_DEBUG` value in Docker | Enables Hailo focus command logs in the AI service. |
 | `CLIPSE_FOCUS_DEBUG` | `WHISPER_DEBUG` value in Docker | Enables web/worker logs showing Hailo focus use and local detector fallback. |
 | `HAILO_COMMAND_TIMEOUT_SECONDS` | `900` | Timeout for Hailo helper commands. |
 | `HAILO_APPS_REF` | `main` | Hailo Apps git ref used when building the Hailo image. |
@@ -204,7 +204,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | Variable | Default | Description |
 | --- | --- | --- |
 | `CLIPSE_FOCUS_PROVIDER` | `auto` | `auto`, `local`, `hailo-vlm`, or `hailo-vision`. |
-| `CLIPSE_HAILO_SERVICE_URL` | `http://localhost:8000` | Hailo focus API URL. Compose sets this to `http://whisper:8000` inside containers. |
+| `CLIPSE_HAILO_SERVICE_URL` | `http://localhost:8000` | Hailo focus API URL. Compose sets this to `http://ai:8000` inside containers. |
 | `CLIPSE_YOLO_MODEL` | `yolo11n.pt` | Local person/face focus model used by the worker. |
 | `CLIPSE_LOCAL_DETECTOR_DEVICE` | `auto` | Local YOLO/RT-DETR device preference. Use `intel:gpu` for OpenVINO on Intel GPU, `cuda` for PyTorch CUDA, or `cpu`. The Intel compose override sets `intel:gpu`. |
 
@@ -259,9 +259,11 @@ HOST_CODEX_HOME="/mnt/c/Users/<you>/.codex"
 | `CLIPSE_APP_IMAGE` | `ghcr.io/fixtse/clipse-app:latest` |
 | `CLIPSE_WORKER_IMAGE` | `ghcr.io/fixtse/clipse-worker:latest` |
 | `CLIPSE_MIGRATE_IMAGE` | `ghcr.io/fixtse/clipse-migrate:latest` |
-| `CLIPSE_WHISPER_IMAGE` | `ghcr.io/fixtse/clipse-whisper:latest` |
-| `CLIPSE_WHISPER_HAILO_IMAGE` | `ghcr.io/fixtse/clipse-whisper-hailo:latest` |
+| `CLIPSE_AI_IMAGE` | `ghcr.io/fixtse/clipse-ai:latest` |
+| `CLIPSE_AI_HAILO_IMAGE` | `ghcr.io/fixtse/clipse-ai-hailo:latest` |
 | `CLIPSE_GARAGE_INIT_IMAGE` | `ghcr.io/fixtse/clipse-garage-init:latest` |
+
+The legacy `CLIPSE_WHISPER_IMAGE` and `CLIPSE_WHISPER_HAILO_IMAGE` variables are still accepted as fallbacks, but new deployments should use the `CLIPSE_AI_*` names.
 
 ## Docker Options
 
@@ -322,7 +324,7 @@ Build app images locally:
 docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
 
-Model files live under `./models`, which is mounted into the Whisper and worker containers as `/models`:
+Model files live under `./models`, which is mounted into the AI and worker containers as `/models`:
 
 ```bash
 mkdir -p models/whisper models/yolo models/hailo
@@ -331,7 +333,7 @@ mkdir -p models/whisper models/yolo models/hailo
 # Hailo HEFs: ./models/hailo/whisper-base.hef, ./models/hailo/yolov8n.hef, etc.
 ```
 
-The default Hailo compose override pulls `ghcr.io/fixtse/clipse-whisper-hailo:latest`, which targets HailoRT 5.3. The host PCIe driver must be the same HailoRT version as the runtime in the image. If you need a newer HailoRT release, build a local Hailo image with matching `hailort_*.deb` and `hailort-*.whl` packages, then install the matching PCIe driver on the host. Put licensed HEFs under `./models/hailo`.
+The default Hailo compose override pulls `ghcr.io/fixtse/clipse-ai-hailo:latest`, which targets HailoRT 5.3. The host PCIe driver must be the same HailoRT version as the runtime in the image. If you need a newer HailoRT release, build a local Hailo image with matching `hailort_*.deb` and `hailort-*.whl` packages, then install the matching PCIe driver on the host. Put licensed HEFs under `./models/hailo`.
 
 Optional: build the Hailo image locally with a wheel directory outside the repo:
 
@@ -343,12 +345,12 @@ ls -l /dev/h1x-*
 hailortcli scan
 mkdir -p models/hailo
 # Put licensed .hef files in ./models/hailo.
-CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+CLIPSE_AI_HAILO_IMAGE=clipse-ai-hailo:local \
 HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build whisper
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build ai
 ```
 
-When running that local image, keep `CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local` in the environment for the `up` command.
+When running that local image, keep `CLIPSE_AI_HAILO_IMAGE=clipse-ai-hailo:local` in the environment for the `up` command.
 
 Run Hailo-10H without an NVIDIA GPU:
 
@@ -385,7 +387,7 @@ Check logs:
 docker compose ps
 docker compose logs -f app
 docker compose logs -f worker
-docker compose logs -f whisper
+docker compose logs -f ai
 ```
 
 See [DOCKER.md](DOCKER.md) for startup checks, troubleshooting, Hailo licensing notes, Garage reset steps, and private Hailo image builds.
@@ -428,7 +430,7 @@ pnpm db:generate
 - `apps/web/src/server/actions` - mutation-oriented server actions.
 - `apps/web/src/server/api/routers` - query-oriented tRPC endpoints.
 - `apps/worker/src/clipse-worker.ts` - transcription, analysis, and render worker.
-- `services/whisper` - Whisper and Hailo API container.
+- `services/whisper` - AI API container source for faster-whisper transcription and Hailo helpers.
 - `services/postgres/migrations` - Drizzle migrations.
 - `services/garage` - Garage object storage config and init image.
 
