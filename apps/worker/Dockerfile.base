@@ -7,7 +7,7 @@ ENV PIP_RETRIES=10
 
 RUN sed -i 's/Components: main/Components: main contrib non-free non-free-firmware/g' /etc/apt/sources.list.d/debian.sources || \
     sed -i 's/main/main contrib non-free non-free-firmware/g' /etc/apt/sources.list
-	
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
@@ -19,6 +19,7 @@ RUN apt-get update \
         python3-opencv \
         intel-media-va-driver-non-free \
         libvpl2 \
+		libmfx-gen1.2 \
         vainfo \
     && rm -rf /var/lib/apt/lists/*
 
