@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24-bookworm-slim
+FROM node:24-trixie-slim
 
 ENV PIP_DEFAULT_TIMEOUT=300
 ENV PIP_RETRIES=10
