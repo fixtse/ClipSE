@@ -11,6 +11,7 @@ export const env = createEnv({
 			.string()
 			.default("clipse-local-development-secret-change-me"),
 		BETTER_AUTH_BASE_URL: z.string().url().default("http://localhost:3000"),
+		BETTER_AUTH_TRUSTED_ORIGINS: z.string().optional(),
 		DATABASE_URL: z.string().url(),
 		NODE_ENV: z
 			.enum(["development", "test", "production"])
@@ -67,6 +68,7 @@ export const env = createEnv({
 	runtimeEnv: {
 		BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
 		BETTER_AUTH_BASE_URL: process.env.BETTER_AUTH_BASE_URL,
+		BETTER_AUTH_TRUSTED_ORIGINS: process.env.BETTER_AUTH_TRUSTED_ORIGINS,
 		DATABASE_URL: process.env.DATABASE_URL,
 		NODE_ENV: process.env.NODE_ENV,
 		WHISPER_SERVICE_URL: process.env.WHISPER_SERVICE_URL,

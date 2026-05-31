@@ -77,7 +77,7 @@ For any non-local deployment, replace the default auth secret before starting:
 openssl rand -base64 32
 ```
 
-Set the generated value as `BETTER_AUTH_SECRET` in `.env`, and set `BETTER_AUTH_BASE_URL` to the public app URL.
+Set the generated value as `BETTER_AUTH_SECRET` in `.env`, and set `BETTER_AUTH_BASE_URL` to the public app URL. If the app is reachable from additional browser origins, add them to `BETTER_AUTH_TRUSTED_ORIGINS` as a comma-separated list.
 
 ## How To Use ClipSE
 
@@ -135,6 +135,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5433/clipse` | PostgreSQL connection string for local tooling. Compose overrides this inside containers. |
 | `BETTER_AUTH_SECRET` | local development secret | Cookie/session signing secret. Replace for any shared or public deployment. |
 | `BETTER_AUTH_BASE_URL` | `http://localhost:3000` | Browser-facing app URL. |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | empty | Additional browser origins allowed to call Better Auth endpoints, separated by commas. `BETTER_AUTH_BASE_URL` is trusted automatically. |
 | `CLIPSE_DISABLE_AUTH` | `false` | Set to `true` to bypass sign-in and allow local anonymous access. Use only in trusted local deployments. |
 
 ### Limits

@@ -381,6 +381,7 @@ Copy `.env.example` to `.env` and set:
 
 - `BETTER_AUTH_SECRET` for local authentication cookies
 - `BETTER_AUTH_BASE_URL`, usually `http://localhost:3000` for local Docker
+- `BETTER_AUTH_TRUSTED_ORIGINS` for additional browser origins, separated by commas
 - `CLIPSE_DISABLE_AUTH=true` only when you want to bypass sign-in in a trusted local deployment
 
 Configure the AI provider, analysis model, and Whisper transcription model in the app settings after sign-in.

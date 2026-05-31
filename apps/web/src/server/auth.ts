@@ -20,15 +20,29 @@ const localTrustedOrigins = [
 	"http://127.0.0.1:*",
 	"http://[::1]:*",
 ];
+const authBaseUrl = isSkippingEnvValidation
+	? (process.env.BETTER_AUTH_BASE_URL ?? buildTimeAuthBaseUrl)
+	: env.BETTER_AUTH_BASE_URL;
+const configuredTrustedOrigins = (
+	isSkippingEnvValidation
+		? process.env.BETTER_AUTH_TRUSTED_ORIGINS
+		: env.BETTER_AUTH_TRUSTED_ORIGINS
+)
+	?.split(",")
+	.map((origin) => origin.trim())
+	.filter((origin) => origin.length > 0);
+const trustedOrigins = [
+	...localTrustedOrigins,
+	new URL(authBaseUrl).origin,
+	...(configuredTrustedOrigins ?? []),
+];
 
 export const auth = betterAuth({
-	baseURL: isSkippingEnvValidation
-		? (process.env.BETTER_AUTH_BASE_URL ?? buildTimeAuthBaseUrl)
-		: env.BETTER_AUTH_BASE_URL,
+	baseURL: authBaseUrl,
 	secret: isSkippingEnvValidation
 		? (process.env.BETTER_AUTH_SECRET ?? buildTimeAuthSecret)
 		: env.BETTER_AUTH_SECRET,
-	trustedOrigins: localTrustedOrigins,
+	trustedOrigins,
 	database: drizzleAdapter(db, {
 		provider: "pg",
 		schema,
