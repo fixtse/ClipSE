@@ -27,7 +27,7 @@ services:
       HAILO_SCREEN_OCR_HEF_PATH: ${HAILO_SCREEN_OCR_HEF_PATH:-}
       HAILO_OBJECT_LABELS: ${HAILO_OBJECT_LABELS:-}
       HAILO_VISION_SAMPLE_INTERVAL_SECONDS: ${HAILO_VISION_SAMPLE_INTERVAL_SECONDS:-0.35}
-      HAILO_VISION_MAX_SAMPLES: ${HAILO_VISION_MAX_SAMPLES:-24}
+      HAILO_VISION_MAX_SAMPLES: ${HAILO_VISION_MAX_SAMPLES:-0}
       HAILO_VISION_COMMAND: ${HAILO_VISION_COMMAND:-python /app/hailo_vision_focus_runner.py --video {video} --model {model} --start {start} --end {end} --detection-mode {detection_mode} --sample-interval {sample_interval} --max-samples {max_samples} {hef_arg} {ocr_hef_arg} {object_labels_arg}}
       HAILO_VISION_FRAME_COMMAND: ${HAILO_VISION_FRAME_COMMAND:-}
       HAILO_COMMAND_TIMEOUT_SECONDS: ${HAILO_COMMAND_TIMEOUT_SECONDS:-900}

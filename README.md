@@ -187,7 +187,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `HAILO_SCREEN_OCR_HEF_PATH` | empty | Optional OCR/text-detection HEF path for screen-heavy shorts. Usually not needed when the matching `.hef` is under `./models`. |
 | `HAILO_OBJECT_LABELS` | empty | Optional comma-separated COCO class ids or names for general object focus mode. Examples: `67,73` or `cell phone,book`. |
 | `HAILO_VISION_SAMPLE_INTERVAL_SECONDS` | `0.35` | Frame sampling interval for Hailo vision focus detection. |
-| `HAILO_VISION_MAX_SAMPLES` | `24` | Maximum sampled frames per Hailo vision request. |
+| `HAILO_VISION_MAX_SAMPLES` | `0` | Maximum sampled frames per Hailo vision request. Use `0` to sample until the clip end. |
 | `HAILO_VISION_COMMAND` | runner command | Override for the Hailo vision helper command. |
 | `HAILO_VISION_FRAME_COMMAND` | empty | Optional per-frame command returning JSON detections when using a custom Hailo detector wrapper. |
 | `HAILO_FOCUS_DEBUG` | `WHISPER_DEBUG` value in Docker | Enables Hailo focus command logs in the Whisper/Hailo service. |

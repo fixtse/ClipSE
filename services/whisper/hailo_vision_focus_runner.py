@@ -405,7 +405,9 @@ def run_focus_detection(args: argparse.Namespace) -> dict:
     timestamp = args.start
     sample_count = 0
     try:
-        while timestamp < args.end and sample_count < args.max_samples:
+        while timestamp < args.end and (
+            args.max_samples <= 0 or sample_count < args.max_samples
+        ):
             capture.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1000)
             ok, frame = capture.read()
             if not ok or frame is None:
@@ -473,7 +475,7 @@ def main() -> int:
     parser.add_argument("--start", type=float, required=True)
     parser.add_argument("--end", type=float, required=True)
     parser.add_argument("--sample-interval", type=float, default=0.35)
-    parser.add_argument("--max-samples", type=int, default=24)
+    parser.add_argument("--max-samples", type=int, default=0)
     args = parser.parse_args()
 
     try:
