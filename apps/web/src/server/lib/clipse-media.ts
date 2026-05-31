@@ -80,6 +80,25 @@ async function pathExists(path: string): Promise<boolean> {
 	}
 }
 
+async function hasUsableIntelQsvDevice(): Promise<boolean> {
+	return commandSucceeds("ffmpeg", [
+		"-hide_banner",
+		"-v",
+		"error",
+		"-init_hw_device",
+		"qsv=hw:/dev/dri/renderD128",
+		"-f",
+		"lavfi",
+		"-i",
+		"nullsrc=s=16x16:d=0.1",
+		"-frames:v",
+		"1",
+		"-f",
+		"null",
+		"-",
+	]);
+}
+
 async function getFfmpegHardwareSupport(): Promise<{
 	readonly hasNvidia: boolean;
 	readonly hasIntelQsv: boolean;
@@ -94,18 +113,23 @@ async function getFfmpegHardwareSupport(): Promise<{
 			nvidiaSmiAvailable,
 			nvidiaDeviceExists,
 			intelDeviceExists,
+			intelQsvDeviceAvailable,
 		] = await Promise.all([
 			runBinary("ffmpeg", ["-hide_banner", "-encoders"]).catch(() => ""),
 			commandSucceeds("nvidia-smi", ["-L"]),
 			pathExists("/dev/nvidia0"),
 			pathExists("/dev/dri/renderD128"),
+			hasUsableIntelQsvDevice(),
 		]);
 
 		return {
 			hasNvidia:
 				encoders.includes("h264_nvenc") &&
 				(nvidiaSmiAvailable || nvidiaDeviceExists),
-			hasIntelQsv: encoders.includes("h264_qsv") && intelDeviceExists,
+			hasIntelQsv:
+				encoders.includes("h264_qsv") &&
+				intelDeviceExists &&
+				intelQsvDeviceAvailable,
 		};
 	})();
 

@@ -12,8 +12,8 @@ services:
     devices:
       - /dev/dri/renderD128:/dev/dri/renderD128
     group_add:
-      - video
-      - render
+      - ${CLIPSE_VIDEO_GID:-44}
+      - ${CLIPSE_RENDER_GID:-109}
     environment:
       NVIDIA_VISIBLE_DEVICES: void
       LIBVA_DRIVER_NAME: ${CLIPSE_INTEL_LIBVA_DRIVER_NAME:-iHD}
@@ -23,8 +23,8 @@ services:
     devices:
       - /dev/dri/renderD128:/dev/dri/renderD128
     group_add:
-      - video
-      - render
+      - ${CLIPSE_VIDEO_GID:-44}
+      - ${CLIPSE_RENDER_GID:-109}
     environment:
       NVIDIA_VISIBLE_DEVICES: void
       LIBVA_DRIVER_NAME: ${CLIPSE_INTEL_LIBVA_DRIVER_NAME:-iHD}

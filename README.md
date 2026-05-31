@@ -290,7 +290,14 @@ mkdir -p models
 docker compose -f docker-compose.yml -f docker-compose.intel.yml up -d
 ```
 
-This passes `/dev/dri/renderD128` into the app and worker containers for Intel QSV encoding and requests OpenVINO Intel GPU inference for local YOLO/RT-DETR focus detection. The host must expose that render device, and the Docker user must be able to access it. If your Intel VA driver is not `iHD`, set `CLIPSE_INTEL_LIBVA_DRIVER_NAME` before starting Compose.
+This passes `/dev/dri/renderD128` into the app and worker containers for Intel QSV encoding and requests OpenVINO Intel GPU inference for local YOLO/RT-DETR focus detection. The host must expose that render device, and the Docker user must be able to access it. If your host uses different device group IDs, set `CLIPSE_RENDER_GID="$(getent group render | cut -d: -f3)"` and `CLIPSE_VIDEO_GID="$(getent group video | cut -d: -f3)"` before starting Compose. If your Intel VA driver is not `iHD`, set `CLIPSE_INTEL_LIBVA_DRIVER_NAME`.
+
+Check Intel driver access inside the worker with:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.intel.yml exec worker sh -lc \
+  'vainfo --display drm --device /dev/dri/renderD128 && ffmpeg -hide_banner -v error -init_hw_device qsv=hw:/dev/dri/renderD128 -f lavfi -i nullsrc=s=16x16:d=0.1 -frames:v 1 -f null -'
+```
 
 Run with Intel GPU ffmpeg acceleration and Hailo-10H Whisper/focus:
 
