@@ -215,6 +215,37 @@ const GOOGLE_SUBTITLE_FONT_FAMILIES = [
 const SUBTITLE_FONT_OPTIONS = Array.from(
 	new Set([...SUBTITLE_FONT_FAMILIES, ...GOOGLE_SUBTITLE_FONT_FAMILIES]),
 );
+
+function getGoogleFontStylesheetUrl(fontFamily: string): string {
+	const family = encodeURIComponent(fontFamily.trim()).replaceAll("%20", "+");
+	return `https://fonts.googleapis.com/css2?family=${family}&display=swap`;
+}
+
+function isSystemSubtitleFont(fontFamily: string): boolean {
+	return (SUBTITLE_FONT_FAMILIES as readonly string[]).includes(fontFamily);
+}
+
+function ensureGoogleFontStylesheet(fontFamily: string): void {
+	const normalizedFontFamily = fontFamily.trim();
+	if (!normalizedFontFamily || isSystemSubtitleFont(normalizedFontFamily)) {
+		return;
+	}
+
+	const id = `clipse-google-font-${normalizedFontFamily
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-|-$/g, "")}`;
+	if (document.getElementById(id)) {
+		return;
+	}
+
+	const link = document.createElement("link");
+	link.href = getGoogleFontStylesheetUrl(normalizedFontFamily);
+	link.id = id;
+	link.rel = "stylesheet";
+	document.head.appendChild(link);
+}
+
 const TRANSCRIPT_EXPORT_FORMATS: ReadonlyArray<{
 	extension: TranscriptExportFormat;
 	labelKey: `workspace.transcriptPanel.exportFormats.${TranscriptExportFormat}`;
@@ -383,6 +414,19 @@ function SubtitleFontCombobox(input: {
 			(fontFamily) =>
 				fontFamily.toLowerCase() === normalizedSearch.toLowerCase(),
 		);
+	const fontFamiliesToLoad = Array.from(
+		new Set([
+			input.value,
+			...matchingOptions,
+			...(canUseSearchValue ? [normalizedSearch] : []),
+		]),
+	);
+
+	useEffect(() => {
+		for (const fontFamily of fontFamiliesToLoad) {
+			ensureGoogleFontStylesheet(fontFamily);
+		}
+	}, [fontFamiliesToLoad]);
 
 	return (
 		<Popover onOpenChange={setOpen} open={open}>
