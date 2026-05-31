@@ -20,10 +20,6 @@ import {
 import type { RenderSubtitleCue } from "~/server/lib/clipse-subtitles";
 
 const execFileAsync = promisify(execFile);
-let ffmpegHardwareSupportPromise: Promise<{
-	readonly hasNvidia: boolean;
-	readonly hasIntelQsv: boolean;
-}> | null = null;
 
 export interface CaptionStyle {
 	readonly color: string;
@@ -57,83 +53,6 @@ async function runBinary(command: string, args: string[]): Promise<string> {
 	}
 
 	return stdout.trim();
-}
-
-async function commandSucceeds(
-	command: string,
-	args: string[],
-): Promise<boolean> {
-	try {
-		await execFileAsync(command, args, { timeout: 5_000 });
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-async function pathExists(path: string): Promise<boolean> {
-	try {
-		await stat(path);
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-async function hasUsableIntelQsvDevice(): Promise<boolean> {
-	return commandSucceeds("ffmpeg", [
-		"-hide_banner",
-		"-v",
-		"error",
-		"-init_hw_device",
-		"qsv=hw:/dev/dri/renderD128",
-		"-f",
-		"lavfi",
-		"-i",
-		"nullsrc=s=16x16:d=0.1",
-		"-frames:v",
-		"1",
-		"-f",
-		"null",
-		"-",
-	]);
-}
-
-async function getFfmpegHardwareSupport(): Promise<{
-	readonly hasNvidia: boolean;
-	readonly hasIntelQsv: boolean;
-}> {
-	if (ffmpegHardwareSupportPromise) {
-		return ffmpegHardwareSupportPromise;
-	}
-
-	ffmpegHardwareSupportPromise = (async () => {
-		const [
-			encoders,
-			nvidiaSmiAvailable,
-			nvidiaDeviceExists,
-			intelDeviceExists,
-			intelQsvDeviceAvailable,
-		] = await Promise.all([
-			runBinary("ffmpeg", ["-hide_banner", "-encoders"]).catch(() => ""),
-			commandSucceeds("nvidia-smi", ["-L"]),
-			pathExists("/dev/nvidia0"),
-			pathExists("/dev/dri/renderD128"),
-			hasUsableIntelQsvDevice(),
-		]);
-
-		return {
-			hasNvidia:
-				encoders.includes("h264_nvenc") &&
-				(nvidiaSmiAvailable || nvidiaDeviceExists),
-			hasIntelQsv:
-				encoders.includes("h264_qsv") &&
-				intelDeviceExists &&
-				intelQsvDeviceAvailable,
-		};
-	})();
-
-	return ffmpegHardwareSupportPromise;
 }
 
 function parseFfmpegTimestamp(value: string): number | null {
@@ -301,35 +220,16 @@ function getYtDlpArgs(sourceUrl: string, outputDirectory?: string): string[] {
 
 async function runFfmpegWithFallback(input: {
 	nvidiaArgs: string[];
-	intelArgs?: string[];
 	cpuArgs: string[];
 	durationSeconds?: number;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
-	const hardwareSupport = await getFfmpegHardwareSupport();
-	if (hardwareSupport.hasNvidia) {
-		try {
-			await runFfmpeg(input.nvidiaArgs, input);
-			return;
-		} catch (error) {
-			console.warn("NVIDIA ffmpeg path failed, falling back:", error);
-		}
-	} else {
-		console.info("NVIDIA ffmpeg path skipped: no NVIDIA device detected.");
+	try {
+		await runFfmpeg(input.nvidiaArgs, input);
+	} catch (error) {
+		console.warn("NVIDIA ffmpeg path failed, falling back to CPU:", error);
+		await runFfmpeg(input.cpuArgs, input);
 	}
-
-	const intelArgs =
-		input.intelArgs ?? getIntelQsvArgsFromCpuArgs(input.cpuArgs);
-	if (hardwareSupport.hasIntelQsv && intelArgs.length > 0) {
-		try {
-			await runFfmpeg(intelArgs, input);
-			return;
-		} catch (error) {
-			console.warn("Intel QSV ffmpeg path failed, falling back to CPU:", error);
-		}
-	}
-
-	await runFfmpeg(input.cpuArgs, input);
 }
 
 function getNvencOutputArgs(): string[] {
@@ -364,38 +264,6 @@ function getX264OutputArgs(): string[] {
 		"-pix_fmt",
 		"yuv420p",
 	];
-}
-
-function getIntelQsvArgsFromCpuArgs(cpuArgs: readonly string[]): string[] {
-	const videoCodecIndex = cpuArgs.findIndex(
-		(value, index) => value === "-c:v" && cpuArgs[index + 1] === "libx264",
-	);
-	if (videoCodecIndex < 0) {
-		return [];
-	}
-
-	const args: string[] = [];
-	for (let index = 0; index < cpuArgs.length; index += 1) {
-		const value = cpuArgs[index];
-		const nextValue = cpuArgs[index + 1];
-
-		if (value === "-c:v" && nextValue === "libx264") {
-			args.push("-c:v", "h264_qsv", "-global_quality", "24");
-			index += 1;
-			continue;
-		}
-
-		if ((value === "-preset" && nextValue === "veryfast") || value === "-crf") {
-			index += 1;
-			continue;
-		}
-
-		if (value) {
-			args.push(value);
-		}
-	}
-
-	return args;
 }
 
 function parseFrameRate(value: string | undefined): number | null {
@@ -1749,6 +1617,13 @@ function getGoogleFontCssUrl(fontFamily: string): string {
 	return `https://fonts.googleapis.com/css2?family=${family}&display=swap`;
 }
 
+function getGoogleFontFileExtension(fontUrl: string): string {
+	const extension = fontUrl
+		.match(/\.([a-z0-9]+)(?:[?#]|$)/i)?.[1]
+		?.toLowerCase();
+	return extension ?? "ttf";
+}
+
 function parseGoogleFontUrl(css: string): string | null {
 	const matches = Array.from(
 		css.matchAll(
@@ -1771,6 +1646,50 @@ function parseGoogleFontUrl(css: string): string | null {
 	return matches[0]?.[1] ?? null;
 }
 
+async function fetchGoogleFontCss(fontFamily: string): Promise<string> {
+	const cssUrl = getGoogleFontCssUrl(fontFamily);
+	const cssRequests: readonly RequestInit[] = [
+		{},
+		{
+			headers: {
+				"User-Agent":
+					"Mozilla/4.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)",
+			},
+		},
+		{
+			headers: {
+				"User-Agent":
+					"Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0",
+			},
+		},
+	];
+
+	const cssResults = await Promise.allSettled(
+		cssRequests.map(async (request) => {
+			const response = await fetch(cssUrl, request);
+			if (!response.ok) {
+				throw new Error(`Google Fonts returned ${response.status}`);
+			}
+			return response.text();
+		}),
+	);
+	const cssResponses = cssResults.flatMap((result) =>
+		result.status === "fulfilled" ? [result.value] : [],
+	);
+
+	const cssWithSupportedFormat = cssResponses.find((css) => {
+		const fontUrl = parseGoogleFontUrl(css);
+		return fontUrl ? getGoogleFontFileExtension(fontUrl) !== "woff2" : false;
+	});
+
+	const fallbackCss = cssResponses[0];
+	if (!fallbackCss) {
+		throw new Error("Google Fonts CSS could not be fetched");
+	}
+
+	return cssWithSupportedFormat ?? fallbackCss;
+}
+
 async function downloadAndRegisterGoogleFont(
 	fontFamily: string,
 ): Promise<void> {
@@ -1778,19 +1697,7 @@ async function downloadAndRegisterGoogleFont(
 		return;
 	}
 
-	const cssResponse = await fetch(getGoogleFontCssUrl(fontFamily), {
-		headers: {
-			// Prefer legacy formats (woff/ttf) that the font loader can handle reliably.
-			"User-Agent":
-				"Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0",
-		},
-	});
-
-	if (!cssResponse.ok) {
-		throw new Error(`Google Fonts returned ${cssResponse.status}`);
-	}
-
-	const fontUrl = parseGoogleFontUrl(await cssResponse.text());
+	const fontUrl = parseGoogleFontUrl(await fetchGoogleFontCss(fontFamily));
 	if (!fontUrl) {
 		throw new Error("Google Fonts CSS did not include a font file");
 	}
@@ -1808,7 +1715,7 @@ async function downloadAndRegisterGoogleFont(
 			`clipse-google-font-${fontFamily
 				.toLowerCase()
 				.replace(/[^a-z0-9]+/g, "-")
-				.replace(/^-|-$/g, "")}.woff2`,
+				.replace(/^-|-$/g, "")}.${getGoogleFontFileExtension(fontUrl)}`,
 		);
 		await writeFile(fontPath, fontBuffer);
 		const registeredFromPath = GlobalFonts.registerFromPath(
