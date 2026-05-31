@@ -1,0 +1,11 @@
+services:
+  whisper:
+    image: ${CLIPSE_WHISPER_HAILO_IMAGE:-clipse-whisper-hailo:local}
+    build:
+      context: ./services/whisper
+      dockerfile: Dockerfile.hailo
+      args:
+        HAILO_APPS_REF: ${HAILO_APPS_REF:-main}
+        INSTALL_LOCAL_HAILORT: ${INSTALL_LOCAL_HAILORT:-false}
+      additional_contexts:
+        hailort_wheel_dir: ${HAILORT_WHEEL_DIR:-./services/whisper/hailo-packages}

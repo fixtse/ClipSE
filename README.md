@@ -172,7 +172,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `CLIPSE_WHISPER_HAILO_IMAGE` | `clipse-whisper-hailo:local` recommended | Private Hailo image tag. Hailo requires building this image locally with a licensed PyHailoRT wheel. |
+| `CLIPSE_WHISPER_HAILO_IMAGE` | `ghcr.io/fixtse/clipse-whisper-hailo:latest` | Hailo Whisper image. Override this for a private/local Hailo image. |
 | `HAILO_DEVICE` | `/dev/h1x-0` | Hailo accelerator device passed into the container. |
 | `HAILO_WHISPER_MODEL` | `whisper-base` | Hailo transcription model. |
 | `HAILO_WHISPER_HEF_PATH` | empty | Optional explicit Whisper HEF path. Usually not needed when the matching `.hef` is under `./models`. |
@@ -194,7 +194,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `CLIPSE_FOCUS_DEBUG` | `WHISPER_DEBUG` value in Docker | Enables web/worker logs showing Hailo focus use and local detector fallback. |
 | `HAILO_COMMAND_TIMEOUT_SECONDS` | `900` | Timeout for Hailo helper commands. |
 | `HAILO_APPS_REF` | `main` | Hailo Apps git ref used when building the Hailo image. |
-| `HAILORT_WHEEL_DIR` | `./services/whisper/hailo-packages` | Required for Hailo: directory containing one licensed `hailort-*.whl` or `pyhailort-*.whl`. If the directory also contains `hailort_*.deb`, it is installed into the private image for `libhailort`. |
+| `HAILORT_WHEEL_DIR` | `./services/whisper/hailo-packages` | Local Hailo image build option: directory containing one `hailort-*.whl` or `pyhailort-*.whl`. If the directory also contains `hailort_*.deb`, it is installed into the local image for `libhailort`. |
 | `HAILO_HOST_LIB_DIR` | `/usr/lib/hailo` | Host HailoRT library mount path. |
 | `HAILO_HOST_BIN_DIR` | `/usr/bin` | Host binary mount path for `hailortcli`. |
 
@@ -259,6 +259,7 @@ HOST_CODEX_HOME="/mnt/c/Users/<you>/.codex"
 | `CLIPSE_WORKER_IMAGE` | `ghcr.io/fixtse/clipse-worker:latest` |
 | `CLIPSE_MIGRATE_IMAGE` | `ghcr.io/fixtse/clipse-migrate:latest` |
 | `CLIPSE_WHISPER_IMAGE` | `ghcr.io/fixtse/clipse-whisper:latest` |
+| `CLIPSE_WHISPER_HAILO_IMAGE` | `ghcr.io/fixtse/clipse-whisper-hailo:latest` |
 | `CLIPSE_GARAGE_INIT_IMAGE` | `ghcr.io/fixtse/clipse-garage-init:latest` |
 
 ## Docker Options
@@ -286,11 +287,13 @@ docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
 Run with Intel GPU ffmpeg acceleration and CPU Whisper:
 
 ```bash
+sudo apt install -y vainfo intel-media-va-driver libva-drm2 libva2
+ls -l /dev/dri/renderD128
 mkdir -p models
 docker compose -f docker-compose.yml -f docker-compose.intel.yml up -d
 ```
 
-This passes `/dev/dri/renderD128` into the app and worker containers for Intel QSV encoding with the Intel media driver (`iHD`) and requests OpenVINO Intel GPU inference for local YOLO/RT-DETR focus detection. The host must expose that render device, and the Docker user must be able to access it. If your host uses different device group IDs, set `CLIPSE_RENDER_GID="$(getent group render | cut -d: -f3)"` and `CLIPSE_VIDEO_GID="$(getent group video | cut -d: -f3)"` before starting Compose.
+This Intel example targets Ubuntu 26.06. The host needs VAAPI/QSV userspace packages (`vainfo`, `intel-media-va-driver`, `libva-drm2`, and `libva2`) installed so the Intel media driver (`iHD`) is available. The compose override passes `/dev/dri/renderD128` into the app and worker containers for Intel QSV encoding and requests OpenVINO Intel GPU inference for local YOLO/RT-DETR focus detection. The host must expose that render device, and the Docker user must be able to access it. If your host uses different device group IDs, set `CLIPSE_RENDER_GID="$(getent group render | cut -d: -f3)"` and `CLIPSE_VIDEO_GID="$(getent group video | cut -d: -f3)"` before starting Compose.
 
 Check Intel driver access inside the worker with:
 
@@ -302,7 +305,8 @@ docker compose -f docker-compose.yml -f docker-compose.intel.yml exec worker sh 
 Run with Intel GPU ffmpeg acceleration and Hailo-10H Whisper/focus:
 
 ```bash
-CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+sudo apt install -y vainfo intel-media-va-driver libva-drm2 libva2
+ls -l /dev/dri/renderD128
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 HAILO_DEVICE=/dev/h1x-0 \
@@ -326,11 +330,12 @@ mkdir -p models/whisper models/yolo models/hailo
 # Hailo HEFs: ./models/hailo/whisper-base.hef, ./models/hailo/yolov8n.hef, etc.
 ```
 
-Hailo requires a cloned checkout because the Hailo image must be built privately with your licensed PyHailoRT wheel. Put the wheel in a directory outside the repo, for example `$HOME/Downloads/hailort`, and put licensed HEFs under `./models/hailo`.
+The default Hailo compose override pulls `ghcr.io/fixtse/clipse-whisper-hailo:latest`, which targets HailoRT 5.3. The host PCIe driver must be the same HailoRT version as the runtime in the image. If you need a newer HailoRT release, build a local Hailo image with matching `hailort_*.deb` and `hailort-*.whl` packages, then install the matching PCIe driver on the host. Put licensed HEFs under `./models/hailo`.
 
-Build the required private Hailo image:
+Optional: build the Hailo image locally with a wheel directory outside the repo:
 
 ```bash
+# Install the host PCIe driver package that matches the HailoRT version in your image.
 ./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
 sudo reboot
 ls -l /dev/h1x-*
@@ -339,13 +344,14 @@ mkdir -p models/hailo
 # Put licensed .hef files in ./models/hailo.
 CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
-docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml -f docker-compose.hailo-build.yml build whisper
 ```
+
+When running that local image, keep `CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local` in the environment for the `up` command.
 
 Run Hailo-10H without an NVIDIA GPU:
 
 ```bash
-CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.hailo.yml up -d
@@ -355,7 +361,6 @@ curl http://localhost:8000/health
 Run Hailo-10H with Intel GPU ffmpeg acceleration:
 
 ```bash
-CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 HAILO_DEVICE=/dev/h1x-0 \
@@ -366,7 +371,6 @@ curl http://localhost:8000/health
 Run Hailo-10H on a host that also has an NVIDIA GPU:
 
 ```bash
-CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d

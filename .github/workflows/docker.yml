@@ -51,12 +51,13 @@ jobs:
             local image="$1"
             local context="$2"
             local dockerfile="$3"
+            local build_contexts="${4:-}"
 
             if [ "$matrix" != "[" ]; then
               matrix="${matrix},"
             fi
 
-            matrix="${matrix}{\"image\":\"${image}\",\"context\":\"${context}\",\"dockerfile\":\"${dockerfile}\"}"
+            matrix="${matrix}{\"image\":\"${image}\",\"context\":\"${context}\",\"dockerfile\":\"${dockerfile}\",\"build_contexts\":\"${build_contexts}\"}"
           }
 
           changed_any() {
@@ -72,6 +73,7 @@ jobs:
             append_image "clipse-worker" "." "apps/worker/Dockerfile"
             append_image "clipse-migrate" "." "services/postgres/Dockerfile.migrate"
             append_image "clipse-whisper" "./services/whisper" "./services/whisper/Dockerfile"
+            append_image "clipse-whisper-hailo" "./services/whisper" "./services/whisper/Dockerfile.hailo" "hailort_wheel_dir=./services/whisper/hailo-packages"
             append_image "clipse-garage-init" "." "services/garage/Dockerfile.init"
           elif ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null || ! git cat-file -e "${SHA}^{commit}" 2>/dev/null; then
             echo "Unable to resolve one of the comparison commits; building all images." > changed-files.txt
@@ -79,6 +81,7 @@ jobs:
             append_image "clipse-worker" "." "apps/worker/Dockerfile"
             append_image "clipse-migrate" "." "services/postgres/Dockerfile.migrate"
             append_image "clipse-whisper" "./services/whisper" "./services/whisper/Dockerfile"
+            append_image "clipse-whisper-hailo" "./services/whisper" "./services/whisper/Dockerfile.hailo" "hailort_wheel_dir=./services/whisper/hailo-packages"
             append_image "clipse-garage-init" "." "services/garage/Dockerfile.init"
           else
             git diff --name-only "$BEFORE_SHA" "$SHA" > changed-files.txt
@@ -101,6 +104,7 @@ jobs:
 
             if changed_any '^(services/whisper/)'; then
               append_image "clipse-whisper" "./services/whisper" "./services/whisper/Dockerfile"
+              append_image "clipse-whisper-hailo" "./services/whisper" "./services/whisper/Dockerfile.hailo" "hailort_wheel_dir=./services/whisper/hailo-packages"
             fi
 
             if changed_any '^(services/garage/)'; then
@@ -227,5 +231,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-contexts: ${{ matrix.build_contexts }}
           build-args: |
             CLIPSE_WORKER_BASE_IMAGE=${{ steps.worker-base.outputs.image }}
