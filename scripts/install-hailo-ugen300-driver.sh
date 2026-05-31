@@ -24,6 +24,19 @@ cleanup() {
 }
 trap cleanup EXIT
 
+patch_hailo_timer_api_if_needed() {
+  local monitor_path="/usr/src/hailort-pcie-driver/linux/vdma/monitor.c"
+
+  if [ ! -f "$monitor_path" ]; then
+    return 0
+  fi
+
+  if $SUDO grep -q 'del_timer_sync' "$monitor_path"; then
+    echo "[hailo] Patching Hailo PCIe driver for Linux timer_delete_sync API"
+    $SUDO sed -i 's/del_timer_sync/timer_delete_sync/g' "$monitor_path"
+  fi
+}
+
 echo "[hailo] Installing host build dependencies"
 $SUDO apt-get update
 $SUDO apt-get install -y build-essential dkms linux-headers-"$(uname -r)" unzip
@@ -34,7 +47,15 @@ unzip -q "$archive_path" -d "$workdir"
 deb_path="$(find "$workdir" -type f -name 'hailort-pcie-driver_*_all.deb' | head -n 1 || true)"
 if [ -n "$deb_path" ]; then
   echo "[hailo] Installing packaged PCIe driver: $deb_path"
-  $SUDO dpkg --install "$deb_path"
+  package_name="$(dpkg-deb -f "$deb_path" Package)"
+  if [ -z "$package_name" ]; then
+    echo "Unable to read package name from $deb_path" >&2
+    exit 1
+  fi
+
+  $SUDO dpkg --unpack "$deb_path"
+  patch_hailo_timer_api_if_needed
+  $SUDO dpkg --configure "$package_name"
 else
   install_script="$(find "$workdir" -type f \( -iname 'install.sh' -o -iname '*install*.sh' \) | head -n 1 || true)"
   dkms_dir="$(find "$workdir" -type f -name 'dkms.conf' -printf '%h\n' | head -n 1 || true)"
