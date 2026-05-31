@@ -390,7 +390,7 @@ See [DOCKER.md](DOCKER.md) for startup checks, troubleshooting, Hailo licensing 
 Use pnpm for local commands:
 
 ```bash
-PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm install
+pnpm install
 cp .env.example .env
 docker compose -f docker-compose.dev.yml up --build
 ```
@@ -398,17 +398,17 @@ docker compose -f docker-compose.dev.yml up --build
 Useful commands:
 
 ```bash
-PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm check
-PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm typecheck
-PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm test:unit
-PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm db:generate
-PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm db:migrate
+pnpm check
+pnpm typecheck
+pnpm test:unit
+pnpm db:generate
+pnpm db:migrate
 ```
 
 Generate migrations after changing the Drizzle schema:
 
 ```bash
-PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm db:generate
+pnpm db:generate
 ```
 
 ## Architecture

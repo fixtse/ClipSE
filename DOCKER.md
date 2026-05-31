@@ -363,7 +363,7 @@ docker compose logs db-migrate
 When schema changes are intentional, generate migration files before rebuilding images:
 
 ```bash
-PATH="/home/fixt/.nvm/versions/node/v24.13.1/bin:$PATH" pnpm db:generate
+pnpm db:generate
 docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
 ```
 
