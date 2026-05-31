@@ -31,9 +31,11 @@ export type DetectorBackend =
 	| "opencv"
 	| "rtdetr-cpu"
 	| "rtdetr-cuda"
+	| "rtdetr-openvino-intel-gpu"
 	| "hailo-vlm"
 	| "yolo-cpu"
-	| "yolo-cuda";
+	| "yolo-cuda"
+	| "yolo-openvino-intel-gpu";
 
 const hailoFocusResponseSchema = z.object({
 	detections: z.array(
@@ -495,8 +497,10 @@ export async function detectFocusRegions(input: {
 			detectorBackend:
 				parsed.detectorBackend === "yolo-cuda" ||
 				parsed.detectorBackend === "yolo-cpu" ||
+				parsed.detectorBackend === "yolo-openvino-intel-gpu" ||
 				parsed.detectorBackend === "rtdetr-cuda" ||
 				parsed.detectorBackend === "rtdetr-cpu" ||
+				parsed.detectorBackend === "rtdetr-openvino-intel-gpu" ||
 				parsed.detectorBackend === "hailo-vision" ||
 				parsed.detectorBackend === "hailo-vlm"
 					? parsed.detectorBackend

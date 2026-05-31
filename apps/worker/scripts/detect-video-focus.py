@@ -48,6 +48,7 @@ PRODUCT_CLASS_IDS = [
 CV2_IMPORT_ATTEMPTED = False
 CV2_IMPORT_RESULT = None
 CV2_IMPORT_ERROR = None
+INTEL_OPENVINO_DEVICE = "intel:gpu"
 
 
 def try_import_cv2():
@@ -114,6 +115,86 @@ def get_torch_device(detector_name):
     return device
 
 
+def get_local_detector_device_preference():
+    return os.environ.get("CLIPSE_LOCAL_DETECTOR_DEVICE", "auto").strip().lower()
+
+
+def should_try_openvino():
+    preference = get_local_detector_device_preference()
+    if preference in ("cpu", "cuda"):
+        return False
+    if preference.startswith("intel") or preference in ("openvino", INTEL_OPENVINO_DEVICE):
+        return True
+    return Path("/dev/dri/renderD128").exists()
+
+
+def get_openvino_model_path(model_path):
+    path = Path(model_path)
+    if path.is_dir() and path.name.endswith("_openvino_model"):
+        return str(path)
+
+    if path.suffix:
+        candidate = path.with_name(f"{path.stem}_openvino_model")
+        if candidate.exists():
+            return str(candidate)
+
+    return None
+
+
+def load_openvino_model(model_class, model_path, detector_name):
+    try:
+        import openvino  # noqa: F401
+    except Exception as error:
+        log_warning(f"OpenVINO is unavailable for {detector_name}: {error}")
+        return None
+
+    openvino_model_path = get_openvino_model_path(model_path)
+    try:
+        if openvino_model_path is None:
+            log_warning(
+                f"Exporting {detector_name} model to OpenVINO for Intel acceleration."
+            )
+            with redirect_stdout(sys.stderr):
+                source_model = model_class(model_path)
+                openvino_model_path = source_model.export(
+                    format="openvino",
+                    imgsz=MAX_SAMPLE_WIDTH,
+                    verbose=False,
+                )
+
+        with redirect_stdout(sys.stderr):
+            return model_class(openvino_model_path)
+    except Exception as error:
+        log_warning(f"OpenVINO setup failed for {detector_name}: {error}")
+        return None
+
+
+def load_detector_model(model_class, model_path, detector_name):
+    detector_backend_name = detector_name.lower().replace("-", "")
+    if should_try_openvino():
+        model = load_openvino_model(model_class, model_path, detector_name)
+        if model is not None:
+            return model, INTEL_OPENVINO_DEVICE, f"{detector_backend_name}-openvino-intel-gpu"
+
+        if get_local_detector_device_preference().startswith("intel"):
+            log_warning(
+                f"Intel OpenVINO was requested for {detector_name}, falling back to PyTorch."
+            )
+
+    device = get_torch_device(detector_name)
+    if device is None:
+        return None, None, None
+
+    try:
+        with redirect_stdout(sys.stderr):
+            model = model_class(model_path)
+        suffix = "cuda" if device != "cpu" else "cpu"
+        return model, device, f"{detector_backend_name}-{suffix}"
+    except Exception as error:
+        log_warning(f"{detector_name} model failed to load: {error}")
+        return None, None, None
+
+
 def detect_yolo(file_path, start_seconds, end_seconds):
     cv2 = try_import_cv2()
     if cv2 is None:
@@ -127,10 +208,6 @@ def detect_yolo(file_path, start_seconds, end_seconds):
         log_warning(f"YOLO dependencies are unavailable: {error}")
         return None
 
-    device = get_torch_device("YOLO")
-    if device is None:
-        return None
-
     try:
         capture = cv2.VideoCapture(file_path)
         if not capture.isOpened():
@@ -138,8 +215,9 @@ def detect_yolo(file_path, start_seconds, end_seconds):
             return None
 
         model_path = resolve_yolo_model_path()
-        with redirect_stdout(sys.stderr):
-            model = YOLO(model_path)
+        model, device, backend = load_detector_model(YOLO, model_path, "YOLO")
+        if model is None or device is None or backend is None:
+            return None
         detections = []
         timestamp = start_seconds
 
@@ -196,7 +274,7 @@ def detect_yolo(file_path, start_seconds, end_seconds):
         capture.release()
         return {
             "detections": detections,
-            "detectorBackend": "yolo-cuda" if device != "cpu" else "yolo-cpu",
+            "detectorBackend": backend,
         }
     except Exception as error:
         log_warning(f"YOLO detection failed: {error}")
@@ -233,10 +311,6 @@ def detect_rtdetr_products(file_path, start_seconds, end_seconds):
         log_warning(f"RT-DETR dependencies are unavailable: {error}")
         return None
 
-    device = get_torch_device("RT-DETR")
-    if device is None:
-        return None
-
     try:
         capture = cv2.VideoCapture(file_path)
         if not capture.isOpened():
@@ -244,8 +318,9 @@ def detect_rtdetr_products(file_path, start_seconds, end_seconds):
             return None
 
         model_path = resolve_rtdetr_model_path()
-        with redirect_stdout(sys.stderr):
-            model = RTDETR(model_path)
+        model, device, backend = load_detector_model(RTDETR, model_path, "RT-DETR")
+        if model is None or device is None or backend is None:
+            return None
         detections = []
         previous_gray = None
         timestamp = start_seconds
@@ -320,7 +395,7 @@ def detect_rtdetr_products(file_path, start_seconds, end_seconds):
         capture.release()
         return {
             "detections": detections,
-            "detectorBackend": "rtdetr-cuda" if device != "cpu" else "rtdetr-cpu",
+            "detectorBackend": backend,
         }
     except Exception as error:
         log_warning(f"RT-DETR product detection failed: {error}")

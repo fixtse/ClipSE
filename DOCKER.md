@@ -20,6 +20,25 @@ mkdir -p models
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
 ```
 
+On a machine with an Intel GPU, use the Intel override for ffmpeg QSV acceleration:
+
+```bash
+cp .env.example .env
+mkdir -p models
+ls -l /dev/dri/renderD128
+docker compose -f docker-compose.yml -f docker-compose.intel.yml up -d
+```
+
+For Intel QSV rendering plus Hailo-10H transcription or focus detection, build the private Hailo image first, then run with the Intel override before the Hailo override:
+
+```bash
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+WHISPER_PROVIDER=hailo \
+CLIPSE_FOCUS_PROVIDER=hailo-vision \
+HAILO_DEVICE=/dev/h1x-0 \
+docker compose -f docker-compose.yml -f docker-compose.intel.yml -f docker-compose.hailo.yml up -d
+```
+
 ## Services
 
 - `app` - Next.js web app
@@ -120,6 +139,15 @@ If the host has no NVIDIA GPU, use:
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
 ```
 
+If the host has an Intel GPU and exposes the render node, use the Intel override for ffmpeg QSV acceleration:
+
+```bash
+ls -l /dev/dri/renderD128
+docker compose -f docker-compose.yml -f docker-compose.intel.yml up -d
+```
+
+The Intel override passes `/dev/dri/renderD128` to the app and worker containers, adds the `video` and `render` groups, disables the inherited NVIDIA runtime, runs Whisper on CPU, and sets `CLIPSE_LOCAL_DETECTOR_DEVICE=intel:gpu` so local YOLO/RT-DETR focus detection uses OpenVINO on Intel GPU when available. Set `CLIPSE_INTEL_LIBVA_DRIVER_NAME` if the host needs a driver other than `iHD`.
+
 ### Hailo-10H Whisper provider
 
 Hailo support is opt-in because the host must expose HailoRT and the accelerator device to the Whisper container.
@@ -212,6 +240,26 @@ CLIPSE_FOCUS_PROVIDER=hailo-vision \
 HAILO_DEVICE=/dev/h1x-0 \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
 ```
+
+On an Intel GPU host, use the Intel override instead of the CPU override so ffmpeg can use QSV while Hailo handles transcription or focus detection:
+
+```bash
+ls -l /dev/dri/renderD128
+ls -l /dev/h1x-*
+hailortcli scan
+
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+HAILORT_WHEEL_DIR="$HOME/Downloads/hailort" \
+docker compose -f docker-compose.yml -f docker-compose.hailo.yml build whisper
+
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+WHISPER_PROVIDER=hailo \
+CLIPSE_FOCUS_PROVIDER=hailo-vision \
+HAILO_DEVICE=/dev/h1x-0 \
+docker compose -f docker-compose.yml -f docker-compose.intel.yml -f docker-compose.hailo.yml up -d
+```
+
+Keep `docker-compose.hailo.yml` last in that command. The Intel file passes `/dev/dri/renderD128` to app/worker, requests OpenVINO Intel GPU inference for local YOLO/RT-DETR fallback, and sets CPU Whisper defaults, while the Hailo file must override Whisper back to the Hailo provider.
 
 ClipSE's Hailo image runs `services/whisper/hailo_whisper_runner.py` automatically. It converts incoming audio to mono 16 kHz little-endian float32 and calls PyHailoRT `Speech2Text.generate_all_segments`. Set `HAILO_HOST_LIB_DIR` or `HAILO_HOST_BIN_DIR` only if your host HailoRT install uses different library or `hailortcli` paths. For ASUS' amd64 zip, the kernel driver is compiled on the host by the script above; PyHailoRT should be installed into the Docker image through a licensed private build.
 

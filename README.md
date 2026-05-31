@@ -38,6 +38,7 @@ mkdir clipse
 cd clipse
 curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/docker-compose.yml
 curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/docker-compose.cpu.yml
+curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/docker-compose.intel.yml
 curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/docker-compose.hailo.yml
 curl -fsSLO https://raw.githubusercontent.com/fixtse/ClipSE/main/.env.example
 mkdir -p services/garage
@@ -204,6 +205,7 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 | `CLIPSE_FOCUS_PROVIDER` | `auto` | `auto`, `local`, `hailo-vlm`, or `hailo-vision`. |
 | `CLIPSE_HAILO_SERVICE_URL` | `http://localhost:8000` | Hailo focus API URL. Compose sets this to `http://whisper:8000` inside containers. |
 | `CLIPSE_YOLO_MODEL` | `yolo11n.pt` | Local person/face focus model used by the worker. |
+| `CLIPSE_LOCAL_DETECTOR_DEVICE` | `auto` | Local YOLO/RT-DETR device preference. Use `intel:gpu` for OpenVINO on Intel GPU, `cuda` for PyTorch CUDA, or `cpu`. The Intel compose override sets `intel:gpu`. |
 
 Focus provider modes:
 
@@ -281,6 +283,27 @@ mkdir -p models
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
 ```
 
+Run with Intel GPU ffmpeg acceleration and CPU Whisper:
+
+```bash
+mkdir -p models
+docker compose -f docker-compose.yml -f docker-compose.intel.yml up -d
+```
+
+This passes `/dev/dri/renderD128` into the app and worker containers for Intel QSV encoding and requests OpenVINO Intel GPU inference for local YOLO/RT-DETR focus detection. The host must expose that render device, and the Docker user must be able to access it. If your Intel VA driver is not `iHD`, set `CLIPSE_INTEL_LIBVA_DRIVER_NAME` before starting Compose.
+
+Run with Intel GPU ffmpeg acceleration and Hailo-10H Whisper/focus:
+
+```bash
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+WHISPER_PROVIDER=hailo \
+CLIPSE_FOCUS_PROVIDER=hailo-vision \
+HAILO_DEVICE=/dev/h1x-0 \
+docker compose -f docker-compose.yml -f docker-compose.intel.yml -f docker-compose.hailo.yml up -d
+```
+
+Use this setup on Intel hosts where `/dev/dri/renderD128` handles ffmpeg QSV rendering and local OpenVINO YOLO/RT-DETR fallback, while `/dev/h1x-0` handles Hailo transcription or focus detection. Keep `docker-compose.hailo.yml` last so its Whisper provider settings override the CPU Whisper defaults from the Intel file.
+
 Build app images locally:
 
 ```bash
@@ -319,6 +342,17 @@ CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.hailo.yml up -d
+curl http://localhost:8000/health
+```
+
+Run Hailo-10H with Intel GPU ffmpeg acceleration:
+
+```bash
+CLIPSE_WHISPER_HAILO_IMAGE=clipse-whisper-hailo:local \
+WHISPER_PROVIDER=hailo \
+CLIPSE_FOCUS_PROVIDER=hailo-vision \
+HAILO_DEVICE=/dev/h1x-0 \
+docker compose -f docker-compose.yml -f docker-compose.intel.yml -f docker-compose.hailo.yml up -d
 curl http://localhost:8000/health
 ```
 

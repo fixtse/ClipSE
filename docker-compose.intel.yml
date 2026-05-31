@@ -1,0 +1,31 @@
+services:
+  whisper:
+    runtime: runc
+    environment:
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
+      WHISPER_CPU_FALLBACK: "true"
+      NVIDIA_VISIBLE_DEVICES: void
+      WHISPER_DEBUG: ${WHISPER_DEBUG:-false}
+
+  app:
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    group_add:
+      - video
+      - render
+    environment:
+      NVIDIA_VISIBLE_DEVICES: void
+      LIBVA_DRIVER_NAME: ${CLIPSE_INTEL_LIBVA_DRIVER_NAME:-iHD}
+
+  worker:
+    runtime: runc
+    devices:
+      - /dev/dri/renderD128:/dev/dri/renderD128
+    group_add:
+      - video
+      - render
+    environment:
+      NVIDIA_VISIBLE_DEVICES: void
+      LIBVA_DRIVER_NAME: ${CLIPSE_INTEL_LIBVA_DRIVER_NAME:-iHD}
+      CLIPSE_LOCAL_DETECTOR_DEVICE: ${CLIPSE_LOCAL_DETECTOR_DEVICE:-intel:gpu}

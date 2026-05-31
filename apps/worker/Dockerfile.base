@@ -13,5 +13,5 @@ RUN python3 -m pip install --break-system-packages --no-cache-dir --upgrade "num
 
 RUN python3 -m pip install --break-system-packages --no-cache-dir torch==2.7.1+cu128 torchvision==0.22.1+cu128 --index-url https://download.pytorch.org/whl/cu128
 
-RUN python3 -m pip install --break-system-packages --no-cache-dir --upgrade "numpy<2" yt-dlp matplotlib pillow pyyaml requests scipy psutil polars \
+RUN python3 -m pip install --break-system-packages --no-cache-dir --upgrade "numpy<2" yt-dlp matplotlib pillow pyyaml requests scipy psutil polars openvino \
 	&& python3 -m pip install --break-system-packages --no-cache-dir --no-deps --upgrade ultralytics-thop ultralytics

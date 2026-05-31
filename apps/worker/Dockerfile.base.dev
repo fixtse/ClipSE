@@ -13,5 +13,5 @@ RUN --mount=type=tmpfs,target=/tmp --mount=type=cache,target=/root/.cache/pip py
 
 RUN --mount=type=tmpfs,target=/tmp --mount=type=cache,target=/root/.cache/pip python3 -m pip install --break-system-packages torch==2.7.1+cu128 torchvision==0.22.1+cu128 --index-url https://download.pytorch.org/whl/cu128
 
-RUN --mount=type=tmpfs,target=/tmp --mount=type=cache,target=/root/.cache/pip python3 -m pip install --break-system-packages --upgrade "numpy<2" yt-dlp matplotlib pillow pyyaml requests scipy psutil polars \
+RUN --mount=type=tmpfs,target=/tmp --mount=type=cache,target=/root/.cache/pip python3 -m pip install --break-system-packages --upgrade "numpy<2" yt-dlp matplotlib pillow pyyaml requests scipy psutil polars openvino \
 	&& python3 -m pip install --break-system-packages --no-deps --upgrade ultralytics-thop ultralytics

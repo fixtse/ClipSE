@@ -20,6 +20,10 @@ import {
 import type { RenderSubtitleCue } from "~/server/lib/clipse-subtitles";
 
 const execFileAsync = promisify(execFile);
+let ffmpegHardwareSupportPromise: Promise<{
+	readonly hasNvidia: boolean;
+	readonly hasIntelQsv: boolean;
+}> | null = null;
 
 export interface CaptionStyle {
 	readonly color: string;
@@ -53,6 +57,59 @@ async function runBinary(command: string, args: string[]): Promise<string> {
 	}
 
 	return stdout.trim();
+}
+
+async function commandSucceeds(
+	command: string,
+	args: string[],
+): Promise<boolean> {
+	try {
+		await execFileAsync(command, args, { timeout: 5_000 });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+async function pathExists(path: string): Promise<boolean> {
+	try {
+		await stat(path);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+async function getFfmpegHardwareSupport(): Promise<{
+	readonly hasNvidia: boolean;
+	readonly hasIntelQsv: boolean;
+}> {
+	if (ffmpegHardwareSupportPromise) {
+		return ffmpegHardwareSupportPromise;
+	}
+
+	ffmpegHardwareSupportPromise = (async () => {
+		const [
+			encoders,
+			nvidiaSmiAvailable,
+			nvidiaDeviceExists,
+			intelDeviceExists,
+		] = await Promise.all([
+			runBinary("ffmpeg", ["-hide_banner", "-encoders"]).catch(() => ""),
+			commandSucceeds("nvidia-smi", ["-L"]),
+			pathExists("/dev/nvidia0"),
+			pathExists("/dev/dri/renderD128"),
+		]);
+
+		return {
+			hasNvidia:
+				encoders.includes("h264_nvenc") &&
+				(nvidiaSmiAvailable || nvidiaDeviceExists),
+			hasIntelQsv: encoders.includes("h264_qsv") && intelDeviceExists,
+		};
+	})();
+
+	return ffmpegHardwareSupportPromise;
 }
 
 function parseFfmpegTimestamp(value: string): number | null {
@@ -220,16 +277,35 @@ function getYtDlpArgs(sourceUrl: string, outputDirectory?: string): string[] {
 
 async function runFfmpegWithFallback(input: {
 	nvidiaArgs: string[];
+	intelArgs?: string[];
 	cpuArgs: string[];
 	durationSeconds?: number;
 	onProgress?: (progress: number) => Promise<void>;
 }): Promise<void> {
-	try {
-		await runFfmpeg(input.nvidiaArgs, input);
-	} catch (error) {
-		console.warn("NVIDIA ffmpeg path failed, falling back to CPU:", error);
-		await runFfmpeg(input.cpuArgs, input);
+	const hardwareSupport = await getFfmpegHardwareSupport();
+	if (hardwareSupport.hasNvidia) {
+		try {
+			await runFfmpeg(input.nvidiaArgs, input);
+			return;
+		} catch (error) {
+			console.warn("NVIDIA ffmpeg path failed, falling back:", error);
+		}
+	} else {
+		console.info("NVIDIA ffmpeg path skipped: no NVIDIA device detected.");
 	}
+
+	const intelArgs =
+		input.intelArgs ?? getIntelQsvArgsFromCpuArgs(input.cpuArgs);
+	if (hardwareSupport.hasIntelQsv && intelArgs.length > 0) {
+		try {
+			await runFfmpeg(intelArgs, input);
+			return;
+		} catch (error) {
+			console.warn("Intel QSV ffmpeg path failed, falling back to CPU:", error);
+		}
+	}
+
+	await runFfmpeg(input.cpuArgs, input);
 }
 
 function getNvencOutputArgs(): string[] {
@@ -264,6 +340,38 @@ function getX264OutputArgs(): string[] {
 		"-pix_fmt",
 		"yuv420p",
 	];
+}
+
+function getIntelQsvArgsFromCpuArgs(cpuArgs: readonly string[]): string[] {
+	const videoCodecIndex = cpuArgs.findIndex(
+		(value, index) => value === "-c:v" && cpuArgs[index + 1] === "libx264",
+	);
+	if (videoCodecIndex < 0) {
+		return [];
+	}
+
+	const args: string[] = [];
+	for (let index = 0; index < cpuArgs.length; index += 1) {
+		const value = cpuArgs[index];
+		const nextValue = cpuArgs[index + 1];
+
+		if (value === "-c:v" && nextValue === "libx264") {
+			args.push("-c:v", "h264_qsv", "-global_quality", "24");
+			index += 1;
+			continue;
+		}
+
+		if ((value === "-preset" && nextValue === "veryfast") || value === "-crf") {
+			index += 1;
+			continue;
+		}
+
+		if (value) {
+			args.push(value);
+		}
+	}
+
+	return args;
 }
 
 function parseFrameRate(value: string | undefined): number | null {
