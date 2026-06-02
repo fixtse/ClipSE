@@ -213,6 +213,9 @@ Pure Linux host setup:
 
 ```bash
 # Install the HailoRT PCIe driver package that matches the HailoRT version in your image.
+curl -fsSL "https://raw.githubusercontent.com/fixtse/ClipSE/main/scripts/install-hailo-ugen300-driver.sh" \
+  -o scripts/install-hailo-ugen300-driver.sh
+chmod +x scripts/install-hailo-ugen300-driver.sh
 ./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
 sudo reboot
 
@@ -243,6 +246,15 @@ If `/dev/h1x-0` is not visible inside WSL, Docker cannot pass the accelerator th
 On a host that also has an NVIDIA GPU, omit the CPU override:
 
 ```bash
+curl -fsSL "https://raw.githubusercontent.com/fixtse/ClipSE/main/scripts/install-hailo-ugen300-driver.sh" \
+  -o scripts/install-hailo-ugen300-driver.sh
+chmod +x scripts/install-hailo-ugen300-driver.sh
+./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
+sudo reboot
+
+ls -l /dev/h1x-*
+hailortcli scan
+
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 HAILO_DEVICE=/dev/h1x-0 \
@@ -253,6 +265,12 @@ On an Intel GPU host, use the Intel override instead of the CPU override so ffmp
 
 ```bash
 sudo apt install -y vainfo intel-media-va-driver libva-drm2 libva2
+curl -fsSL "https://raw.githubusercontent.com/fixtse/ClipSE/main/scripts/install-hailo-ugen300-driver.sh" \
+  -o scripts/install-hailo-ugen300-driver.sh
+chmod +x scripts/install-hailo-ugen300-driver.sh
+./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
+sudo reboot
+
 ls -l /dev/dri/renderD128
 ls -l /dev/h1x-*
 hailortcli scan

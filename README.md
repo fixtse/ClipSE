@@ -112,6 +112,16 @@ Configure these inside the app settings after sign-in.
 | `faster-whisper` | `small`, `medium`, `large-v3-turbo` | Default provider. The default AI Docker service uses CUDA. |
 | `hailo` | `whisper-tiny`, `whisper-base`, `whisper-small` | Hailo-10H inference backend through `docker-compose.hailo.yml`. |
 
+Hailo host setup requires the UGen300/Hailo PCIe driver before Compose can pass `/dev/h1x-0` into the container:
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/fixtse/ClipSE/main/scripts/install-hailo-ugen300-driver.sh" \
+  -o scripts/install-hailo-ugen300-driver.sh
+chmod +x scripts/install-hailo-ugen300-driver.sh
+./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
+sudo reboot
+```
+
 Transcription chunking can be enabled in settings. The chunk length accepts `1` to `120` minutes and defaults to `20` minutes when enabled.
 
 ### Render Options
@@ -334,12 +344,15 @@ mkdir -p models/whisper models/yolo models/hailo
 # Hailo HEFs: ./models/hailo/whisper-base.hef, ./models/hailo/yolov8n.hef, etc.
 ```
 
-The default Hailo compose override pulls `ghcr.io/fixtse/clipse-ai-hailo:latest`, which targets HailoRT 5.3. The host PCIe driver must be the same HailoRT version as the runtime in the image. If you need a newer HailoRT release, build a local Hailo image with matching `hailort_*.deb` and `hailort-*.whl` packages, then install the matching PCIe driver on the host. Put licensed HEFs under `./models/hailo`.
+The default Hailo compose override pulls `ghcr.io/fixtse/clipse-ai-hailo:latest`, which targets HailoRT 5.3. The host PCIe driver must be the same HailoRT version as the runtime in the image. If you need a newer HailoRT release, build a local Hailo image with matching `hailort_*.deb` and `hailort-*.whl` packages, then install the matching PCIe driver on the host. Put HEFs models under `./models/hailo`.
 
 For a custom HailoRT version, build the Hailo image locally with a wheel directory outside the repo:
 
 ```bash
 # Install the host PCIe driver package that matches the HailoRT version in your image.
+curl -fsSL "https://raw.githubusercontent.com/fixtse/ClipSE/main/scripts/install-hailo-ugen300-driver.sh" \
+  -o scripts/install-hailo-ugen300-driver.sh
+chmod +x scripts/install-hailo-ugen300-driver.sh
 ./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
 sudo reboot
 ls -l /dev/h1x-*
@@ -356,6 +369,14 @@ When running that local image, keep `CLIPSE_AI_HAILO_IMAGE=clipse-ai-hailo:local
 Run Hailo-10H without an NVIDIA GPU:
 
 ```bash
+curl -fsSL "https://raw.githubusercontent.com/fixtse/ClipSE/main/scripts/install-hailo-ugen300-driver.sh" \
+  -o scripts/install-hailo-ugen300-driver.sh
+chmod +x scripts/install-hailo-ugen300-driver.sh
+./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
+sudo reboot
+ls -l /dev/h1x-*
+hailortcli scan
+
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 docker compose -f docker-compose.yml -f docker-compose.cpu.yml -f docker-compose.hailo.yml up -d
@@ -365,6 +386,14 @@ curl http://localhost:8000/health
 Run Hailo-10H with Intel GPU ffmpeg acceleration:
 
 ```bash
+curl -fsSL "https://raw.githubusercontent.com/fixtse/ClipSE/main/scripts/install-hailo-ugen300-driver.sh" \
+  -o scripts/install-hailo-ugen300-driver.sh
+chmod +x scripts/install-hailo-ugen300-driver.sh
+./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
+sudo reboot
+ls -l /dev/h1x-*
+hailortcli scan
+
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 HAILO_DEVICE=/dev/h1x-0 \
@@ -375,6 +404,14 @@ curl http://localhost:8000/health
 Run Hailo-10H on a host that also has an NVIDIA GPU:
 
 ```bash
+curl -fsSL "https://raw.githubusercontent.com/fixtse/ClipSE/main/scripts/install-hailo-ugen300-driver.sh" \
+  -o scripts/install-hailo-ugen300-driver.sh
+chmod +x scripts/install-hailo-ugen300-driver.sh
+./scripts/install-hailo-ugen300-driver.sh ~/Downloads/UGen300_M2_5.3.0_driver_Linux_amd64.zip
+sudo reboot
+ls -l /dev/h1x-*
+hailortcli scan
+
 WHISPER_PROVIDER=hailo \
 CLIPSE_FOCUS_PROVIDER=hailo-vision \
 docker compose -f docker-compose.yml -f docker-compose.hailo.yml up -d
