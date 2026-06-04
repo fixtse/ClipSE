@@ -634,6 +634,8 @@ export function ClipSEWorkspace({
 	const [transcriptEditDraft, setTranscriptEditDraft] = useState("");
 	const [savingTranscriptSegmentIndex, setSavingTranscriptSegmentIndex] =
 		useState<number | null>(null);
+	const [renderAllPendingKind, setRenderAllPendingKind] =
+		useState<ClipSEKind | null>(null);
 	const [isPending, startTransition] = useTransition();
 	const [isSigningOut, setIsSigningOut] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1712,27 +1714,33 @@ export function ClipSEWorkspace({
 	}
 
 	async function handleRenderAllClips(videoId: string, clipKind: ClipSEKind) {
-		const result = await queueContentVideoClipRendersAction({
-			videoId,
-			clipKind,
-			...renderOptions,
-			focusMode:
-				renderOptions.aspectMode === "vertical9x16"
-					? "auto-speaker"
-					: undefined,
-		});
+		setRenderAllPendingKind(clipKind);
 
-		if (!result.success) {
-			toast.error(result.error);
-			return;
+		try {
+			const result = await queueContentVideoClipRendersAction({
+				videoId,
+				clipKind,
+				...renderOptions,
+				focusMode:
+					renderOptions.aspectMode === "vertical9x16"
+						? "auto-speaker"
+						: undefined,
+			});
+
+			if (!result.success) {
+				toast.error(result.error);
+				return;
+			}
+
+			toast.success(
+				t("workspace.toasts.renderJobsQueued", {
+					count: result.data.queuedCount,
+				}),
+			);
+			await refreshDashboard();
+		} finally {
+			setRenderAllPendingKind(null);
 		}
-
-		toast.success(
-			t("workspace.toasts.renderJobsQueued", {
-				count: result.data.queuedCount,
-			}),
-		);
-		await refreshDashboard();
 	}
 
 	async function handleClearFinishedJobs(videoId: string) {
@@ -1831,6 +1839,7 @@ export function ClipSEWorkspace({
 	const renderableClipCount = visibleClips.filter(
 		(clip) => clip.status !== "queued" && clip.status !== "rendering",
 	).length;
+	const isRenderAllPending = renderAllPendingKind === clipListTab;
 	const goToClipListPage = (page: number) => {
 		const nextPage = Math.min(Math.max(1, page), clipListPageCount);
 		const nextClip = visibleClips[nextPage - 1] ?? null;
@@ -4170,6 +4179,7 @@ export function ClipSEWorkspace({
 														className="border-orange-300/25 bg-orange-400/15 text-orange-50 hover:bg-orange-400/20"
 														disabled={
 															isPending ||
+															isRenderAllPending ||
 															!visibleClips.length ||
 															renderableClipCount === 0
 														}
@@ -4183,7 +4193,11 @@ export function ClipSEWorkspace({
 														}
 														size="sm"
 													>
-														<Scissors className="h-4 w-4" />
+														{isRenderAllPending ? (
+															<LoaderCircle className="h-4 w-4 animate-spin" />
+														) : (
+															<Scissors className="h-4 w-4" />
+														)}
 														{t("workspace.clipList.exportAll")}
 													</Button>
 												</div>
