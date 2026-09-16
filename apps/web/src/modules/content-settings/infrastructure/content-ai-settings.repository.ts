@@ -81,7 +81,7 @@ export class ContentAiSettingsRepository
 				geminiModel: "gemini-2.5-flash",
 				openrouterApiKey: "",
 				openrouterModel: "",
-				codexModel: "gpt-5.3-codex",
+				codexModel: "",
 				whisperProvider: "faster-whisper",
 				whisperModel: "medium",
 				whisperChunkingEnabled: false,

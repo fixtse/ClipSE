@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	getAudioLanguageOptions,
+	getAvailableModelValue,
 	getProviderModelValue,
 	getWhisperModelOptions,
 	getWhisperProviderOptions,
@@ -101,5 +102,31 @@ describe("ClipSE AI settings form helpers", () => {
 		expect(getProviderModelValue({ ...input, provider: "codex" })).toBe(
 			"gpt-5.3-codex",
 		);
+	});
+
+	it("selects the Codex CLI default when the saved model is unavailable", () => {
+		expect(
+			getAvailableModelValue("retired-model", [
+				{ value: "available-model", label: "Available model" },
+				{
+					value: "recommended-model",
+					label: "Recommended model",
+					isDefault: true,
+				},
+			]),
+		).toBe("recommended-model");
+	});
+
+	it("keeps a saved model while it remains available", () => {
+		expect(
+			getAvailableModelValue("available-model", [
+				{ value: "available-model", label: "Available model" },
+				{
+					value: "recommended-model",
+					label: "Recommended model",
+					isDefault: true,
+				},
+			]),
+		).toBe("available-model");
 	});
 });

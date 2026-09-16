@@ -79,4 +79,17 @@ export function getProviderModelValue(input: {
 	}
 }
 
+export function getAvailableModelValue(
+	currentValue: string,
+	options: readonly ContentAiModelOption[],
+): string {
+	if (options.some((option) => option.value === currentValue)) {
+		return currentValue;
+	}
+
+	return (
+		options.find((option) => option.isDefault)?.value ?? options[0]?.value ?? ""
+	);
+}
+
 export type { ContentAiModelOption, ContentAiProvider, ContentAiSettings };

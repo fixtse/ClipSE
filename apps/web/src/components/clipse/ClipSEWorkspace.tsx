@@ -49,6 +49,7 @@ import type {
 } from "~/modules/content-clips/domain/content-clip.valueobject";
 import {
 	getAudioLanguageOptions,
+	getAvailableModelValue,
 	getWhisperModelOptions,
 	getWhisperProviderOptions,
 } from "~/modules/content-settings/application/content-ai-settings-form";
@@ -601,7 +602,7 @@ export function ClipSEWorkspace({
 	const [geminiModel, setGeminiModel] = useState("gemini-2.5-flash");
 	const [openrouterApiKey, setOpenrouterApiKey] = useState("");
 	const [openrouterModel, setOpenrouterModel] = useState("");
-	const [codexModel, setCodexModel] = useState("gpt-5.3-codex");
+	const [codexModel, setCodexModel] = useState("");
 	const [whisperProvider, setWhisperProvider] =
 		useState<WhisperProvider>("faster-whisper");
 	const [whisperModel, setWhisperModel] = useState<WhisperModel>("medium");
@@ -799,6 +800,18 @@ export function ClipSEWorkspace({
 
 		setWhisperModel(getDefaultWhisperModel(whisperProvider));
 	}, [whisperModel, whisperProvider]);
+
+	useEffect(() => {
+		if (aiProvider !== "codex" || !aiModelsQuery.data?.length) {
+			return;
+		}
+
+		if (aiModelsQuery.data.some((model) => model.value === codexModel)) {
+			return;
+		}
+
+		setCodexModel(getAvailableModelValue(codexModel, aiModelsQuery.data));
+	}, [aiModelsQuery.data, aiProvider, codexModel]);
 
 	useEffect(() => {
 		if (typeof window === "undefined") {

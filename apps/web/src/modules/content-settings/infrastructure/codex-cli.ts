@@ -6,6 +6,7 @@ interface CodexAppServerModelListResponse {
 		readonly displayName?: string;
 		readonly hidden?: boolean;
 		readonly id?: string;
+		readonly isDefault?: boolean;
 		readonly model?: string;
 	}>;
 }
@@ -184,16 +185,32 @@ export async function listCodexModels(): Promise<ContentAiModelOption[]> {
 			return {
 				value,
 				label: model.displayName || value,
+				isDefault: model.isDefault === true,
 			};
 		})
-		.filter((model) => model.value.length > 0)
-		.sort((left, right) => left.label.localeCompare(right.label));
+		.filter((model) => model.value.length > 0);
+}
+
+async function resolveCodexModel(requestedModel: string): Promise<string> {
+	const models = await listCodexModels();
+	const requested = models.find((model) => model.value === requestedModel);
+	if (requested) {
+		return requested.value;
+	}
+
+	const availableModel = models.find((model) => model.isDefault) ?? models[0];
+	if (!availableModel) {
+		throw new Error("Codex CLI did not report any available models.");
+	}
+
+	return availableModel.value;
 }
 
 export async function generateCodexText(input: {
 	readonly model: string;
 	readonly prompt: string;
 }): Promise<string> {
+	const model = await resolveCodexModel(input.model);
 	const { stdout } = await runCodex({
 		args: [
 			"exec",
@@ -201,7 +218,7 @@ export async function generateCodexText(input: {
 			"--sandbox",
 			"read-only",
 			"--model",
-			input.model,
+			model,
 			"-",
 		],
 		stdin: input.prompt,

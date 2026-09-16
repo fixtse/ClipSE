@@ -1,0 +1,1 @@
+ALTER TABLE "content_ai_settings" ALTER COLUMN "codex_model" SET DEFAULT '';

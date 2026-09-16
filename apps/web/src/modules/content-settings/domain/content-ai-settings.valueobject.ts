@@ -33,7 +33,7 @@ export const ContentAiSettingsSchema = z.object({
 	geminiModel: z.string().min(1).max(180),
 	openrouterApiKey: z.string(),
 	openrouterModel: z.string().max(180),
-	codexModel: z.string().min(1).max(180),
+	codexModel: z.string().max(180),
 	whisperProvider: z.enum(WHISPER_PROVIDERS),
 	whisperModel: z.enum(WHISPER_MODELS),
 	whisperChunkingEnabled: z.boolean(),

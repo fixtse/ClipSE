@@ -10,4 +10,5 @@ export type ContentAiProvider = (typeof CONTENT_AI_PROVIDERS)[number];
 export interface ContentAiModelOption {
 	readonly value: string;
 	readonly label: string;
+	readonly isDefault?: boolean;
 }
