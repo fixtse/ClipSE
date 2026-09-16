@@ -14,6 +14,62 @@ export const CONTENT_VIDEO_SOURCE_TYPES = ["file", "url"] as const;
 export type ContentVideoSourceType =
 	(typeof CONTENT_VIDEO_SOURCE_TYPES)[number];
 
+export const SUPPORTED_AUDIO_EXTENSIONS = ["mp3", "wav", "m4a"] as const;
+export const SOURCE_FILE_ACCEPT =
+	"video/*,.mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a";
+
+const SUPPORTED_AUDIO_MIME_TYPES = new Set([
+	"audio/mpeg",
+	"audio/mp3",
+	"audio/wav",
+	"audio/x-wav",
+	"audio/wave",
+	"audio/vnd.wave",
+	"audio/mp4",
+	"audio/x-m4a",
+]);
+
+export function isSupportedSourceFile(input: {
+	readonly filename: string;
+	readonly mimeType?: string;
+}): boolean {
+	const mimeType = input.mimeType?.toLowerCase().split(";", 1)[0]?.trim() ?? "";
+	if (
+		mimeType.startsWith("video/") ||
+		SUPPORTED_AUDIO_MIME_TYPES.has(mimeType)
+	) {
+		return true;
+	}
+
+	const extension = input.filename.toLowerCase().match(/\.([^.]+)$/)?.[1];
+	return SUPPORTED_AUDIO_EXTENSIONS.some(
+		(supportedExtension) => supportedExtension === extension,
+	);
+}
+
+export function resolveSourceMimeType(input: {
+	readonly filename: string;
+	readonly mimeType?: string;
+}): string {
+	const mimeType = input.mimeType?.trim();
+	if (mimeType) {
+		return mimeType;
+	}
+
+	const extension = input.filename.toLowerCase().match(/\.([^.]+)$/)?.[1];
+	if (extension === "mp3") {
+		return "audio/mpeg";
+	}
+	if (extension === "wav") {
+		return "audio/wav";
+	}
+	if (extension === "m4a") {
+		return "audio/mp4";
+	}
+
+	return "video/mp4";
+}
+
 export const ContentVideoSchema = z.object({
 	id: z.string().uuid(),
 	channelId: z.string().uuid().nullable(),
@@ -43,20 +99,29 @@ export const ContentVideoSchema = z.object({
 
 export type ContentVideo = z.infer<typeof ContentVideoSchema>;
 
-export const CreateContentVideoDraftSchema = z.object({
-	channelId: z.string().uuid().optional(),
-	originalFilename: z.string().min(1).max(255),
-	title: z.string().min(1).max(255).optional(),
-	analysisPrompt: z.string().max(4000).optional(),
-	sourceType: z.enum(CONTENT_VIDEO_SOURCE_TYPES).optional(),
-	sourceUrl: z.string().url().optional(),
-	languageHint: z.string().min(2).max(10).optional(),
-	mimeType: z
-		.string()
-		.regex(/^video\//)
-		.optional(),
-	sizeBytes: z.number().int().positive(),
-});
+export const CreateContentVideoDraftSchema = z
+	.object({
+		channelId: z.string().uuid().optional(),
+		originalFilename: z.string().min(1).max(255),
+		title: z.string().min(1).max(255).optional(),
+		analysisPrompt: z.string().max(4000).optional(),
+		sourceType: z.enum(CONTENT_VIDEO_SOURCE_TYPES).optional(),
+		sourceUrl: z.string().url().optional(),
+		languageHint: z.string().min(2).max(10).optional(),
+		mimeType: z.string().optional(),
+		sizeBytes: z.number().int().positive(),
+	})
+	.refine(
+		(input) =>
+			isSupportedSourceFile({
+				filename: input.originalFilename,
+				mimeType: input.mimeType,
+			}),
+		{
+			message: "Source must be a video, MP3, WAV, or M4A file",
+			path: ["mimeType"],
+		},
+	);
 
 export type CreateContentVideoDraftInput = z.infer<
 	typeof CreateContentVideoDraftSchema

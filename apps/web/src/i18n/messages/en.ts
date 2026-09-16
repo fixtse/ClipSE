@@ -193,9 +193,9 @@ export const enMessages = {
 		intake: {
 			title: "Add Source",
 			description:
-				"Add a local video file or queue a URL download with yt-dlp.",
-			sourceFile: "Source File",
-			dropTitle: "Drop a video file here",
+				"Add a local video or audio file, or queue a URL download with yt-dlp.",
+			sourceFile: "Source Media File",
+			dropTitle: "Drop a video, MP3, WAV, or M4A file here",
 			dropDescription: "or click to choose a file manually",
 			videoUrl: "Video URL",
 			urlPlaceholder: "https://www.youtube.com/watch?v=...",
@@ -404,8 +404,9 @@ export const enMessages = {
 		},
 		toasts: {
 			chooseVideoFile: "Choose a video file.",
+			chooseMediaFile: "Choose a video, MP3, WAV, or M4A file.",
 			chooseImageFile: "Choose an image file.",
-			chooseSourceVideoFirst: "Choose a source video first.",
+			chooseSourceVideoFirst: "Choose a source media file first.",
 			pasteVideoUrlFirst: "Paste a video URL first.",
 			selectSourceFirst: "Select a source first.",
 			selectChannelFirst: "Select a channel first.",

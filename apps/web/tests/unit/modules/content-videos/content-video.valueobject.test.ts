@@ -3,6 +3,8 @@ import {
 	buildBumperStorageKey,
 	buildSourceStorageKey,
 	buildVideoTitle,
+	CreateContentVideoDraftSchema,
+	isSupportedSourceFile,
 } from "~/modules/content-videos/domain/content-video.valueobject";
 
 describe("ClipSE video helpers", () => {
@@ -35,5 +37,31 @@ describe("ClipSE video helpers", () => {
 		expect(buildBumperStorageKey("video-123", "outro", "Final Outro.MOV")).toBe(
 			"videos/video-123/bumpers/outro-final-outro.mov",
 		);
+	});
+
+	it.each([
+		["recording.mp3", "audio/mpeg"],
+		["recording.wav", "audio/x-wav"],
+		["recording.m4a", "audio/mp4"],
+		["recording.m4a", ""],
+	])("accepts supported audio source %s (%s)", (filename, mimeType) => {
+		expect(isSupportedSourceFile({ filename, mimeType })).toBe(true);
+		expect(
+			CreateContentVideoDraftSchema.safeParse({
+				originalFilename: filename,
+				mimeType,
+				sizeBytes: 1024,
+			}).success,
+		).toBe(true);
+	});
+
+	it("rejects unsupported audio formats", () => {
+		expect(
+			CreateContentVideoDraftSchema.safeParse({
+				originalFilename: "recording.flac",
+				mimeType: "audio/flac",
+				sizeBytes: 1024,
+			}).success,
+		).toBe(false);
 	});
 });

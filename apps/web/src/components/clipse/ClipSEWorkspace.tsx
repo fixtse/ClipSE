@@ -80,6 +80,10 @@ import {
 } from "~/modules/content-videos/application/content-clip-dashboard-view";
 import type { ClipSEDashboardVideo } from "~/modules/content-videos/application/get-content-clip-dashboard";
 import { uploadContentVideoFile } from "~/modules/content-videos/application/upload-content-video-file";
+import {
+	isSupportedSourceFile,
+	SOURCE_FILE_ACCEPT,
+} from "~/modules/content-videos/domain/content-video.valueobject";
 import { createContentChannelAction } from "~/server/actions/content-channels/create-content-channel";
 import {
 	deleteContentChannelBumperAction,
@@ -1049,8 +1053,8 @@ export function ClipSEWorkspace({
 			return;
 		}
 
-		if (!file.type.startsWith("video/")) {
-			toast.error(t("workspace.toasts.chooseVideoFile"));
+		if (!isSupportedSourceFile({ filename: file.name, mimeType: file.type })) {
+			toast.error(t("workspace.toasts.chooseMediaFile"));
 			return;
 		}
 
@@ -2917,7 +2921,7 @@ export function ClipSEWorkspace({
 												{t("workspace.intake.sourceFile")}
 											</p>
 											<input
-												accept="video/*"
+												accept={SOURCE_FILE_ACCEPT}
 												className="sr-only"
 												onChange={(event) =>
 													selectUploadFile(event.target.files?.[0] ?? null)

@@ -192,11 +192,11 @@ export const esMessages = {
 			intake: "Agregar video",
 		},
 		intake: {
-			title: "Agregar video",
+			title: "Agregar fuente",
 			description:
-				"Agrega un archivo de video local o encola una descarga por URL con yt-dlp.",
-			sourceFile: "Archivo de video",
-			dropTitle: "Suelta un archivo de video aquí",
+				"Agrega un archivo local de video o audio, o encola una descarga por URL con yt-dlp.",
+			sourceFile: "Archivo multimedia fuente",
+			dropTitle: "Suelta aquí un video o archivo MP3, WAV o M4A",
 			dropDescription: "o haz clic para elegir un archivo manualmente",
 			videoUrl: "URL del video",
 			urlPlaceholder: "https://www.youtube.com/watch?v=...",
@@ -410,8 +410,9 @@ export const esMessages = {
 		},
 		toasts: {
 			chooseVideoFile: "Elige un archivo de video.",
+			chooseMediaFile: "Elige un video o archivo MP3, WAV o M4A.",
 			chooseImageFile: "Elige un archivo de imagen.",
-			chooseSourceVideoFirst: "Elige primero un video fuente.",
+			chooseSourceVideoFirst: "Elige primero un archivo multimedia fuente.",
 			pasteVideoUrlFirst: "Pega primero una URL de video.",
 			selectSourceFirst: "Selecciona primero una fuente.",
 			selectChannelFirst: "Selecciona primero un canal.",
