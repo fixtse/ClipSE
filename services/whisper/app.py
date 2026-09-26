@@ -15,6 +15,7 @@ from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from faster_whisper import WhisperModel
+from audio_enhancement import enhance_audio
 
 
 app = FastAPI(title="ClipSE Whisper Service")
@@ -198,6 +199,7 @@ async def transcribe(
     language: str | None = Form(default=None),
     unload_after: bool = Form(default=True),
     provider: str = Form(default=DEFAULT_PROVIDER),
+    enhance: bool = Form(default=True),
 ) -> dict:
     provider_name = normalize_provider(provider)
     suffix = Path(file.filename or "audio.wav").suffix or ".wav"
@@ -205,11 +207,21 @@ async def transcribe(
         temp_file.write(await file.read())
         temp_path = temp_file.name
 
+    enhanced_path = None
     try:
         started_at = time.perf_counter()
+        if enhance:
+            try:
+                enhanced_path = enhance_audio(temp_path)
+            except (OSError, ValueError) as error:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Audio enhancement failed: {error}",
+                ) from error
+        audio_path = enhanced_path or temp_path
         if provider_name == "hailo":
             response = transcribe_with_hailo(
-                audio_path=temp_path,
+                audio_path=audio_path,
                 model_name=model or HAILO_WHISPER_MODEL,
                 language=language,
             )
@@ -223,7 +235,7 @@ async def transcribe(
                 unload_after=unload_after,
             ) as whisper_model:
                 segments, info = whisper_model.transcribe(
-                    temp_path,
+                    audio_path,
                     language=None if language in (None, "", "auto") else language,
                     vad_filter=True,
                     beam_size=5,
@@ -279,6 +291,8 @@ async def transcribe(
             "elapsedSeconds": round(time.perf_counter() - started_at, 3),
         }
     finally:
+        if enhanced_path:
+            Path(enhanced_path).unlink(missing_ok=True)
         try:
             os.unlink(temp_path)
         except FileNotFoundError:

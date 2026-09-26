@@ -169,6 +169,8 @@ Copy `.env.example` to `.env` and change values for your environment. Docker Com
 
 ### Whisper
 
+The `/transcribe` endpoint enhances audio by default before either Whisper provider runs. FFmpeg applies spectral noise reduction, speech-focused equalization, gentle compression, and loudness leveling, then supplies mono 16 kHz WAV to Whisper. This improves speech clarity and suppresses some background sound, but does not separate overlapping speakers or remove every noise source. Send `enhance=false` as a multipart form field to use the original audio. Processing preserves timing for word timestamps and adds an FFmpeg pass to transcription time.
+
 | Variable | Default | Description |
 | --- | --- | --- |
 | `WHISPER_SERVICE_URL` | `http://localhost:8000` | AI service transcription API URL for local tooling. Compose sets this to `http://ai:8000` inside containers. |
