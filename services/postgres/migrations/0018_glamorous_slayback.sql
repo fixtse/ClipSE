@@ -1,0 +1,1 @@
+ALTER TABLE "content_ai_settings" ADD COLUMN "codex_reasoning_effort" varchar(20);

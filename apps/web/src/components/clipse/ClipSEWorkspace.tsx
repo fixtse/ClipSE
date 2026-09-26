@@ -603,6 +603,8 @@ export function ClipSEWorkspace({
 	const [openrouterApiKey, setOpenrouterApiKey] = useState("");
 	const [openrouterModel, setOpenrouterModel] = useState("");
 	const [codexModel, setCodexModel] = useState("");
+	const [codexReasoningEffort, setCodexReasoningEffort] =
+		useState<ContentAiSettings["codexReasoningEffort"]>(null);
 	const [whisperProvider, setWhisperProvider] =
 		useState<WhisperProvider>("faster-whisper");
 	const [whisperModel, setWhisperModel] = useState<WhisperModel>("medium");
@@ -784,6 +786,7 @@ export function ClipSEWorkspace({
 		setOpenrouterApiKey(settings.openrouterApiKey);
 		setOpenrouterModel(settings.openrouterModel);
 		setCodexModel(settings.codexModel);
+		setCodexReasoningEffort(settings.codexReasoningEffort);
 		setWhisperProvider(settings.whisperProvider);
 		setWhisperModel(settings.whisperModel);
 		setWhisperChunkingEnabled(settings.whisperChunkingEnabled);
@@ -1385,6 +1388,7 @@ export function ClipSEWorkspace({
 			openrouterApiKey,
 			openrouterModel,
 			codexModel,
+			codexReasoningEffort: selectedCodexEffort,
 			whisperProvider,
 			whisperModel,
 			whisperChunkingEnabled,
@@ -1886,6 +1890,15 @@ export function ClipSEWorkspace({
 	}, [selectedClipId, selectedClipPage]);
 
 	const modelOptions = aiModelsQuery.data ?? [];
+	const selectedCodexModel = modelOptions.find(
+		(model) => model.value === codexModel,
+	);
+	const supportedCodexEfforts =
+		selectedCodexModel?.supportedReasoningEfforts ?? [];
+	const selectedCodexEffort =
+		codexReasoningEffort && supportedCodexEfforts.includes(codexReasoningEffort)
+			? codexReasoningEffort
+			: null;
 	const whisperModelOptions = getWhisperModelOptions(t);
 	const providerWhisperModelOptions = whisperModelOptions.filter((option) =>
 		isWhisperModelForProvider(whisperProvider, option.value),
@@ -2565,6 +2578,39 @@ export function ClipSEWorkspace({
 														options={modelOptions}
 														value={codexModel}
 													/>
+													{supportedCodexEfforts.length > 0 ? (
+														<Select
+															onValueChange={(value) =>
+																setCodexReasoningEffort(
+																	value === "model-default" ? null : value,
+																)
+															}
+															value={selectedCodexEffort ?? "model-default"}
+														>
+															<SelectTrigger className="border-white/10 bg-slate-900/75 text-white">
+																<SelectValue
+																	placeholder={t(
+																		"workspace.settings.codexReasoningEffort",
+																	)}
+																/>
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="model-default">
+																	{t(
+																		"workspace.settings.codexReasoningDefault",
+																	)}
+																	{selectedCodexModel?.defaultReasoningEffort
+																		? ` (${selectedCodexModel.defaultReasoningEffort})`
+																		: ""}
+																</SelectItem>
+																{supportedCodexEfforts.map((effort) => (
+																	<SelectItem key={effort} value={effort}>
+																		{effort}
+																	</SelectItem>
+																))}
+															</SelectContent>
+														</Select>
+													) : null}
 												</div>
 											)}
 											{aiModelsQuery.error ? (

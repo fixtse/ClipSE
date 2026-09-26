@@ -267,6 +267,7 @@ export const ClipSEAiSettingsMother = {
 			openrouterApiKey: "openrouter-key",
 			openrouterModel: "openrouter/model",
 			codexModel: "gpt-5.3-codex",
+			codexReasoningEffort: null,
 			whisperProvider: "faster-whisper",
 			whisperModel: "medium",
 			whisperChunkingEnabled: false,

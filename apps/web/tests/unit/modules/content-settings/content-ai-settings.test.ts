@@ -5,6 +5,10 @@ import { updateContentAiSettings } from "~/modules/content-settings/application/
 import { ClipSEAiSettingsMother } from "../../../mothers/domain-mothers";
 import { ClipSEAiSettingsRepositoryMother } from "../../../mothers/repository-mothers";
 
+vi.mock("~/modules/content-settings/infrastructure/codex-cli", () => ({
+	listCodexModels: vi.fn(),
+}));
+
 describe("ClipSE AI settings use cases", () => {
 	it("loads and updates settings through the repository", async () => {
 		const settings = ClipSEAiSettingsMother.create();
@@ -20,6 +24,7 @@ describe("ClipSE AI settings use cases", () => {
 				geminiModel: "gemini-3-pro",
 				openrouterModel: "",
 				codexModel: "gpt-5.3-codex",
+				codexReasoningEffort: null,
 				whisperProvider: "hailo",
 				whisperModel: "large-v3-turbo",
 				whisperChunkingEnabled: true,
@@ -40,6 +45,7 @@ describe("ClipSE AI settings use cases", () => {
 			geminiModel: "gemini-3-pro",
 			openrouterModel: "",
 			codexModel: "gpt-5.3-codex",
+			codexReasoningEffort: null,
 			whisperProvider: "hailo",
 			whisperModel: "large-v3-turbo",
 			whisperChunkingEnabled: true,
@@ -60,6 +66,7 @@ describe("ClipSE AI settings use cases", () => {
 				geminiModel: "gemini-3-pro",
 				openrouterModel: "",
 				codexModel: "gpt-5.3-codex",
+				codexReasoningEffort: null,
 				whisperProvider: "faster-whisper",
 				whisperModel: "medium",
 				whisperChunkingEnabled: false,

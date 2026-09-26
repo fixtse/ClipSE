@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
+import { resolveCodexReasoningEffort } from "../domain/codex-reasoning";
 import type { ContentAiModelOption } from "../domain/content-ai-models";
+import type { ContentAiSettings } from "../domain/content-ai-settings.valueobject";
 
 interface CodexAppServerModelListResponse {
 	readonly data?: Array<{
@@ -8,6 +10,10 @@ interface CodexAppServerModelListResponse {
 		readonly id?: string;
 		readonly isDefault?: boolean;
 		readonly model?: string;
+		readonly defaultReasoningEffort?: string;
+		readonly supportedReasoningEfforts?: Array<{
+			readonly reasoningEffort?: string;
+		}>;
 	}>;
 }
 
@@ -38,11 +44,15 @@ function runCodex(input: {
 	readonly timeoutMs?: number;
 }): Promise<{ readonly stdout: string; readonly stderr: string }> {
 	return new Promise((resolve, reject) => {
-		const child = spawn(codexCommand(), [...input.args], {
-			cwd: codexCwd(),
-			env: codexEnvironment(),
-			stdio: ["pipe", "pipe", "pipe"],
-		});
+		const child = spawn(
+			/*turbopackIgnore: true*/ codexCommand(),
+			[...input.args],
+			{
+				cwd: codexCwd(),
+				env: codexEnvironment(),
+				stdio: ["pipe", "pipe", "pipe"],
+			},
+		);
 		const stdout: Buffer[] = [];
 		const stderr: Buffer[] = [];
 		const timeout = setTimeout(() => {
@@ -79,11 +89,15 @@ async function requestCodexAppServer<T>(
 	params: Record<string, unknown>,
 ): Promise<T> {
 	return new Promise((resolve, reject) => {
-		const child = spawn(codexCommand(), ["app-server"], {
-			cwd: codexCwd(),
-			env: codexEnvironment(),
-			stdio: ["pipe", "pipe", "pipe"],
-		});
+		const child = spawn(
+			/*turbopackIgnore: true*/ codexCommand(),
+			["app-server"],
+			{
+				cwd: codexCwd(),
+				env: codexEnvironment(),
+				stdio: ["pipe", "pipe", "pipe"],
+			},
+		);
 		let stdout = "";
 		let stderr = "";
 		const timeout = setTimeout(() => {
@@ -186,16 +200,22 @@ export async function listCodexModels(): Promise<ContentAiModelOption[]> {
 				value,
 				label: model.displayName || value,
 				isDefault: model.isDefault === true,
+				defaultReasoningEffort: model.defaultReasoningEffort,
+				supportedReasoningEfforts: model.supportedReasoningEfforts
+					?.map((effort) => effort.reasoningEffort ?? "")
+					.filter((effort) => /^[a-z]{1,20}$/.test(effort)),
 			};
 		})
 		.filter((model) => model.value.length > 0);
 }
 
-async function resolveCodexModel(requestedModel: string): Promise<string> {
+async function resolveCodexModel(
+	requestedModel: string,
+): Promise<ContentAiModelOption> {
 	const models = await listCodexModels();
 	const requested = models.find((model) => model.value === requestedModel);
 	if (requested) {
-		return requested.value;
+		return requested;
 	}
 
 	const availableModel = models.find((model) => model.isDefault) ?? models[0];
@@ -203,14 +223,19 @@ async function resolveCodexModel(requestedModel: string): Promise<string> {
 		throw new Error("Codex CLI did not report any available models.");
 	}
 
-	return availableModel.value;
+	return availableModel;
 }
 
 export async function generateCodexText(input: {
 	readonly model: string;
 	readonly prompt: string;
+	readonly reasoningEffort: ContentAiSettings["codexReasoningEffort"];
 }): Promise<string> {
 	const model = await resolveCodexModel(input.model);
+	const reasoningEffort = resolveCodexReasoningEffort(
+		model,
+		input.reasoningEffort,
+	);
 	const { stdout } = await runCodex({
 		args: [
 			"exec",
@@ -218,7 +243,10 @@ export async function generateCodexText(input: {
 			"--sandbox",
 			"read-only",
 			"--model",
-			model,
+			model.value,
+			...(reasoningEffort
+				? ["-c", `model_reasoning_effort=${reasoningEffort}`]
+				: []),
 			"-",
 		],
 		stdin: input.prompt,

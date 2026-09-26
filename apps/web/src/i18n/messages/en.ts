@@ -111,6 +111,8 @@ export const enMessages = {
 			openAiBaseUrl: "Optional OpenAI-compatible base URL",
 			geminiApiKey: "Gemini API key",
 			openRouterApiKey: "OpenRouter API key",
+			codexReasoningEffort: "Reasoning effort",
+			codexReasoningDefault: "Model default",
 			whisperTitle: "Transcription model",
 			whisperDescription:
 				"Choose the Whisper model used for server-side transcription.",

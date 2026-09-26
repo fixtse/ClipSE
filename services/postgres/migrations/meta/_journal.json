@@ -127,6 +127,13 @@
       "when": 1789559292808,
       "tag": "0017_reflective_hellfire_club",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790447126761,
+      "tag": "0018_glamorous_slayback",
+      "breakpoints": true
     }
   ]
 }

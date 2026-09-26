@@ -472,6 +472,7 @@ async function generateContentAiObject<Schema extends z.ZodTypeAny>(input: {
 	if (input.aiSettings.provider === "codex") {
 		const text = await generateCodexText({
 			model: input.aiSettings.codexModel,
+			reasoningEffort: input.aiSettings.codexReasoningEffort,
 			prompt: `${AI_SYSTEM_INSTRUCTIONS}
 
 ${input.promptParts.context}

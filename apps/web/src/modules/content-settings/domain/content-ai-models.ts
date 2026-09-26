@@ -11,4 +11,6 @@ export interface ContentAiModelOption {
 	readonly value: string;
 	readonly label: string;
 	readonly isDefault?: boolean;
+	readonly defaultReasoningEffort?: string;
+	readonly supportedReasoningEfforts?: readonly string[];
 }

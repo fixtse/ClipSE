@@ -204,7 +204,7 @@ describe("transcribeWithWhisperService", () => {
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 		expect(
 			fetchMock.mock.calls.map(([, init]) =>
-				(init?.body as FormData).get("unload_after"),
+				(init?.body as FormData | undefined)?.get("unload_after"),
 			),
 		).toEqual(["false", "true"]);
 	});
