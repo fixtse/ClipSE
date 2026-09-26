@@ -129,6 +129,9 @@ export const esMessages = {
 			whisperBackendHailoUnavailable: "Hailo no disponible",
 			whisperBackendDevices: "Dispositivos Hailo detectados: {devices}",
 			whisperChunkingTitle: "Dividir transcripciones largas",
+			whisperEnhanceTitle: "Mejorar el audio antes de transcribir",
+			whisperEnhanceDescription:
+				"Reduce el ruido de fondo y nivela el volumen de la voz antes de usar Whisper.",
 			whisperChunkingDescription:
 				"Procesa audios largos en fragmentos superpuestos de 20 minutos. Dejalo apagado para maxima consistencia de texto.",
 			whisperChunkMinutes: "Duracion del fragmento en minutos",

@@ -128,6 +128,9 @@ export const enMessages = {
 			whisperBackendHailoUnavailable: "Hailo unavailable",
 			whisperBackendDevices: "Detected Hailo devices: {devices}",
 			whisperChunkingTitle: "Chunk long transcriptions",
+			whisperEnhanceTitle: "Enhance audio before transcription",
+			whisperEnhanceDescription:
+				"Reduce background noise and level speech volume before Whisper runs.",
 			whisperChunkingDescription:
 				"Process long audio in overlapping 20-minute chunks. Leave off for maximum wording consistency.",
 			whisperChunkMinutes: "Chunk length in minutes",

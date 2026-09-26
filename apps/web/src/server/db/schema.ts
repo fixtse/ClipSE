@@ -191,6 +191,10 @@ export const contentAiSettings = createTable("content_ai_settings", (d) => ({
 		.varchar("whisper_model", { length: 40 })
 		.notNull()
 		.default("medium"),
+	whisperEnhanceEnabled: d
+		.boolean("whisper_enhance_enabled")
+		.notNull()
+		.default(false),
 	whisperChunkingEnabled: d
 		.boolean("whisper_chunking_enabled")
 		.notNull()

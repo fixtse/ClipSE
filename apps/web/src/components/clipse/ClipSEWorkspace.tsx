@@ -608,6 +608,7 @@ export function ClipSEWorkspace({
 	const [whisperProvider, setWhisperProvider] =
 		useState<WhisperProvider>("faster-whisper");
 	const [whisperModel, setWhisperModel] = useState<WhisperModel>("medium");
+	const [whisperEnhanceEnabled, setWhisperEnhanceEnabled] = useState(false);
 	const [whisperChunkingEnabled, setWhisperChunkingEnabled] = useState(false);
 	const [whisperChunkMinutes, setWhisperChunkMinutes] = useState(20);
 	const [subtitleColor, setSubtitleColor] = useState("#ffffff");
@@ -789,6 +790,7 @@ export function ClipSEWorkspace({
 		setCodexReasoningEffort(settings.codexReasoningEffort);
 		setWhisperProvider(settings.whisperProvider);
 		setWhisperModel(settings.whisperModel);
+		setWhisperEnhanceEnabled(settings.whisperEnhanceEnabled);
 		setWhisperChunkingEnabled(settings.whisperChunkingEnabled);
 		setWhisperChunkMinutes(settings.whisperChunkMinutes);
 		setSubtitleColor(settings.subtitleColor);
@@ -1391,6 +1393,7 @@ export function ClipSEWorkspace({
 			codexReasoningEffort: selectedCodexEffort,
 			whisperProvider,
 			whisperModel,
+			whisperEnhanceEnabled,
 			whisperChunkingEnabled,
 			whisperChunkMinutes: boundedWhisperChunkMinutes,
 			subtitleColor,
@@ -2708,6 +2711,28 @@ export function ClipSEWorkspace({
 														{selectedWhisperModelOption?.description}
 													</p>
 												</Tabs>
+												<button
+													aria-pressed={whisperEnhanceEnabled}
+													className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"
+													onClick={() =>
+														setWhisperEnhanceEnabled((value) => !value)
+													}
+													type="button"
+												>
+													<SelectableOptionIndicator
+														checked={whisperEnhanceEnabled}
+													/>
+													<span>
+														<span className="block font-medium text-sm text-white">
+															{t("workspace.settings.whisperEnhanceTitle")}
+														</span>
+														<span className="block text-slate-400 text-xs">
+															{t(
+																"workspace.settings.whisperEnhanceDescription",
+															)}
+														</span>
+													</span>
+												</button>
 												<button
 													aria-pressed={whisperChunkingEnabled}
 													className="flex w-full items-start gap-3 rounded-md border border-white/10 bg-white/4 p-3 text-left transition hover:bg-white/6"

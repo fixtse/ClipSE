@@ -85,6 +85,7 @@ export class ContentAiSettingsRepository
 				codexReasoningEffort: null,
 				whisperProvider: "faster-whisper",
 				whisperModel: "medium",
+				whisperEnhanceEnabled: false,
 				whisperChunkingEnabled: false,
 				whisperChunkMinutes: DEFAULT_WHISPER_CHUNK_MINUTES,
 				subtitleColor: DEFAULT_SUBTITLE_COLOR,
@@ -132,6 +133,7 @@ export class ContentAiSettingsRepository
 				codexReasoningEffort: input.codexReasoningEffort,
 				whisperProvider: input.whisperProvider,
 				whisperModel: input.whisperModel,
+				whisperEnhanceEnabled: input.whisperEnhanceEnabled,
 				whisperChunkingEnabled: input.whisperChunkingEnabled,
 				whisperChunkMinutes: input.whisperChunkMinutes,
 				subtitleColor: normalizeSubtitleColor(input.subtitleColor),
@@ -168,6 +170,7 @@ export class ContentAiSettingsRepository
 			codexReasoningEffort: row.codexReasoningEffort,
 			whisperProvider: normalizeWhisperProvider(row.whisperProvider),
 			whisperModel: normalizeWhisperModel(row.whisperModel),
+			whisperEnhanceEnabled: row.whisperEnhanceEnabled,
 			whisperChunkingEnabled: row.whisperChunkingEnabled,
 			whisperChunkMinutes:
 				row.whisperChunkMinutes || DEFAULT_WHISPER_CHUNK_MINUTES,

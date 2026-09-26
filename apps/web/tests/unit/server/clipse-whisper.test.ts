@@ -37,6 +37,7 @@ describe("transcribeWithWhisperService", () => {
 		getSettingsMock.mockResolvedValueOnce({
 			whisperModel: "large-v3-turbo",
 			whisperProvider: "faster-whisper",
+			whisperEnhanceEnabled: false,
 			whisperChunkingEnabled: false,
 			whisperChunkMinutes: 20,
 		});
@@ -65,6 +66,7 @@ describe("transcribeWithWhisperService", () => {
 			const body = init?.body as FormData;
 			expect(body.get("model")).toBe("large-v3-turbo");
 			expect(body.get("provider")).toBe("faster-whisper");
+			expect(body.get("enhance")).toBe("false");
 			expect(body.get("unload_after")).toBe("true");
 
 			return new Response(
@@ -106,11 +108,40 @@ describe("transcribeWithWhisperService", () => {
 		);
 	});
 
+	it("reports a non JSON 524 response as an upstream timeout", async () => {
+		getSettingsMock.mockResolvedValueOnce({
+			whisperModel: "medium",
+			whisperProvider: "faster-whisper",
+			whisperEnhanceEnabled: false,
+			whisperChunkingEnabled: false,
+			whisperChunkMinutes: 20,
+		});
+		vi.stubGlobal(
+			"fetch",
+			vi.fn().mockResolvedValue(
+				new Response("<html>timeout</html>", {
+					status: 524,
+					headers: { "content-type": "text/html" },
+				}),
+			),
+		);
+		const workspace = await mkdtemp(join(tmpdir(), "clipse-whisper-test-"));
+		const audioFilePath = join(workspace, "audio.wav");
+		await writeFile(audioFilePath, Buffer.from("wav"));
+
+		await expect(
+			transcribeWithWhisperService({ audioFilePath }),
+		).rejects.toThrow(
+			"Whisper request timed out at an upstream proxy (HTTP 524)",
+		);
+	});
+
 	it("overlaps chunks and merges absolute segment and word timestamps", async () => {
 		vi.stubEnv("CLIPSE_WHISPER_CHUNK_OVERLAP_SECONDS", "5");
 		getSettingsMock.mockResolvedValueOnce({
 			whisperModel: "medium",
 			whisperProvider: "faster-whisper",
+			whisperEnhanceEnabled: true,
 			whisperChunkingEnabled: true,
 			whisperChunkMinutes: 1,
 		});
@@ -202,6 +233,11 @@ describe("transcribeWithWhisperService", () => {
 			],
 		});
 		expect(fetchMock).toHaveBeenCalledTimes(2);
+		expect(
+			fetchMock.mock.calls.map(([, init]) =>
+				(init?.body as FormData | undefined)?.get("enhance"),
+			),
+		).toEqual([null, null]);
 		expect(
 			fetchMock.mock.calls.map(([, init]) =>
 				(init?.body as FormData | undefined)?.get("unload_after"),

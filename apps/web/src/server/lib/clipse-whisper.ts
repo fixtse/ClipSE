@@ -125,6 +125,7 @@ export async function transcribeWithWhisperService(input: {
 					audioFilePath: chunk.filePath,
 					model,
 					provider,
+					enhance: aiSettings.whisperEnhanceEnabled,
 					languageHint: input.languageHint,
 					unloadAfter: isLastChunk,
 				});
@@ -154,6 +155,7 @@ async function transcribeAudioFile(input: {
 	audioFilePath: string;
 	model: ContentAiSettings["whisperModel"];
 	provider: ContentAiSettings["whisperProvider"];
+	enhance: boolean;
 	languageHint?: string | null;
 	unloadAfter: boolean;
 }): Promise<z.infer<typeof whisperResponseSchema>> {
@@ -170,6 +172,9 @@ async function transcribeAudioFile(input: {
 	formData.set("model", input.model);
 	formData.set("unload_after", input.unloadAfter ? "true" : "false");
 	formData.set("provider", input.provider);
+	if (!input.enhance) {
+		formData.set("enhance", "false");
+	}
 
 	if (input.languageHint && input.languageHint !== "auto") {
 		formData.set("language", input.languageHint);
@@ -185,6 +190,11 @@ async function transcribeAudioFile(input: {
 		const errorDetail = parseWhisperErrorDetail(errorBody) ?? errorBody;
 		if (response.status === 422 && errorDetail.includes("No speech detected")) {
 			throw new WhisperNoSpeechError();
+		}
+		if (response.status === 524) {
+			throw new Error(
+				"Whisper request timed out at an upstream proxy (HTTP 524). Configure WHISPER_SERVICE_URL to reach the AI service directly, or enable shorter Whisper audio chunks in AI settings.",
+			);
 		}
 		throw new Error(
 			`Whisper service failed with ${response.status}: ${errorDetail}`,

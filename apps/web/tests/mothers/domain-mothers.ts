@@ -270,6 +270,7 @@ export const ClipSEAiSettingsMother = {
 			codexReasoningEffort: null,
 			whisperProvider: "faster-whisper",
 			whisperModel: "medium",
+			whisperEnhanceEnabled: false,
 			whisperChunkingEnabled: false,
 			whisperChunkMinutes: 20,
 			subtitleColor: "#ffffff",

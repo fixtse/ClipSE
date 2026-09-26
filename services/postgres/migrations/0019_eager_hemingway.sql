@@ -1,0 +1,1 @@
+ALTER TABLE "content_ai_settings" ADD COLUMN "whisper_enhance_enabled" boolean DEFAULT false NOT NULL;

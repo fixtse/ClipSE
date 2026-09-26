@@ -27,6 +27,7 @@ describe("ClipSE AI settings use cases", () => {
 				codexReasoningEffort: null,
 				whisperProvider: "hailo",
 				whisperModel: "large-v3-turbo",
+				whisperEnhanceEnabled: false,
 				whisperChunkingEnabled: true,
 				whisperChunkMinutes: 20,
 				subtitleColor: "#67e8f9",
@@ -37,6 +38,7 @@ describe("ClipSE AI settings use cases", () => {
 			provider: "gemini",
 			whisperProvider: "hailo",
 			whisperModel: "large-v3-turbo",
+			whisperEnhanceEnabled: false,
 			whisperChunkingEnabled: true,
 		});
 		expect(repository.update).toHaveBeenCalledWith({
@@ -48,6 +50,7 @@ describe("ClipSE AI settings use cases", () => {
 			codexReasoningEffort: null,
 			whisperProvider: "hailo",
 			whisperModel: "large-v3-turbo",
+			whisperEnhanceEnabled: false,
 			whisperChunkingEnabled: true,
 			whisperChunkMinutes: 20,
 			subtitleColor: "#67e8f9",
@@ -69,6 +72,7 @@ describe("ClipSE AI settings use cases", () => {
 				codexReasoningEffort: null,
 				whisperProvider: "faster-whisper",
 				whisperModel: "medium",
+				whisperEnhanceEnabled: false,
 				whisperChunkingEnabled: false,
 				whisperChunkMinutes: 20,
 				subtitleColor: "#ffffff",
