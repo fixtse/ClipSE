@@ -376,6 +376,43 @@ describe("ClipSEWorkspace", () => {
 		expect(markup).not.toContain("Follow-up clip");
 	});
 
+	it.each(["clips", "shorts"] as const)(
+		"shows downloaded and marked paginator states together for %s",
+		(kind) => {
+			setDashboardData({ withMultipleClips: true, withSelectedVideo: true });
+			const data = mocks.dashboardData as {
+				selectedVideo: {
+					clips: Array<Record<string, unknown>>;
+					shorts?: Array<Record<string, unknown>>;
+				};
+			};
+			data.selectedVideo.clips[0] = {
+				...data.selectedVideo.clips[0],
+				downloadedAt: new Date(),
+				isMarked: true,
+			};
+			if (kind === "shorts") {
+				data.selectedVideo.shorts = data.selectedVideo.clips.map((clip) => ({
+					...clip,
+					clipKind: "short",
+				}));
+				vi.stubGlobal("window", {
+					location: { href: "https://clipse.test/en?clipTab=short" },
+					localStorage: { getItem: () => null },
+				});
+			}
+			const markup = renderToStaticMarkup(<ClipSEWorkspace />);
+			const firstPage = markup.match(
+				/<button[^>]*aria-current="page"[^>]*>/,
+			)?.[0];
+			expect(firstPage).toContain("workspace.clipEditor.downloaded");
+			expect(firstPage).toContain("workspace.clipList.marked");
+			expect(firstPage).toContain("bg-teal-100");
+			expect(firstPage).toContain("border-violet-400");
+			expect(firstPage).toContain("ring-orange-200");
+		},
+	);
+
 	it("renders floating job status when active jobs exist", () => {
 		setDashboardData({ withActiveJob: true, withSelectedVideo: true });
 

@@ -87,6 +87,7 @@ export const ClipSEMother = {
 			outputStorageKey: null,
 			outputFilename: null,
 			downloadedAt: null,
+			isMarked: false,
 			latestError: null,
 			createdAt: date(),
 			updatedAt: date(),

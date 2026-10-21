@@ -35,6 +35,31 @@ describe("updateClipSE", () => {
 		});
 	});
 
+	it.each([true, false])(
+		"sets the mark to %s without passing timing that would reset the rendered asset",
+		async (isMarked) => {
+			const currentClip = ClipSEMother.create({
+				outputStorageKey: "clips/rendered.mp4",
+				downloadedAt: new Date(),
+				isMarked: !isMarked,
+			});
+			const clipRepository = ClipSERepositoryMother.create({
+				findById: vi.fn(async () => currentClip),
+				update: vi.fn(async () => ({ ...currentClip, isMarked })),
+			});
+			const result = await updateClipSE(clipRepository, {
+				id: currentClip.id,
+				isMarked,
+			});
+			expect(clipRepository.update).toHaveBeenCalledWith({
+				id: currentClip.id,
+				isMarked,
+			});
+			expect(result.outputStorageKey).toBe(currentClip.outputStorageKey);
+			expect(result.downloadedAt).toEqual(currentClip.downloadedAt);
+		},
+	);
+
 	it("rejects when the clip is missing", async () => {
 		const clipRepository = ClipSERepositoryMother.create({
 			findById: vi.fn(async () => null),

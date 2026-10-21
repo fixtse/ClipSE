@@ -325,6 +325,10 @@ export const enMessages = {
 				"Generate clips and chapters after transcription completes.",
 		},
 		clipList: {
+			mark: "Mark",
+			unmark: "Unmark",
+			marked: "Marked",
+
 			eyebrow: "Clip Candidates",
 			title: "Draft clips",
 			candidates: "{count} candidates",

@@ -221,3 +221,41 @@ export function getYoutubeChapterText(
 		? buildYoutubeChapterText(selectedVideo.chapters, formatTimecode)
 		: "";
 }
+
+export const GENERATION_TARGETS_STORAGE_KEY = "clipse-ai-generation-targets";
+
+export interface GenerationTargets {
+	readonly generateClips: boolean;
+	readonly generateShorts: boolean;
+	readonly generateChapters: boolean;
+}
+
+export function parseGenerationTargets(
+	value: string | null,
+): GenerationTargets | null {
+	try {
+		const parsed: unknown = JSON.parse(value ?? "null");
+		if (
+			!parsed ||
+			typeof parsed !== "object" ||
+			!("generateClips" in parsed) ||
+			typeof parsed.generateClips !== "boolean" ||
+			!("generateShorts" in parsed) ||
+			typeof parsed.generateShorts !== "boolean" ||
+			!("generateChapters" in parsed) ||
+			typeof parsed.generateChapters !== "boolean" ||
+			(!parsed.generateClips &&
+				!parsed.generateShorts &&
+				!parsed.generateChapters)
+		) {
+			return null;
+		}
+		return {
+			generateClips: parsed.generateClips,
+			generateShorts: parsed.generateShorts,
+			generateChapters: parsed.generateChapters,
+		};
+	} catch {
+		return null;
+	}
+}

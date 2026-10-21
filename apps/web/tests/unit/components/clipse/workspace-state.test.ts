@@ -15,6 +15,7 @@ import {
 	getSelectedVideoFromDashboard,
 	getWorkspaceTabFromBrowserUrl,
 	getYoutubeChapterText,
+	parseGenerationTargets,
 	shouldShowFloatingJobButton,
 } from "~/components/clipse/workspace-state";
 import { SELECTED_CHANNEL_STORAGE_KEY } from "~/modules/content-videos/application/content-clip-dashboard-view";
@@ -254,5 +255,28 @@ describe("workspace state helpers", () => {
 				video: DashboardVideoMother.create(),
 			}),
 		).toContain("1:05 Second chapter");
+	});
+});
+
+describe("saved AI generation targets", () => {
+	it("restores the exact previous selection, including unchecked targets", () => {
+		const targets = {
+			generateClips: false,
+			generateShorts: true,
+			generateChapters: false,
+		};
+		expect(parseGenerationTargets(JSON.stringify(targets))).toEqual(targets);
+	});
+
+	it.each([
+		null,
+		"invalid JSON",
+		"null",
+		"[]",
+		"{}",
+		'{"generateClips":"true","generateShorts":true,"generateChapters":false}',
+		'{"generateClips":false,"generateShorts":false,"generateChapters":false}',
+	])("ignores missing or invalid saved preferences: %s", (value) => {
+		expect(parseGenerationTargets(value)).toBeNull();
 	});
 });

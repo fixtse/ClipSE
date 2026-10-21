@@ -21,6 +21,28 @@ const handlers = {
 };
 
 describe("ClipEditorCard", () => {
+	it.each([true, false])(
+		"renders a mark toggle with pressed state %s",
+		(isMarked) => {
+			const markup = renderToStaticMarkup(
+				<ClipEditorCard
+					clip={DashboardClipMother.create({ isMarked })}
+					currentTime={0}
+					frameRate={30}
+					maxDurationSeconds={120}
+					mutationPending={false}
+					onMarkChange={vi.fn()}
+					sourceUrl={null}
+					{...handlers}
+				/>,
+			);
+			expect(markup).toContain(`aria-pressed="${isMarked}"`);
+			expect(markup).toContain(
+				isMarked ? "workspace.clipList.unmark" : "workspace.clipList.mark",
+			);
+		},
+	);
+
 	it("renders source-pending state and disables save when there are no draft changes", () => {
 		const clip = DashboardClipMother.create({
 			title: "Manual clip",

@@ -41,6 +41,7 @@ export const ClipSESchema = z.object({
 	outputStorageKey: z.string().nullable(),
 	outputFilename: z.string().nullable(),
 	downloadedAt: z.date().nullable(),
+	isMarked: z.boolean().default(false),
 	latestError: z.string().nullable(),
 	createdAt: z.date(),
 	updatedAt: z.date(),
@@ -80,6 +81,7 @@ export const CreateClipSESchema = z.object({
 export type CreateClipSEInput = z.input<typeof CreateClipSESchema>;
 
 export const UpdateClipSESchema = z.object({
+	isMarked: z.boolean().optional(),
 	id: z.string().uuid(),
 	title: z.string().min(1).max(255).optional(),
 	hook: z.string().max(1000).optional(),

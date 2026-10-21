@@ -281,6 +281,7 @@ export const contentClips = createTable(
 		outputStorageKey: d.text("output_storage_key"),
 		outputFilename: d.varchar("output_filename", { length: 255 }),
 		downloadedAt: d.timestamp("downloaded_at", { withTimezone: true }),
+		isMarked: d.boolean("is_marked").notNull().default(false),
 		latestError: d.text("latest_error"),
 		createdAt: d
 			.timestamp("created_at", { withTimezone: true })

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	Bookmark,
 	Check,
 	ChevronsUpDown,
 	Clipboard,
@@ -133,6 +134,8 @@ interface ClipEditorCardProps {
 	}) => Promise<GeneratedClipMetadataResult | undefined>;
 	onRender: (clipId: string) => Promise<void>;
 	onDelete: (clipId: string) => Promise<void>;
+	onDownload?: () => void;
+	onMarkChange?: (isMarked: boolean) => Promise<void>;
 	onShortDetectionModeChange?: (
 		clipId: string,
 		mode: ClipSEShortDetectionMode,
@@ -576,6 +579,8 @@ export function ClipEditorCard({
 	onRender,
 	onDelete,
 	onShortDetectionModeChange,
+	onDownload,
+	onMarkChange,
 }: ClipEditorCardProps) {
 	const t = useTranslations();
 	const [title, setTitle] = useState(clip.title);
@@ -594,6 +599,7 @@ export function ClipEditorCard({
 	const [sourceSeekStepSeconds, setSourceSeekStepSeconds] = useState(5);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [aiGenerateDialogOpen, setAiGenerateDialogOpen] = useState(false);
+	const [markPending, setMarkPending] = useState(false);
 	const [downloadedAt, setDownloadedAt] = useState(clip.downloadedAt);
 	const activeClipIdRef = useRef(clip.id);
 	const sourcePlayerRef = useRef<ClipFullVideoPlayerHandle | null>(null);
@@ -824,7 +830,38 @@ export function ClipEditorCard({
 							</CardDescription>
 						) : null}
 					</div>
-					<div className="flex gap-2">
+					<div className="flex flex-wrap gap-2">
+						{onMarkChange ? (
+							<Button
+								aria-pressed={clip.isMarked}
+								className={cn(
+									"border-white/10 bg-white/6 text-slate-200 hover:bg-white/10",
+									clip.isMarked &&
+										"border-violet-400 bg-violet-300/15 text-violet-100 hover:bg-violet-300/20",
+								)}
+								disabled={mutationPending || markPending}
+								onClick={async () => {
+									setMarkPending(true);
+									try {
+										await onMarkChange(!clip.isMarked);
+									} finally {
+										setMarkPending(false);
+									}
+								}}
+								size="sm"
+								variant="outline"
+							>
+								<Bookmark
+									className="h-4 w-4"
+									fill={clip.isMarked ? "currentColor" : "none"}
+								/>
+								{t(
+									clip.isMarked
+										? "workspace.clipList.unmark"
+										: "workspace.clipList.mark",
+								)}
+							</Button>
+						) : null}
 						<Button
 							className="border-orange-300/25 bg-orange-400/15 text-orange-50 hover:bg-orange-400/20"
 							disabled={mutationPending || hasChanges || isRendering}
@@ -1345,7 +1382,10 @@ export function ClipEditorCard({
 							>
 								<a
 									href={clip.downloadUrl}
-									onClick={() => setDownloadedAt(new Date())}
+									onClick={() => {
+										setDownloadedAt(new Date());
+										onDownload?.();
+									}}
 								>
 									<Download className="h-4 w-4" />
 									{t("workspace.clipEditor.downloadMp4")}

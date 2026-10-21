@@ -25,7 +25,9 @@ export async function updateClipSE(
 
 	return clipRepository.update({
 		...validatedInput,
-		startSeconds,
-		endSeconds,
+		...(validatedInput.startSeconds !== undefined ||
+		validatedInput.endSeconds !== undefined
+			? { startSeconds, endSeconds }
+			: {}),
 	});
 }

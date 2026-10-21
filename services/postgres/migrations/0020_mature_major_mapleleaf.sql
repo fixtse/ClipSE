@@ -1,0 +1,1 @@
+ALTER TABLE "content_clip" ADD COLUMN "is_marked" boolean DEFAULT false NOT NULL;

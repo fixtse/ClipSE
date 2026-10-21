@@ -329,6 +329,10 @@ export const esMessages = {
 				"Genera clips y capítulos cuando termine la transcripción.",
 		},
 		clipList: {
+			mark: "Marcar",
+			unmark: "Desmarcar",
+			marked: "Marcado",
+
 			eyebrow: "Candidatos de clips",
 			title: "Clips en borrador",
 			candidates: "{count} candidatos",

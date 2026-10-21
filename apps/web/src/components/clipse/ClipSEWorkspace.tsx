@@ -159,6 +159,7 @@ import {
 import {
 	buildWorkspaceBrowserUrl,
 	type ClipListTab,
+	GENERATION_TARGETS_STORAGE_KEY,
 	getClipListTabFromBrowserUrl,
 	getDashboardSelectedVideoId,
 	getDashboardVideos,
@@ -167,6 +168,7 @@ import {
 	getSelectedVideoFromDashboard,
 	getWorkspaceTabFromBrowserUrl,
 	getYoutubeChapterText,
+	parseGenerationTargets,
 	shouldShowFloatingJobButton as shouldDisplayFloatingJobButton,
 } from "./workspace-state";
 
@@ -633,6 +635,9 @@ export function ClipSEWorkspace({
 	const [librarySearch, setLibrarySearch] = useState("");
 	const [libraryPage, setLibraryPage] = useState(1);
 	const [clipListPage, setClipListPage] = useState(1);
+	const [downloadedAssets, setDownloadedAssets] = useState<
+		Record<string, { storageKey: string; updatedAt: number }>
+	>({});
 	const [currentTime, setCurrentTime] = useState(0);
 	const [transcriptSearch, setTranscriptSearch] = useState("");
 	const [transcriptPanelTab, setTranscriptPanelTab] =
@@ -817,6 +822,21 @@ export function ClipSEWorkspace({
 
 		setCodexModel(getAvailableModelValue(codexModel, aiModelsQuery.data));
 	}, [aiModelsQuery.data, aiProvider, codexModel]);
+
+	useEffect(() => {
+		try {
+			const targets = parseGenerationTargets(
+				window.localStorage.getItem(GENERATION_TARGETS_STORAGE_KEY),
+			);
+			if (targets) {
+				setGenerateClips(targets.generateClips);
+				setGenerateShorts(targets.generateShorts);
+				setGenerateChapters(targets.generateChapters);
+			}
+		} catch {
+			// Generation remains available when browser storage is disabled.
+		}
+	}, []);
 
 	useEffect(() => {
 		if (typeof window === "undefined") {
@@ -1530,6 +1550,14 @@ export function ClipSEWorkspace({
 				return;
 			}
 
+			try {
+				window.localStorage.setItem(
+					GENERATION_TARGETS_STORAGE_KEY,
+					JSON.stringify({ generateClips, generateShorts, generateChapters }),
+				);
+			} catch {
+				// A storage failure must not turn a queued request into an error.
+			}
 			toast.success(t("workspace.toasts.aiGenerationQueued"));
 			setAiGenerateOpen(false);
 			await refreshDashboard();
@@ -1849,10 +1877,6 @@ export function ClipSEWorkspace({
 	const paginatedVisibleClips = visibleClips.slice(
 		boundedClipListPage - 1,
 		boundedClipListPage,
-	);
-	const clipListPages = Array.from(
-		{ length: clipListPageCount },
-		(_, index) => index + 1,
 	);
 	const selectedClipIndex = selectedClipId
 		? visibleClips.findIndex((clip) => clip.id === selectedClipId)
@@ -4294,37 +4318,62 @@ export function ClipSEWorkspace({
 												<>
 													<div className="flex justify-center">
 														<div className="flex max-w-full flex-wrap items-center justify-center gap-2 rounded-md border border-white/10 bg-slate-950/55 px-3 py-2">
-															{clipListPages.map((page) => (
-																<button
-																	aria-current={
-																		page === activeClipListPage
-																			? "page"
-																			: undefined
-																	}
-																	aria-label={t(
-																		"workspace.clipList.pageStatus",
-																		{
-																			page,
-																			total: clipListPageCount,
-																		},
-																	)}
-																	className={cn(
-																		"flex h-8 min-w-8 items-center justify-center rounded-md border px-2 font-medium text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200/60",
-																		page === activeClipListPage
-																			? "border-orange-300/70 bg-orange-400 text-slate-950 shadow-orange-950/30 shadow-sm ring-1 ring-orange-200/40 hover:bg-orange-300"
-																			: "border-white/10 bg-white/6 text-slate-200 hover:bg-white/10",
-																	)}
-																	key={page}
-																	onClick={() => goToClipListPage(page)}
-																	title={t("workspace.clipList.pageStatus", {
+															{visibleClips.map((pageClip, index) => {
+																const page = index + 1;
+																const isDownloaded = Boolean(
+																	pageClip.downloadedAt ||
+																		(pageClip.outputStorageKey &&
+																			downloadedAssets[pageClip.id]
+																				?.updatedAt ===
+																				pageClip.updatedAt.getTime() &&
+																			downloadedAssets[pageClip.id]
+																				?.storageKey ===
+																				pageClip.outputStorageKey),
+																);
+																const pageLabel = [
+																	t("workspace.clipList.pageStatus", {
 																		page,
 																		total: clipListPageCount,
-																	})}
-																	type="button"
-																>
-																	{page}
-																</button>
-															))}
+																	}),
+																	isDownloaded
+																		? t("workspace.clipEditor.downloaded")
+																		: null,
+																	pageClip.isMarked
+																		? t("workspace.clipList.marked")
+																		: null,
+																]
+																	.filter(Boolean)
+																	.join(" · ");
+																return (
+																	<button
+																		aria-current={
+																			page === activeClipListPage
+																				? "page"
+																				: undefined
+																		}
+																		aria-label={pageLabel}
+																		className={cn(
+																			"flex h-8 min-w-8 items-center justify-center rounded-md border px-2 font-medium text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-200/60",
+																			isDownloaded
+																				? "bg-teal-100 text-teal-950 hover:bg-teal-200"
+																				: page === activeClipListPage
+																					? "bg-orange-400 text-slate-950 hover:bg-orange-300"
+																					: "bg-white/6 text-slate-200 hover:bg-white/10",
+																			pageClip.isMarked
+																				? "border-2 border-violet-400"
+																				: "border-white/10",
+																			page === activeClipListPage &&
+																				"ring-2 ring-orange-200/80 ring-offset-2 ring-offset-slate-950",
+																		)}
+																		key={page}
+																		onClick={() => goToClipListPage(page)}
+																		title={pageLabel}
+																		type="button"
+																	>
+																		{page}
+																	</button>
+																);
+															})}
 														</div>
 													</div>
 													<AnimatePresence initial={false} mode="wait">
@@ -4356,6 +4405,28 @@ export function ClipSEWorkspace({
 																	}}
 																	onDelete={async (clipId) => {
 																		await handleDeleteClip(clipId);
+																	}}
+																	onDownload={() => {
+																		const storageKey = clip.outputStorageKey;
+																		if (storageKey)
+																			setDownloadedAssets((current) => ({
+																				...current,
+																				[clip.id]: {
+																					storageKey,
+																					updatedAt: clip.updatedAt.getTime(),
+																				},
+																			}));
+																	}}
+																	onMarkChange={async (isMarked) => {
+																		const result = await updateClipSEAction({
+																			id: clip.id,
+																			isMarked,
+																		});
+																		if (!result.success) {
+																			toast.error(result.error);
+																			return;
+																		}
+																		await refreshDashboard();
 																	}}
 																	onRender={async (clipId) => {
 																		await handleRenderClip(clipId);

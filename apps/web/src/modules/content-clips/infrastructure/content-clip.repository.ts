@@ -127,6 +127,7 @@ export class ClipSERepository implements ClipSERepositoryInterface {
 		const [updated] = await db
 			.update(contentClips)
 			.set({
+				isMarked: input.isMarked,
 				title: input.title?.trim(),
 				hook: input.hook,
 				summary: input.summary,
@@ -257,6 +258,7 @@ export class ClipSERepository implements ClipSERepositoryInterface {
 			outputStorageKey: row.outputStorageKey ?? null,
 			outputFilename: row.outputFilename ?? null,
 			downloadedAt: row.downloadedAt ?? null,
+			isMarked: row.isMarked,
 			latestError: row.latestError ?? null,
 			createdAt: row.createdAt,
 			updatedAt: row.updatedAt,
